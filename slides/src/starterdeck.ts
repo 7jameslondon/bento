@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 The Bento/Suite authors
-// The starter deck — what a freshly built Bento Slides file opens with.
+// The starter deck — what a freshly built bento/slides file opens with.
 //
 // It is the product demo, the launch asset and the feature tour in one: every
 // claim it makes is proven by the feature making it. A cast of four "bento
@@ -311,7 +311,7 @@ const DOTS_PAPER =
 
 export function starterDoc(): BentoDoc {
   const doc = newDoc()
-  doc.title = 'Bento Slides Showcase'
+  doc.title = 'bento/slides showcase'
   doc.theme.fontFamily = BODY
   doc.theme.accent = PEACH
   // new charts (＋ Chart, table→chart) inherit the deck's midnight-&-peach family

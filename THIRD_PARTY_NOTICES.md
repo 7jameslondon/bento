@@ -1,6 +1,6 @@
 # Third-party notices
 
-Bento Slides is MIT-licensed (© 2026 The Bento/Suite authors; see `LICENSE`).
+bento/slides is MIT-licensed (© 2026 The Bento/Suite authors; see `LICENSE`).
 The shippable single-file shell (`Bento_Slides.bento.html`) bundles the
 following third-party open-source components. Their license terms require that
 these notices accompany copies, so the same text is embedded as a `NOTICE`

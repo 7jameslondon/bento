@@ -1,6 +1,6 @@
 # Bento docs
 
-Engineering and format documentation for Bento Slides. Start here.
+Engineering and format documentation for bento/slides. Start here.
 
 | Document | What it covers |
 |---|---|

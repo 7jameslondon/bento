@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Bento Slides**. The app version is baked into every
+All notable changes to **bento/slides**. The app version is baked into every
 shell as `APP_VERSION` (from `slides/package.json`) and shown in the About
 dialog; a shipped file updates itself through the signed release channel.
 

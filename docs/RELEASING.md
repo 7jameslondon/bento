@@ -1,4 +1,4 @@
-# Releasing Bento Slides
+# Releasing bento/slides
 
 Releases are cut **locally** — the signing key never leaves the maintainer's
 machine, and the signed bytes are exactly the served bytes (no CI rebuild can

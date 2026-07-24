@@ -24,6 +24,7 @@ import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
 import { t, setLocale, locale, LOCALE_CHOICES } from '../i18n'
+import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
 const i18nT = t
@@ -195,8 +196,8 @@ export class Editor {
       `<rect x="5" y="5" width="7" height="22" rx="2.5" fill="#5E7699"/>` +
       `<rect x="14" y="5" width="13" height="10" rx="2.5" fill="#FF9E8A"/>` +
       `<rect x="14" y="17" width="13" height="10" rx="2.5" fill="#F0EBE0"/>` +
-      `</svg> <b>Bento<span style="color:#FF9E8A">/</span>Slides</b>`
-    logo.title = t('About Bento Slides — version, updates, licenses')
+      `</svg> <b>bento<span style="color:#FF9E8A">/</span>slides</b>`
+    logo.title = t('About bento/slides — version, updates, licenses')
     logo.style.cursor = 'pointer'
     logo.addEventListener('click', () => this.openAbout())
     const title = document.createElement('input')
@@ -206,13 +207,13 @@ export class Editor {
     title.spellcheck = false
     title.addEventListener('change', () => {
       this.store.commit(() => { this.store.doc.title = title.value || 'Untitled' })
-      document.title = `${this.store.doc.title} — Bento Slides`
+      document.title = `${this.store.doc.title} — ${appConfig().appName}`
     })
     // remote/programmatic title changes reflect live (unless being typed in)
     this.store.on('doc', () => {
       if (document.activeElement !== title && title.value !== this.store.doc.title) {
         title.value = this.store.doc.title
-        document.title = `${this.store.doc.title} — Bento Slides`
+        document.title = `${this.store.doc.title} — ${appConfig().appName}`
       }
     })
     this.dirtyDot = div('ed-dirty')
@@ -1950,7 +1951,7 @@ export class Editor {
       `<rect x="5" y="5" width="7" height="22" rx="2.5" fill="#5E7699"/>` +
       `<rect x="14" y="5" width="13" height="10" rx="2.5" fill="#FF9E8A"/>` +
       `<rect x="14" y="17" width="13" height="10" rx="2.5" fill="#F0EBE0"/>` +
-      `</svg><div><b>Bento<span style="color:#FF9E8A">/</span>Slides</b><span>v${APP_VERSION} · format v${FORMAT_VERSION}</span></div>` +
+      `</svg><div><b>bento<span style="color:#FF9E8A">/</span>slides</b><span>v${APP_VERSION} · format v${FORMAT_VERSION}</span></div>` +
       `</a>`
     head.querySelector('a')?.setAttribute('title', t('Visit bento.page (opens in a new tab)'))
     box.appendChild(head)
