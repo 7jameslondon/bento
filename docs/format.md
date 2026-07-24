@@ -1,6 +1,6 @@
 # The `bento/slides` document format
 
-*Normative reference for the JSON document model, current as of Bento Slides
+*Normative reference for the JSON document model, current as of bento/slides
 **v1.0.6** (format version `1`). The authoritative source is
 [`slides/src/model.ts`](../slides/src/model.ts) — this document tracks it. If
 the two disagree, the code wins; please file that as a docs bug.*

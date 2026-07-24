@@ -40,7 +40,7 @@ const flag = (name, fallback) => {
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback
 }
 const generator = flag('generator', 'bento-slides')
-const titleFallback = flag('title', 'Bento Slides')
+const titleFallback = flag('title', 'bento/slides')
 
 const html = readFileSync(path, 'utf8')
 if (html.includes('id="bento-rt"')) {

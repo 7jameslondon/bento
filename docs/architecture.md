@@ -1,4 +1,4 @@
-# Bento Slides — architecture
+# bento/slides — architecture
 
 *Engineering reference, current as of July 2026. Covers how a `.bento.html`
 file is constructed, what the on-disk format looks like, and how the runtime
@@ -61,7 +61,7 @@ else is the fixed *shell*. Skeleton of the actual markup
 <head>
   <meta charset="UTF-8"> <meta name="viewport" …> <meta name="generator" content="bento-slides">
   <link rel="icon" href="data:image/svg+xml,…">
-  <title>Deck title — Bento Slides</title>
+  <title>Deck title — bento/slides</title>
 
   <!-- NOTICE — bundled open-source components …
        (license notices; part of the shell, so they travel with every copy) -->

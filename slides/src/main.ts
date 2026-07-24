@@ -5,7 +5,7 @@
 
 import './styles.css'
 import { anim } from './anim'
-import { configureApp } from '../../kernel/src/app.ts'
+import { configureApp, appConfig } from '../../kernel/src/app.ts'
 import {
   capturePristine, readEmbeddedDoc, serializeFile, serializeAuto, downloadFile,
   suggestedFileName, parseEnvelope, decryptEnvelope, setEncryptionPassword,
@@ -25,7 +25,7 @@ import { onlineTransport, startSharing, stopSharing } from './sync/online'
 // (window title suffix, save-picker label, update manifest + its `app` check).
 configureApp({
   appId: 'bento-slides',
-  appName: 'Bento Slides',
+  appName: 'bento/slides',
   manifestUrl: 'https://bento.page/releases/slides/manifest.json',
 })
 
@@ -93,7 +93,7 @@ function bootWith(doc: BentoDoc) {
  * never expose the editor. Leaving the presentation lands on a minimal card.
  */
 function playerMode(doc: BentoDoc) {
-  document.title = `${doc.title} — Bento Slides`
+  document.title = `${doc.title} — ${appConfig().appName}`
   if (doc.fonts?.length) injectFonts(doc)
   document.getElementById('bento-splash')?.remove()
   const card = document.createElement('div')
@@ -120,7 +120,7 @@ function playerMode(doc: BentoDoc) {
 
 function editorMode(doc: BentoDoc) {
 
-document.title = `${doc.title} — Bento Slides`
+document.title = `${doc.title} — ${appConfig().appName}`
 
 // Embedded fonts: register @font-face rules from the asset table so text
 // elements can use bundled families in the editor, presenter and thumbnails.

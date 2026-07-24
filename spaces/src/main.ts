@@ -11,7 +11,7 @@
 // rather than assembled from guesses. See docs/PLATFORM.md §10.
 
 import './styles.css'
-import { configureApp } from '../../kernel/src/app.ts'
+import { configureApp, appConfig } from '../../kernel/src/app.ts'
 import {
   capturePristine, readEmbeddedDoc, serializeFile, serializeAuto,
   saveFile, parseEnvelope,
@@ -23,7 +23,7 @@ import { parseDoc, starterDoc, docContentKey, uid, type SpacesDoc } from './mode
 
 configureApp({
   appId: 'bento-spaces',
-  appName: 'Bento Spaces',
+  appName: 'bento/spaces',
   manifestUrl: 'https://bento.page/releases/spaces/manifest.json',
 })
 
@@ -41,7 +41,7 @@ if (embedded && parseEnvelope(embedded)) {
 }
 
 function boot(doc: SpacesDoc) {
-  document.title = `${doc.title} — Bento Spaces`
+  document.title = `${doc.title} — ${appConfig().appName}`
   document.getElementById('bento-splash')?.remove()
 
   const app = document.getElementById('app')!
@@ -114,7 +114,7 @@ function boot(doc: SpacesDoc) {
 
   titleInput.addEventListener('input', () => {
     doc.title = titleInput.value || 'Untitled'
-    document.title = `${doc.title} — Bento Spaces`
+    document.title = `${doc.title} — ${appConfig().appName}`
     touch()
   })
 
@@ -181,7 +181,7 @@ function boot(doc: SpacesDoc) {
       if (!next) return false
       doc = next
       titleInput.value = doc.title
-      document.title = `${doc.title} — Bento Spaces`
+      document.title = `${doc.title} — ${appConfig().appName}`
       render()
       touch()
       return true

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 The Bento/Suite authors
-// Cut a Bento Slides release: build the shell, sign the manifest, and
+// Cut a bento/slides release: build the shell, sign the manifest, and
 // assemble the complete static site for bento.page into ./site/.
 //
 //   node scripts/release.mjs [--no-build] [--key path]
