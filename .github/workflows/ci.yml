@@ -33,7 +33,9 @@ jobs:
           # stripping (node scripts/test-sync.ts).
           node-version: 24
           cache: npm
-          cache-dependency-path: slides/package-lock.json
+          cache-dependency-path: |
+            slides/package-lock.json
+            spaces/package-lock.json
 
       - name: Install
         working-directory: slides
@@ -55,6 +57,22 @@ jobs:
 
       - name: Splice conformance gate
         run: node scripts/shell-gate.mjs slides/dist-single/Bento_Slides.bento.html
+
+      # spaces: a second app proving the kernel seam — same pipeline, same gate.
+      - name: Install (spaces)
+        working-directory: spaces
+        run: npm ci
+
+      - name: Typecheck (spaces)
+        working-directory: spaces
+        run: node_modules/.bin/tsc -b
+
+      - name: Build single-file shell (spaces)
+        working-directory: spaces
+        run: npm run build:single
+
+      - name: Splice conformance gate (spaces)
+        run: node scripts/shell-gate.mjs spaces/dist-single/Bento_Spaces.bento.html
 
       - name: CRDT convergence rig
         # 40 seeds locally; deeper on CI where the seconds are free.
