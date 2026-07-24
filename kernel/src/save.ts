@@ -8,6 +8,7 @@
 // shell, new document inside. TiddlyWiki pioneered this trick.
 
 import type { KernelDoc } from './doc.ts'
+import { appConfig } from './app.ts'
 
 const DATA_BLOCK_ID = 'bento-doc'
 // Split so the literal never appears in the bundle (it would terminate the
@@ -42,7 +43,7 @@ function serializeBody(shell: Document, body: string, title: string): string {
   block.textContent = '\n' + body.replace(/</g, '\\u003c') + '\n'
 
   const titleEl = clone.querySelector('title')
-  if (titleEl) titleEl.textContent = title + ' — Bento Slides'
+  if (titleEl) titleEl.textContent = title + ' — ' + appConfig().appName
 
   const html = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML
   // Belt-and-braces: an unescaped close tag anywhere in generated output would
@@ -198,7 +199,7 @@ async function pickHandle(doc: KernelDoc, suffix = ''): Promise<FsFileHandle | n
   try {
     return await (window as any).showSaveFilePicker({
       suggestedName: suggestedFileName(doc, suffix),
-      types: [{ description: 'Bento Slides', accept: { 'text/html': ['.html'] } }],
+      types: [{ description: appConfig().appName, accept: { 'text/html': ['.html'] } }],
     })
   } catch (err: any) {
     if (err?.name === 'AbortError') return null
