@@ -14,9 +14,58 @@ Decision. Why. Pointers.
 
 ---
 
-## 2026-07-24 — Suite expansion: Bento Spaces and Bento Dash
-Two new apps begin: **Bento Spaces** (Notion/notes-like) and **Bento Dash**
-(data/spreadsheet). Names provisional. Development fans out across parallel
+## 2026-07-24 — Naming: the platform is `bento`, the mark is `bento/.`, all lowercase
+Settled after working through the whole namespace. **Do not reopen these** —
+each rejected candidate was rejected for a specific reason, recorded below.
+
+- **Platform: `bento`** (lowercase). Not "Bento Box", not "Bento Suite" — the
+  bare word is the family, and `bento/<app>` reads as members of it.
+- **Wordmark: `bento/.`** — the trailing dot stands for the platform (the apps
+  complete the slash). This is a MARK, not a name: `/` is a path separator and
+  is illegal in filenames, URLs, package names and social handles, and
+  punctuation is disregarded for trademark purposes. Anywhere a name must be
+  stored or typed, it is `bento`.
+- **Casing: lowercase everywhere**, brand and machine alike. This deliberately
+  collapses the usual split (`Docker` the brand / `docker` the command)
+  because the lowercase form is already the file's own identity — `doc.type`
+  is `bento/slides`, the MIME type is `application/bento+json`.
+- **Apps:** `bento/slides` (shipped), `bento/spaces` (Notion/notes-like),
+  `bento/dash` (spreadsheet + tables + dashboards — absorbs what would have
+  been a separate database app), `bento/vault` (document library / personal
+  storage). A word-processor app is planned; **`bento/folio` is the proposed
+  name, NOT yet confirmed** (alternatives considered: draft, prose, write —
+  `pages` and `docs` are unusable, being Apple's and Google's).
+
+**Rejected, with reasons:** `box` — the natural collective noun, and Box, Inc.
+is a cloud-storage company; keep it as an informal collective at most.
+`base` — retired once dash absorbed tables; also reads as "database", which
+this platform does not have. `bits` — generic, tonally wrong for an editorial
+brand, and pushes search toward snack food. `page`/`pages` — reserved: it is
+the best name for a future web-publishing app, and Apple Pages owns the
+word-processor association. `shelf`/`library` — weaker than vault, and library
+reads as "code library" to this audience.
+
+**Note on the crowded namespace:** several unrelated SaaS products are called
+Bento (email automation, link-in-bio, analytics, a dead FileMaker database).
+The field is crowded, which weakens everyone's claim — including ours. The
+practical cost is discoverability, not legal exposure. Mitigation is the
+`bento/<app>` form, the `bento.page` domain, and always carrying the
+descriptor. Get real clearance before commercialising; a bare wordmark would
+be hard to register, a composite (mark + logo) much less so.
+
+## 2026-07-24 — bento/vault holds the map, not the keys
+The document library must not become a custody service. It stores an encrypted
+index of what documents exist and how they reference each other; each document
+keeps its own encryption password and collab credentials. Compromising the
+vault reveals *what you have*, not what is in it, and losing the vault loses an
+index, not your work. This preserves the property that makes the relay
+defensible — files stay authoritative, server loss is survivable — and keeps
+the name an honest promise. Any sync tier is E2EE and optional (DO for
+coordination + R2 for encrypted blobs; never D1/plaintext), and self-hostable.
+
+## 2026-07-24 — Suite expansion: bento/spaces and bento/dash
+Two new apps begin: **bento/spaces** (Notion/notes-like) and **bento/dash**
+(spreadsheet + tables). Development fans out across parallel
 agents and multiple tools (Claude Code, Codex, Antigravity) — coordination
 rules in `docs/PARALLEL-WORK.md`, platform contract in `docs/PLATFORM.md`.
 Planned pre-fan-out groundwork: extract the shared kernel (monorepo layout,

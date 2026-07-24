@@ -7,12 +7,19 @@ only reads one file, read this one, then follow the pointers.
 
 ## What this project is
 
-Bento — office documents as single self-contained HTML files. One file = the
+bento — office documents as single self-contained HTML files. One file = the
 document + viewer + editor; it saves itself, updates itself over a signed
 channel, and optionally syncs E2EE through a blind relay. `slides/` is the
-shipped app (Bento Slides). Two more are starting: **Bento Spaces**
-(Notion/notes-like) and **Bento Dash** (data/spreadsheet) — names provisional,
-see `docs/DECISIONS.md`.
+shipped app. Starting now: **bento/spaces** (Notion/notes-like),
+**bento/dash** (spreadsheet + tables), **bento/vault** (document library).
+
+**Naming and casing — lowercase everywhere.** The platform is `bento`, the
+wordmark is `bento/.`, and apps are `bento/slides`, `bento/spaces`,
+`bento/dash`, `bento/vault`. This applies to UI strings and prose as well as
+format constants — do not write "Bento Slides" in new copy. The `/` in the
+wordmark is decorative: anywhere a name is stored or typed (filenames, URLs,
+package names) it is plain `bento`. Full reasoning and the rejected candidates
+are in `docs/DECISIONS.md` — don't reopen them.
 
 ## Read before writing code
 
