@@ -43,6 +43,12 @@ jobs:
         working-directory: slides
         run: node_modules/.bin/tsc -b
 
+      - name: Typecheck kernel (standalone)
+        # Apps also typecheck kernel transitively through their imports; this
+        # catches kernel-only errors under the kernel's own flags.
+        working-directory: slides
+        run: node_modules/.bin/tsc -p ../kernel
+
       - name: Build single-file shell
         working-directory: slides
         run: npm run build:single
