@@ -28,10 +28,19 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { deflateRawSync } from 'node:zlib'
 
 const path = process.argv[2]
-if (!path) {
-  console.error('usage: node scripts/postbuild-compress.mjs <shell.html>')
+if (!path || path.startsWith('--')) {
+  console.error('usage: node scripts/postbuild-compress.mjs <shell.html> [--generator <id>] [--title <fallback>]')
   process.exit(1)
 }
+
+// Per-app identity. Defaults reproduce the slides output byte-for-byte, so
+// the slides build script needs no flags; other apps pass their own.
+const flag = (name, fallback) => {
+  const i = process.argv.indexOf(`--${name}`)
+  return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback
+}
+const generator = flag('generator', 'bento-slides')
+const titleFallback = flag('title', 'Bento Slides')
 
 const html = readFileSync(path, 'utf8')
 if (html.includes('id="bento-rt"')) {
@@ -62,7 +71,7 @@ const notice = html.match(/<!--\s*NOTICE[\s\S]*?-->/)?.[0] ?? ''
 const docBlock = html.match(/<script type="application\/bento\+json" id="bento-doc">[\s\S]*?<\/script>/)?.[0]
 if (!docBlock) throw new Error('#bento-doc not found')
 const favicon = html.match(/<link rel="icon"[^>]*\/?>/)?.[0] ?? ''
-const title = html.match(/<title>[\s\S]*?<\/title>/)?.[0] ?? '<title>Bento Slides</title>'
+const title = html.match(/<title>[\s\S]*?<\/title>/)?.[0] ?? `<title>${titleFallback}</title>`
 const splashDiv = html.match(/<div id="bento-splash"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? ''
 const splashCss = (() => {
   const bodyPart = html.slice(html.indexOf('<body'))
@@ -70,7 +79,7 @@ const splashCss = (() => {
   return m ? m[1] : ''
 })()
 
-const TOOLING_COMMENT = `<!--
+const SLIDES_TOOLING = `<!--
   ════════════════════════════════════════════════════════════════════════
   AI AGENTS / TOOLING — READ THIS BEFORE EDITING THIS DECK
   ════════════════════════════════════════════════════════════════════════
@@ -119,6 +128,24 @@ const TOOLING_COMMENT = `<!--
   ════════════════════════════════════════════════════════════════════════
 -->`
 
+// Every Bento app must point agents at the document block and the scripting
+// API (docs/PLATFORM.md §7). Apps beyond slides get this short form until
+// they have authoring guidance of their own worth shipping in every file.
+const GENERIC_TOOLING = `<!--
+  ════════════════════════════════════════════════════════════════════════
+  AI AGENTS / TOOLING — READ THIS BEFORE EDITING THIS FILE
+  ════════════════════════════════════════════════════════════════════════
+  · The document is the ONE script block of type "application/bento+json",
+    id "bento-doc", below — plain readable JSON. Edit THAT block in place;
+    never regenerate the whole file. Escape every "<" in the JSON as \\u003c.
+  · The base64 blocks near the end are the DEFLATE-compressed app runtime
+    (open source, https://bento.page) — no user content, leave them alone.
+  · In a running file, window.bento exposes { doc, serialize(), loadDoc(json) }.
+  ════════════════════════════════════════════════════════════════════════
+-->`
+
+const TOOLING_COMMENT = generator === 'bento-slides' ? SLIDES_TOOLING : GENERIC_TOOLING
+
 // --- loader (plain script, runs at end of body; no "</script>" literal) -----
 const loader = `
 (async () => {
@@ -162,7 +189,7 @@ const out = `<!DOCTYPE html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="only light" />
-    <meta name="generator" content="bento-slides" />
+    <meta name="generator" content="${generator}" />
     ${favicon}
     ${title}
     ${notice}
