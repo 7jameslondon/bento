@@ -2129,6 +2129,20 @@ export class Editor {
           status.appendChild(reloadB)
         }
 
+        // What changed, before deciding whether to take it. The manifest carries
+        // no release notes today, so this points at the per-version release page
+        // — which publish-site.mjs now creates for every release, so the link
+        // cannot dangle. Placed BEFORE the action buttons deliberately: reading
+        // first is the point.
+        const notesLink = document.createElement('a')
+        notesLink.className = 'ed-btn'
+        notesLink.href = `https://github.com/nyblnet/bento/releases/tag/v${release.version}`
+        notesLink.target = '_blank'
+        notesLink.rel = 'noopener'
+        notesLink.textContent = t('What’s new →')
+        notesLink.title = t('Read the release notes for v{v} (opens in a new tab)', { v: release.version })
+        status.appendChild(notesLink)
+
         const inPlaceB = document.createElement('button')
         inPlaceB.className = 'ed-btn ed-btn-primary'
         inPlaceB.textContent = canUpdateInPlace() ? t('Update this file') : t('Update this file…')

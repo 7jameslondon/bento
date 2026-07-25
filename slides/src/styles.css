@@ -106,6 +106,7 @@ option { background: #fff; color: #1e2a3a; }
   cursor: pointer;
   white-space: nowrap;
 }
+a.ed-btn { text-decoration: none; }  /* the update block's "What's new" link is styled as a button */
 .ed-btn:hover { background: var(--chrome-2); }
 .ed-btn:active { background: var(--line); }
 .ed-btn svg { display: block; }
@@ -530,6 +531,13 @@ option { background: #fff; color: #1e2a3a; }
 .ed-about-row { display: flex; gap: 8px; }
 .ed-about-status {
   min-height: 18px;
+  /* The dialog is a height-capped column flex (max-height: 88vh, scrolls). A
+     flex item shrinks by default, so once this block grew — an update being
+     available adds a heading, a notes link and two buttons — it collapsed to
+     exactly its min-height and its children spilled over the controls below,
+     overlapping the auto-check row and Document properties. Don't shrink: let
+     the dialog scroll, which is what its overflow-y is for. */
+  flex-shrink: 0;
   color: var(--ink);
   line-height: 1.5;
   display: flex;

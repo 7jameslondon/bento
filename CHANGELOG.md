@@ -43,6 +43,14 @@ pre-1.0.
   backed up, while still showing the file itself as out of date, because it is.
   (A password-protected deck is never snapshotted, so it stays quiet rather
   than promise a safety net it doesn't have.)
+- **See what's new before you update.** When an update is available, the About
+  dialog now offers a "What's new" link straight to that version's release
+  notes.
+
+- **Fix: the About dialog's update section overlapped the controls beneath it.**
+  Once an update was found, the extra heading and buttons collapsed into a
+  sliver and drew on top of the auto-check and offline switches. It now takes
+  the room it needs and the dialog scrolls.
 
 ## [1.0.10] — 2026-07-25
 
