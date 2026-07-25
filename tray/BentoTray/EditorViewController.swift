@@ -64,7 +64,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     override func viewDidLoad() {
         super.viewDidLoad()
         let cfg = WKWebViewConfiguration()
-        cfg.setURLSchemeHandler(self, forURLScheme: "bento-app")
+        cfg.setURLSchemeHandler(self, forURLScheme: "bento-tray")
         cfg.userContentController.add(self, name: "bentoFile")
 
         // .atDocumentStart is required, not stylistic: Bento decides whether it
@@ -80,7 +80,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.allowsBackForwardNavigationGestures = false
         view.addSubview(webView)
-        webView.load(URLRequest(url: URL(string: "bento-app://\(originHost)/index.html")!))
+        webView.load(URLRequest(url: URL(string: "bento-tray://\(originHost)/index.html")!))
     }
 
     // MARK: - serving the deck

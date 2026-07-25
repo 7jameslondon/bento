@@ -1,4 +1,4 @@
-# bento/host — iOS
+# bento/tray — iOS
 
 A thin native host that runs **any self-contained HTML document** and lets it
 **save itself in place** on iOS.
@@ -70,7 +70,7 @@ of this bridge did exactly that and prompted on every single save.
 
 ## Two implementation details that carry weight
 
-- **The document is served through a custom scheme** (`bento-app://`), never
+- **The document is served through a custom scheme** (`bento-tray://`), never
   `loadFileURL`. A `file://` page in WKWebView gets an opaque, unstable origin,
   which makes `localStorage` and IndexedDB unreliable — silently breaking the
   autosave backstop, the per-device collab member key, and language/motion
@@ -92,10 +92,10 @@ Needs **full Xcode** (Command Line Tools alone is not enough) and XcodeGen:
 
 ```sh
 brew install xcodegen
-cd ios && xcodegen && open BentoHost.xcodeproj
+cd tray && xcodegen && open BentoTray.xcodeproj
 ```
 
-`BentoHost.xcodeproj` is generated, never committed — a `.pbxproj` in git is a
+`BentoTray.xcodeproj` is generated, never committed — a `.pbxproj` in git is a
 merge-conflict magnet.
 
 ## State: scaffold, not shippable

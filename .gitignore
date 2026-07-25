@@ -27,6 +27,6 @@ working/
 # make-og.mjs intermediate (the SVG rasterised into site-src/og.png)
 scripts/.cache/
 
-# generated Xcode project — regenerate with `cd ios && xcodegen`
-ios/*.xcodeproj/
-ios/BentoHost/Resources/starter.bento.html
+# generated Xcode project — regenerate with `cd tray && xcodegen`
+tray/*.xcodeproj/
+tray/BentoTray/Resources/starter.bento.html
