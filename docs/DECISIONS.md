@@ -14,6 +14,38 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-25 — Every PR gets human review before merging to main (for now)
+
+At this stage of development the maintainer reviews **every** PR before it
+lands on `main`, including agent-authored ones. No auto-merge. The point is
+visibility into what the agents are actually producing while the multi-agent
+workflow is still being shaken out — the cost is throughput, and that is
+currently the right trade.
+
+Supporting config, already in place: `main` is branch-protected with one
+required approval, and CI (`validate`) is a **required status check**, so a red
+build cannot merge. Admin bypass stays enabled for the maintainer.
+
+### FUTURE ACTION — revisit when review becomes the bottleneck
+
+When PR volume outgrows one reviewer, consider auto-merging **app-zone** PRs on
+green CI. If that happens, these paths must **always** require human review
+regardless, because a bad merge is either silent or catastrophic:
+
+- **`kernel/src/`** — every app depends on it.
+- **`slides/src/sync/`, above all `crdt.ts`** — convergence bugs are silent and
+  corrupt documents. The rig is necessary but not sufficient: it only generates
+  short strings, which is why it missed the large-text stack overflow (#47).
+- **`server/`** — one bad deploy breaks live collaboration for everyone at
+  once, and there is no per-user rollback.
+- **`scripts/release.mjs` / `sign-release.mjs` / `keygen.mjs`** — the signing
+  and release path.
+- **Anything touching the `#bento-doc` splice contract or the update-manifest
+  shape** (`PLATFORM.md` §2, §6) — these brick files already on users' disks.
+
+Do not enable auto-merge without that exclusion list encoded somewhere
+enforceable, not just written down here.
+
 ## 2026-07-24 — Naming: the platform is `bento`, the mark is `bento/.`, all lowercase
 Settled after working through the whole namespace. **Do not reopen these** —
 each rejected candidate was rejected for a specific reason, recorded below.
