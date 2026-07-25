@@ -659,4 +659,7 @@ export const ja: Catalog = {
   "Add a point on the path; double-click a point to remove it": "パス上に点を追加。点をダブルクリックで削除",
   "Set how fast the element moves through that point": "その点を通過する速さを設定",
   "Scroll a point": "点をスクロール",
+  "Start from scratch…": "最初から始める…",
+  "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "すべてのスライドを 1 枚の空白スライドに置き換えます。プレゼンテーションのテーマ、名前、ライブセッションはそのまま残ります — ⌘Z で元に戻せます。",
+  "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "{n} 枚すべてのスライドを 1 枚の空白スライドに置き換えますか？ ⌘Z で元に戻せます。",
 }

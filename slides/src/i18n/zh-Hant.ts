@@ -659,4 +659,7 @@ export const zhHant: Catalog = {
   "Add a point on the path; double-click a point to remove it": "在路徑上新增點；連按兩下某點可移除",
   "Set how fast the element moves through that point": "設定元素通過該點的速度",
   "Scroll a point": "捲動某點",
+  "Start from scratch…": "從頭開始…",
+  "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "將所有投影片取代為一張空白投影片。簡報的主題、名稱與即時協作工作階段都會保留 — ⌘Z 可復原。",
+  "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "將全部 {n} 張投影片取代為一張空白投影片？⌘Z 可復原。",
 }

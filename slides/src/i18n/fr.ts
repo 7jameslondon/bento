@@ -659,4 +659,7 @@ export const fr: Catalog = {
   "Add a point on the path; double-click a point to remove it": "Ajoute un point sur la trajectoire ; double-clic sur un point pour le retirer",
   "Set how fast the element moves through that point": "Définit la vitesse à laquelle l'élément passe par ce point",
   "Scroll a point": "Faites défiler un point",
+  "Start from scratch…": "Repartir de zéro…",
+  "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "Remplace toutes les diapositives par une seule diapositive vierge. Conserve le thème, le nom et la session en direct de la présentation — ⌘Z annule.",
+  "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "Remplacer les {n} diapositives par une diapositive vierge ? ⌘Z annule cette action.",
 }
