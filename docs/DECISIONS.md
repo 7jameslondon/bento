@@ -209,3 +209,26 @@ Three properties are load-bearing and must not be traded away:
 Operational consequence: the relay must be deployed **before** a client that
 depends on the blob endpoints — the standing rule for this split, same as the
 keepalive and access-verification changes.
+
+## 2026-07-25 — Solo review model: PR + green CI, zero required approvals
+
+**Amends the entry below** ("Every PR gets human review before merging"). The
+intent stands — every change lands via PR and the maintainer reads it — but the
+*mechanism* was wrong and was quietly defeating the CI gate.
+
+`main` required 1 approving review. GitHub forbids approving your own PR, so on
+a one-person project that requirement is unsatisfiable and **every** merge had
+to use `--admin`. Admin bypass skips *all* branch protection, including the
+required `validate` status check. Net effect: the CI gate was decorative, and a
+red build could land on `main` with nothing to stop it.
+
+Now: `required_approving_review_count: 0`, PRs still required, `validate` still
+a required status check, force-pushes and deletions still blocked. A normal
+`gh pr merge` works and genuinely cannot merge a red build. Admin bypass stays
+*available* (`enforce_admins: false`) but is now an exception rather than the
+daily path — if you find yourself reaching for `--admin`, that is a signal
+something is actually failing.
+
+Human review is a practice, not a GitHub setting, for as long as the team is
+one person. Restore a real approval count the moment a second reviewer exists;
+the future-action exclusion list in the amended entry still applies.
