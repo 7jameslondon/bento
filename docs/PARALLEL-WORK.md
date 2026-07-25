@@ -9,11 +9,16 @@ rules exist to keep N parallel workstreams from dissolving into merge hell.
 
 ## 1. Ownership zones
 
-- **App zones** — `slides/`, and (as they land) `spaces/`, `dash/`: parallel
-  work is safe *within different apps*. Agents working on different apps must
-  not touch each other's app directories.
-- **Kernel zone** — shared machinery (save/splice, sync engine + relay,
-  update, i18n runtime, build tooling; see `docs/PLATFORM.md` §9):
+- **App zones** — `slides/` (shipped) and `spaces/` (scaffold); `dash/` when
+  it lands. Parallel work is safe *within different apps*. Agents working on
+  different apps must not touch each other's app directories. Each app owns
+  its own `package.json`, `vite.config.ts`, `index.html`, `src/model.ts` and
+  `src/i18n.ts` facade.
+- **Kernel zone — `kernel/src/`** — `save.ts` (splice + bento/enc),
+  `autosave.ts`, `update.ts`, `anim.ts`, `charts.ts`, the `i18n.ts` engine,
+  `app.ts`, `doc.ts`; plus `slides/src/sync/` and `server/`, which are shared
+  in effect even though they still live app-side. See `docs/PLATFORM.md` §9.
+  This zone is:
   **serialize, don't parallelize.** One coordinated change at a time, reviewed
   against the platform invariants. If your app task needs a kernel change,
   stop, make (or request) the kernel change as its own small PR, land it,
@@ -66,7 +71,25 @@ of every tool can see it.
 - i18n: new strings present in all catalogs (`x-pseudo` audit catches strays)
 - no edits under generated dirs (`site/`, `dist-single/`)
 
-## 6. Coordination artifacts (the shared brain)
+## 6. Picking up work without colliding
+
+Zones stop *cross-app* collisions. Two agents inside one app will still
+collide, and no tooling fixes that — it is a work-assignment question.
+Practical rules for a small team running many agents:
+
+- **One agent per app zone at a time**, unless the maintainer has explicitly
+  split the work by file.
+- **Push the branch early**, before the work is finished, so another agent can
+  see it exists.
+- **Check `gh pr list` before starting.** An open PR touching your files is
+  the cheapest collision warning available.
+- **Branches whose commits look unmerged may already be shipped.** `main` was
+  rewritten once (to scrub a bot's commits), which orphaned older branch
+  hashes. Compare *content*, not commit ids, before "rescuing" anything.
+- Agents from other harnesses (Codex, Antigravity) read `AGENTS.md`, not this
+  file — keep the hard rules mirrored there.
+
+## 7. Coordination artifacts (the shared brain)
 
 - `docs/DECISIONS.md` — append-only decision log. Before starting non-trivial
   work: read it. After settling anything another agent could contradict:
@@ -78,7 +101,7 @@ of every tool can see it.
   finds adjacent-but-out-of-scope work files it as a note or issue instead of
   expanding its own PR.
 
-## 7. What agents never do
+## 8. What agents never do
 
 - Release, publish, deploy, or touch signing keys (maintainer-only, local).
 - Rewrite history or force-push shared branches.
