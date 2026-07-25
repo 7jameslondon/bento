@@ -662,4 +662,5 @@ export const it: Catalog = {
   "Start from scratch…": "Ricomincia da capo…",
   "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "Sostituisce tutte le diapositive con una sola diapositiva vuota. Mantiene tema, nome e sessione dal vivo della presentazione — ⌘Z annulla.",
   "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "Sostituire tutte le {n} diapositive con una diapositiva vuota? ⌘Z annulla l’operazione.",
+  "Don’t pair — use its own id": "Non abbinare — usa il proprio id",
 }
