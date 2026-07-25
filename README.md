@@ -141,7 +141,7 @@ through the signed update channel.
 ## License
 
 Bento is open source under the [MIT License](LICENSE) — all software here is
-MIT, © 2026 The Bento/Suite authors. Bundled runtime components (reveal.js,
+MIT, © 2026 The Bento authors. Bundled runtime components (reveal.js,
 Moveable, Selecto) are MIT; the embedded typefaces (Fraunces, Instrument Sans)
 are OFL; gallery imagery is public-domain (see
 `scripts/gallery-photos/SOURCES.md`). Each component keeps its own license.

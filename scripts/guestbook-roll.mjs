@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The guestbook daemon's one command — a COMPLETE, load-hardened epoch roll.
 //
 //   node scripts/guestbook-roll.mjs --snapshot-only

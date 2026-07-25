@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The bento/slides document model. This JSON is what lives inside the
 // <script type="application/bento+json"> block of a .bento.html file.
 

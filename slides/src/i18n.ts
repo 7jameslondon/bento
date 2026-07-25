@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Facade: the i18n ENGINE lives in the shared kernel (kernel/src/i18n.ts);
 // the CATALOGS are this app's string data and stay here in ./i18n/*.ts.
 //

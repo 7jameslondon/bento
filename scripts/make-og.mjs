@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Compose the social share card (og:image) as a self-contained SVG, using the
 // SAME embedded typefaces as the deck/landing so it's on-brand. Writes an SVG;
 // it's rasterised to site-src/og.png in the browser (no CLI rasteriser is

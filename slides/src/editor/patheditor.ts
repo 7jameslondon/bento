@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Visual motion-path editing — HYBRID bezier. The path of an fx.loop
 // 'motion-path' is a set of draggable waypoints. By default a waypoint stays
 // AUTO: its in/out tangents are auto-computed (Catmull-Rom) so the trajectory

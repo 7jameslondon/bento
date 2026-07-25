@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Editor shell: topbar, slide sidebar, canvas, properties panel, keyboard
 // shortcuts, save & present wiring.
 

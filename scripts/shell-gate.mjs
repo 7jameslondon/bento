@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // CONFORMANCE GATE — old updaters are frozen code; every shell must satisfy
 // the splice contract they rely on (see postbuild-compress.mjs): plaintext
 // #bento-doc, regex-extractable, balanced script tags, and a v0.1.0-style

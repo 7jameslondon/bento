@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // charts-lite: Bento's own chart engine (replaces ECharts — see git history).
 //
 // A `chart` element stores a plain-JSON option in the ECharts option SHAPE —
