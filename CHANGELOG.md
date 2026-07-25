@@ -11,6 +11,22 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Photos and video now work in live collaboration.** This finishes what
+  1.0.9 could only warn you about: previously anything past about half a
+  megabyte was simply too big to send to your collaborators. Now a large image
+  is uploaded once, encrypted, and everyone else pulls it down in the
+  background — so you can drop a full-resolution photo into a shared deck the
+  same way you would in a deck you're editing alone. A 3MB photo used to
+  produce a message the relay refused outright; it now travels as a reference
+  of about a hundred bytes.
+
+  As always the server never sees the picture: it is encrypted before it
+  leaves your machine, and the relay stores bytes it cannot read. Collaborators
+  on the same computer don't involve the relay at all. Small images are still
+  carried inside the document exactly as before, so nothing changes for
+  ordinary decks, and a self-hosted relay without blob storage keeps working —
+  it just falls back to the old inline-only behaviour.
+
 ## [1.0.9] — 2026-07-25
 
 - **Fix: large text could silently kill live collaboration.** A text box of
