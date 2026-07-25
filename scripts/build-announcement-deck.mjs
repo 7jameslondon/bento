@@ -157,7 +157,7 @@ const s7 = slide({
       '· Morph only animates elements that <b>share an id</b> across slides — not automatic “magic move”<br>' +
       '· Identities are key-bound, not human-verified — SSO name-mapping is on the roadmap<br>' +
       '· Files grow with embedded images and video — no optimizer yet<br>' +
-      '· Docs and Sheets don’t exist yet. Slides came first.' }),
+      '· spaces (notes) and dash (sheets &amp; tables) don’t exist yet. slides came first.' }),
     text({ x: 96, y: 620, w: 1000, h: 30, html: 'TRADE-OFFS ARE DESIGN. WE’D RATHER DISCLOSE THAN DISAPPOINT.', fontSize: 12, fontWeight: 700, letterSpacing: 3, color: 'rgba(255,158,138,0.7)', fx: { enter: 'fade-up', order: 2 } }),
   ],
 })

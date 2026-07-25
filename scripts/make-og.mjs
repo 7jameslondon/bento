@@ -48,13 +48,13 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
   <circle cx="1050" cy="70" r="420" fill="url(#amber)"/>
   <circle cx="120" cy="640" r="380" fill="url(#blue)"/>
 
-  <!-- wordmark: logo tile + Bento/Suite -->
+  <!-- wordmark: logo tile + the bento/. platform mark -->
   <g transform="translate(80,74)">
     <rect width="52" height="52" rx="12" fill="#16273E"/>
     <rect x="8" y="8" width="11" height="36" rx="4" fill="#5E7699"/>
     <rect x="23" y="8" width="21" height="16" rx="4" fill="#FF9E8A"/>
     <rect x="23" y="28" width="21" height="16" rx="4" fill="#F0EBE0"/>
-    <text x="70" y="35" font-family="Instrument Sans, sans-serif" font-weight="700" font-size="30" fill="#ffffff">Bento<tspan fill="#FF9E8A">/</tspan>Suite</text>
+    <text x="70" y="35" font-family="Instrument Sans, sans-serif" font-weight="700" font-size="30" fill="#ffffff">bento<tspan fill="#FF9E8A">/</tspan>.</text>
   </g>
 
   <!-- kicker -->
