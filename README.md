@@ -132,11 +132,11 @@ security issue? See [SECURITY.md](SECURITY.md).
 
 ## Roadmap
 
-**Bento/Slides** is the first app of Bento/Suite — a PowerPoint alternative,
-shipping now. **Docs** (`bento/docs`) and **Sheets** (`bento/sheets`) follow,
-each as its own self-contained `.bento.html` distributable. The current release
-lives on [bento.page](https://bento.page) and reaches every existing file
-through the signed update channel.
+**bento/slides** is the first app — a PowerPoint alternative, shipping now.
+**bento/spaces** (notes), **bento/dash** (sheets & tables) and **bento/vault**
+follow, each as its own self-contained `.bento.html` distributable. The
+current release lives on [bento.page](https://bento.page) and reaches every
+existing file through the signed update channel.
 
 ## License
 
