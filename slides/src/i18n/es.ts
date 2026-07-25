@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const es: Catalog = {
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Esa imagen es demasiado grande para compartirla en vivo (máx. 1 MB aprox.). Se guarda en tu copia, pero los colaboradores no la verán.",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Ese cambio es demasiado grande para compartirlo en vivo (máx. 1 MB aprox.). Se guarda en tu copia, pero los colaboradores no lo verán.",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Esta sesión en vivo se ha quedado sin espacio. Tu cambio se guarda en tu copia, pero los colaboradores no lo verán.",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "La sesión en vivo no pudo guardar ese cambio. Se guarda en tu copia, pero los colaboradores no lo verán.",
+  "Too many changes at once — live sync is catching up.": "Demasiados cambios a la vez — la sincronización en vivo se está poniendo al día.",
   "Backdrop": "Fondo",
   "Blend": "Fusión",
   "Outline": "Contorno",

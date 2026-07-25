@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const fr: Catalog = {
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Cette image est trop volumineuse pour le partage en direct (environ 1 Mo max). Elle est enregistrée dans votre copie, mais les collaborateurs ne la verront pas.",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Cette modification est trop volumineuse pour le partage en direct (environ 1 Mo max). Elle est enregistrée dans votre copie, mais les collaborateurs ne la verront pas.",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Cette session en direct n’a plus de place. Votre modification est enregistrée dans votre copie, mais les collaborateurs ne la verront pas.",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "La session en direct n’a pas pu enregistrer cette modification. Elle est enregistrée dans votre copie, mais les collaborateurs ne la verront pas.",
+  "Too many changes at once — live sync is catching up.": "Trop de modifications à la fois — la synchronisation en direct rattrape son retard.",
   "Backdrop": "Arrière-plan",
   "Blend": "Fusion",
   "Outline": "Contour",

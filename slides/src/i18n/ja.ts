@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "この画像はライブ共有には大きすぎます（上限は約 1 MB）。自分のコピーには保存されますが、共同編集者には表示されません。",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "この変更はライブ共有には大きすぎます（上限は約 1 MB）。自分のコピーには保存されますが、共同編集者には表示されません。",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "このライブセッションの容量がいっぱいです。変更は自分のコピーに保存されますが、共同編集者には表示されません。",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "ライブセッションがこの変更を保存できませんでした。自分のコピーには保存されますが、共同編集者には表示されません。",
+  "Too many changes at once — live sync is catching up.": "変更が多すぎます — ライブ同期が追いついています。",
   "Backdrop": "背景ぼかし",
   "Blend": "描画モード",
   "Outline": "縁取り",
