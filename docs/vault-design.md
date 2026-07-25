@@ -30,6 +30,10 @@ The relay is *infrastructure*, deliberately dumb. Vault is the *product*.
 Serious self-hosters run their own relay; everyone else uses the hosted one at
 `bento.page`. Either way they run the same vault.
 
+The relay's own spec is `relay-design.md`. Note that **the relay is always in
+the path** — clients never speak to a vault directly, even when both run on
+the same box — so the vault never accepts an inbound connection.
+
 ### The relay stays dumb — non-negotiable
 
 The relay does exactly three things:
