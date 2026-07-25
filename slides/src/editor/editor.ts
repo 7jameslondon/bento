@@ -1602,6 +1602,7 @@ export class Editor {
 
   private autosaveTimer = 0
   private lastVersionAt = 0
+  private lastBackupAt = 0
 
   private wireAutosave() {
     if (this.store.doc.readonly) return // player file — nothing to autosave
@@ -1622,8 +1623,10 @@ export class Editor {
     if (doc.readonly) return
     // Never write an encrypted deck's plaintext to IndexedDB; its file
     // write-back below stays encrypted via serializeAuto.
+    let snapshotted = false
     if (!isEncryptionActive()) {
       await putRecovery(doc)
+      snapshotted = true
       if (Date.now() - this.lastVersionAt > 120_000) { this.lastVersionAt = Date.now(); await addVersion(doc) }
     }
     // Silent file write-back once we hold a writable handle (Chrome/Edge).
@@ -1633,8 +1636,32 @@ export class Editor {
         await writeUpdatedFile(await serializeAuto(doc))
         this.store.setDirty(false)
         this.flashSaved()
+        return
       } catch { /* keep dirty; the IndexedDB snapshot is the backstop */ }
     }
+    // No handle (Safari/Firefox/iOS) or the write failed: the file on disk is
+    // STALE and the deck stays dirty — saying "Saved" here would be a lie. But
+    // the snapshot means the work is not lost, and that was previously
+    // invisible: nothing was shown at all, so the only signal was an amber dot
+    // that never cleared. Say what is actually true.
+    //
+    // Deliberately silent for an ENCRYPTED deck: those are never snapshotted to
+    // IndexedDB (plaintext-to-disk), so on a browser that cannot write back
+    // there is no backstop, and claiming one would be the worst kind of wrong.
+    if (snapshotted) {
+      this.lastBackupAt = Date.now()
+      this.flashSaved(t('Backed up in this browser'))
+      this.refreshDirtyHint()
+    }
+  }
+
+  /** Keep the dirty dot's tooltip honest about the backstop — the file is still
+   *  stale, but the work is recoverable, and the user should be able to find
+   *  that out by hovering the thing that is worrying them. */
+  private refreshDirtyHint() {
+    if (canWriteInPlace() || !this.lastBackupAt) return
+    const when = new Date(this.lastBackupAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    this.dirtyDot.title = t('Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.', { when })
   }
 
   private async checkRecovery() {
@@ -1830,10 +1857,10 @@ export class Editor {
   }
 
   private savedTimer = 0
-  private flashSaved() {
+  private flashSaved(message = t('Saved')) {
     let tag = document.querySelector<HTMLElement>('.ed-autosaved')
     if (!tag) { tag = div('ed-autosaved'); document.querySelector('.ed-topbar .ed-title')?.after(tag) }
-    tag.textContent = t('Saved')
+    tag.textContent = message
     tag.classList.add('show')
     clearTimeout(this.savedTimer)
     this.savedTimer = window.setTimeout(() => tag!.classList.remove('show'), 1400)

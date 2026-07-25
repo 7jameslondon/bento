@@ -4,6 +4,8 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "Backed up in this browser": "このブラウザに保存しました",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "未保存の変更 — {when} にこのブラウザへ保存済みで、再度開いたときに復元できます。⌘S は更新されたコピーをダウンロードします。",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "未保存の変更 — ⌘S は更新されたコピーをダウンロードします（このブラウザはファイルを上書きできません）",
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "保存 — 更新されたコピーをダウンロード（⌘S）。このブラウザは開いているファイルを上書きできません。",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "このブラウザはファイルを直接上書きできません。⌘S は代わりに更新されたコピーをダウンロードします。作業内容はこのブラウザにも保存され、再度開いたときに復元できます。",

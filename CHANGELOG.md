@@ -31,6 +31,14 @@ pre-1.0.
   says what will actually happen before any work is at stake, once per browser,
   and the Save button describes the real behaviour.
 
+  Those browsers also now show that your work *is* being kept safe. Bento has
+  always snapshotted the deck into the browser as you edit and offered it back
+  when you reopen, but on Safari and Firefox nothing ever said so — the only
+  signal was an amber dot that never cleared. It now reports when it last
+  backed up, while still showing the file itself as out of date, because it is.
+  (A password-protected deck is never snapshotted, so it stays quiet rather
+  than promise a safety net it doesn't have.)
+
 ## [1.0.10] — 2026-07-25
 
 - **Table defaults can follow the deck theme.** A deck may now define table
