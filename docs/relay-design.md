@@ -171,17 +171,39 @@ change re-sends the whole asset — and **every snapshot re-sends every asset**,
 because `session.snapshot()` serialises the whole document. Content-addressing
 is what fixes this; chunking would not.
 
-### Not chunking
+### Chunking IS required — the binding constraint is storage, not the socket
 
-Cloudflare raised the WebSocket message limit from 1 MiB to **32 MiB**
-(2025-10-31), so a single frame comfortably carries the current 8 MB embed
-budget (14.2 MB on the wire). Chunking would solve a problem that no longer
-exists at these sizes.
+An earlier draft of this section argued chunking was unnecessary because
+Cloudflare raised the WebSocket message limit from 1 MiB to 32 MiB
+(2025-10-31). **That was wrong**, and testing against the real worker under
+standalone `workerd` is what caught it.
 
-If a single asset ever exceeds ~18 MB binary, the answer is a **resumable
-multipart upload to the blob store** — an ordinary, well-understood problem —
-not splitting CRDT ops across frames, which would require reassembly state and
-orphan collection inside a relay that cannot read its own payloads.
+The WebSocket limit is not the binding constraint. **A Durable Object storage
+value caps near 2 MB** — measured: 2 MB stores, 2.5 MB throws inside
+`storage.put()`. Worse, `webSocketMessage`'s blanket `.catch(() => {})`
+swallowed the throw, so frames between the old 1 MB cap and 32 MiB passed every
+check and then silently disappeared. Raising `MAX_FRAME` alone doesn't widen
+the pipe; it just moves where the payload is lost.
+
+`MAX_FRAME` is therefore pinned at **1.9 MB**, chosen so that *accepted* and
+*storable* mean the same thing. At the ~1.78× wire cost that carries roughly
+**1.05 MB of binary** — photographs, not video.
+
+So an 8 MB `MEDIA_EMBED_BUDGET` cannot travel as one op, and no constant will
+change that. Two ways out, and they are not exclusive:
+
+- **Content-addressed blobs (preferred).** The asset never enters the op log;
+  the op carries a hash and the encrypted blob goes to a store with no 2 MB
+  row limit (R2, or the dead-drop). Also fixes dedupe, replay and pruning.
+- **Chunked ops.** Split an asset across ≤ 1.9 MB frames and reassemble.
+  Needed if a payload must live in the op log at all, and needed *anyway* as
+  resumable multipart upload once a single blob is large. The costs are real:
+  reassembly state, and orphan collection for partial sets inside a relay that
+  cannot read its own payloads — mitigated because the chunk count is
+  plaintext envelope metadata, so the relay can GC incomplete sets on a TTL.
+
+Sequence blobs first (it removes the need for chunking in the common case),
+then chunk uploads for genuinely large single assets.
 
 ### Migration path
 
@@ -203,10 +225,11 @@ their own relays we cannot control deploy order at all. So:
 Recorded here because the recommendation is to grow `server/sync-worker/` into
 this relay rather than start beside it.
 
-- **`MAX_FRAME` is 1 MB, an outdated self-imposed limit** (the platform now
-  allows 32 MiB). Consequence: any asset over **~549 KB of binary** produces an
-  op the relay silently drops with `return` — no NACK, nothing the client can
-  see. Peers receive the element but not the asset, and render a broken image.
+- **`MAX_FRAME` was 1 MB and silent on overflow** — any asset over ~549 KB of
+  binary produced an op dropped with a bare `return`. FIXED: frames are now
+  refused with `{ ctl:'refused', code }`, and `MAX_FRAME` is 1.9 MB, pinned to
+  the ~2 MB Durable Object storage ceiling rather than the 32 MiB socket
+  limit (see *Chunking IS required*).
 - **Silent drops become a retry loop.** The peer's version vector stays behind,
   the `need`/`vv` catch-up asks for the missing op, the sender re-sends the
   same oversized frame from its log, and the relay drops it again — forever.
