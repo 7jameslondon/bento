@@ -4,6 +4,8 @@
 import type { Catalog } from '../i18n'
 
 export const es: Catalog = {
+  "Backed up in this browser": "Copia guardada en este navegador",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Cambios sin guardar — conservados en este navegador a las {when} y se te ofrecerán al reabrir. ⌘S descarga una copia actualizada.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Cambios sin guardar — ⌘S descarga una copia actualizada (este navegador no puede reescribir el archivo)",
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "Guardar — descargar una copia actualizada (⌘S). Este navegador no puede reescribir el archivo abierto.",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "Este navegador no puede reescribir archivos en su sitio. ⌘S descargará una copia actualizada — tu trabajo también se guarda en este navegador y se te ofrecerá si vuelves a abrirlo.",
