@@ -195,6 +195,21 @@ let fileHandle: FsFileHandle | null = null
 
 const hasFsAccess = () => typeof (window as any).showSaveFilePicker === 'function'
 
+/**
+ * Can this browser rewrite the open file, or only hand back copies?
+ *
+ * The File System Access API is Chrome/Edge only: Safari and Firefox lack it,
+ * and so does EVERY browser on iOS, because they are all WebKit underneath.
+ * Without it there is no writable handle, which costs three things — in-place
+ * save, silent autosave write-back, and in-place self-update.
+ *
+ * Exported because the UI must not promise what the browser cannot do. "⌘S
+ * rewrites this file in place" is the product's central claim and it is simply
+ * false here; saying it anyway and retracting it in a toast after the first
+ * save is worse than saying the true thing up front.
+ */
+export const canWriteInPlace = () => hasFsAccess()
+
 async function pickHandle(doc: KernelDoc, suffix = ''): Promise<FsFileHandle | null> {
   try {
     return await (window as any).showSaveFilePicker({
