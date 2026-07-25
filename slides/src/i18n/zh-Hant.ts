@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const zhHant: Catalog = {
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "此圖片太大，無法即時共用（上限約 1 MB）。它已儲存在你的副本中，但協作者不會看到。",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "此變更太大，無法即時共用（上限約 1 MB）。它已儲存在你的副本中，但協作者不會看到。",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "此即時工作階段空間已滿。你的變更已儲存在你的副本中，但協作者不會看到。",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "即時工作階段無法儲存此變更。它已儲存在你的副本中，但協作者不會看到。",
+  "Too many changes at once — live sync is catching up.": "變更太多 — 即時同步正在追趕。",
   "Backdrop": "背景模糊",
   "Blend": "混合模式",
   "Outline": "外框",
