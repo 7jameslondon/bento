@@ -33,15 +33,15 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
 
     func documentBrowser(_ c: UIDocumentBrowserViewController, didPickDocumentsAt urls: [URL]) {
         guard let url = urls.first else { return }
-        present(url)
+        openEditor(url)
     }
 
     func documentBrowser(_ c: UIDocumentBrowserViewController, didImportDocumentAt sourceURL: URL,
                          toDestinationURL destinationURL: URL) {
-        present(destinationURL)
+        openEditor(destinationURL)
     }
 
-    private func present(_ url: URL) {
+    private func openEditor(_ url: URL) {
         // Security-scoped access: a document opened in place lives outside the
         // app container, so the URL must be scoped for the whole editing
         // session and released when the editor closes.

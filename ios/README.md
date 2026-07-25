@@ -94,14 +94,18 @@ browser with the native side emulated (`begin`/`write` over the same protocol):
 - "Save a copy…" prompts for a destination and leaves the open document
   untouched
 
-Not verified — **none of the Swift has been compiled or run.** It was written on
-a machine without Xcode; `swiftc -parse` checks syntax only and cannot resolve
-UIKit or WebKit. Treat every Swift file as unreviewed until it builds.
+Also verified — the Swift **typechecks against the real iOS 26.5 simulator SDK**
+(`swiftc -typecheck -sdk $(xcrun --sdk iphonesimulator --show-sdk-path)`), so
+UIKit, WebKit, `UIDocument`, `WKURLSchemeHandler` and every protocol conformance
+resolve. That is full semantic analysis, not a syntax pass.
+
+Not verified — **the app has never been linked, launched or run.** Typechecking
+stops before codegen and linking, and nothing has exercised the bridge on an
+actual device or simulator. Runtime behaviour — the scheme handler serving
+bytes, security-scoped access, the save round trip reaching disk — is still
+unproven.
 
 Still to do:
 
-- `Resources/starter.bento.html` — the seed for new documents. Not committed;
-  wire a build step that copies `slides/dist-single/Bento_Slides.bento.html`.
-  Until then, document creation fails.
 - App icon, launch screen, signing, an Apple Developer account ($99/yr).
 - Decide whether a `.bento.html` UTI is worth declaring over plain `public.html`.

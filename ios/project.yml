@@ -12,6 +12,20 @@ targets:
     platform: iOS
     sources:
       - path: BentoHost
+    preBuildScripts:
+      # The seed shell for "new document". Copied from the current build rather
+      # than committed: a 587KB binary in git would churn on every release, and
+      # the seed ages harmlessly anyway — a new deck self-updates through the
+      # normal signed channel the first time it checks.
+      - name: Stage starter shell
+        script: |
+          SRC="$SRCROOT/../slides/dist-single/Bento_Slides.bento.html"
+          DST="$SRCROOT/BentoHost/Resources/starter.bento.html"
+          if [ -f "$SRC" ]; then
+            mkdir -p "$(dirname "$DST")" && cp "$SRC" "$DST"
+          elif [ ! -f "$DST" ]; then
+            echo "warning: no starter shell — run 'npm run build:single' in slides/; new-document creation will fail"
+          fi
     settings:
       base:
         INFOPLIST_FILE: BentoHost/Info.plist
