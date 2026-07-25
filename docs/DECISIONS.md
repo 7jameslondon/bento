@@ -53,7 +53,34 @@ practical cost is discoverability, not legal exposure. Mitigation is the
 descriptor. Get real clearance before commercialising; a bare wordmark would
 be hard to register, a composite (mark + logo) much less so.
 
-## 2026-07-24 — bento/vault holds the map, not the keys
+## 2026-07-25 — bento/vault is a personal server; the relay is a separate product
+**Supersedes the "map, not the keys" entry below.** Vault is not an index and
+not a sync service — it is "cloud services without a cloud": your documents
+live on hardware you own (desktop / NAS / homelab) and it provides
+reachability, search, cross-document references and version history without
+any of it running on someone else's computer. The closer reference is
+Tailscale, not Dropbox.
+
+Vault and the **relay** are separate products with separate release trains.
+The relay is dumb infrastructure — rendezvous, an optional encrypted
+dead-drop, presence, nothing else — hosted on Cloudflare for the masses and
+self-hosted by serious users. Every actual service runs on the personal
+server; if the hosted relay ever accretes features, self-hosting becomes
+second-class and we lose the audience this is for.
+
+Consequences captured in `docs/vault-design.md`: the relay needs a portable
+(Docker) implementation because the current Worker+DO+hibernation stack is not
+realistically self-hostable; independent release trains require a versioned
+capability handshake (we can no longer control deploy order); background
+execution is unreliable on every platform so the protocol must be correct
+after unbounded offline periods; mobile uses iOS File Provider /
+Android DocumentsProvider rather than a background daemon; and the agent syncs
+a FOLDER, so no Bento app needs any changes. Retained from the superseded
+entry: the relay only ever sees ciphertext, and **export-to-standalone-file
+always works** — that invariant is what keeps "your data is a file you own"
+true while vault holds it.
+
+## 2026-07-24 — [SUPERSEDED] bento/vault holds the map, not the keys
 The document library must not become a custody service. It stores an encrypted
 index of what documents exist and how they reference each other; each document
 keeps its own encryption password and collab credentials. Compromising the
