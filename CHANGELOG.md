@@ -11,6 +11,20 @@ pre-1.0.
 
 ## [Unreleased]
 
+## [1.0.10] — 2026-07-25
+
+- **Fix: deleting a slide could empty the deck entirely.** The "a deck needs at
+  least one slide" guard counted the slides you had rather than the ones that
+  would be left — and deleting a slide also deletes its interactive states. So
+  a deck holding one slide plus one state of it passed the check, lost both,
+  and left the editor with nothing to show. Deletion then appeared stuck. The
+  guard now checks what survives.
+
+- **Fix: setting a morph id by hand did nothing.** Pairing two elements across
+  slides via the Morph panel silently failed — the element matched up but never
+  animated, so morphing only worked through the duplicate-a-slide route. Both
+  ways work now.
+
 - **Photos and video now work in live collaboration.** This finishes what
   1.0.9 could only warn you about: previously anything past about half a
   megabyte was simply too big to send to your collaborators. Now a large image
