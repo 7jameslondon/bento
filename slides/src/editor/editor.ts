@@ -1625,8 +1625,9 @@ export class Editor {
     // write-back below stays encrypted via serializeAuto.
     let snapshotted = false
     if (!isEncryptionActive()) {
-      await putRecovery(doc)
-      snapshotted = true
+      // only true if it REALLY stored — see putRecovery; no IndexedDB (Safari
+      // private browsing, some file:// contexts) must not read as "backed up"
+      snapshotted = await putRecovery(doc)
       if (Date.now() - this.lastVersionAt > 120_000) { this.lastVersionAt = Date.now(); await addVersion(doc) }
     }
     // Silent file write-back once we hold a writable handle (Chrome/Edge).
