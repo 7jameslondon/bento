@@ -14,7 +14,10 @@
 //     expiry costs convenience, never data)
 //
 // Envelope (JSON text frames, ≤ MAX_FRAME):
-//   client → server:  { i, d }            ephemeral (presence, hello, need)
+//   client → server:  { k? }               OPTIONAL client frame id, emitted FIRST
+//                                         so it is recoverable from an oversize
+//                                         frame without parsing; echoed on refusal
+//                     { i, d }            ephemeral (presence, hello, need)
 //                     { p:1, i, d }       persist an op batch
 //                     { snap:1, q, i, d } encrypted snapshot covering seq ≤ q
 //   server → clients: same frames fanned out, ops stamped with { q: seq };
@@ -48,12 +51,27 @@ const RATE_BYTES = 8 * 1024 * 1024
 const ROOM_BYTE_CAP = 96 * 1024 * 1024
 const OP_KEY = (seq) => `op:${String(seq).padStart(10, '0')}`
 
-/** Tell the sender why a frame was refused. Clients MUST stop re-queueing an
- *  op that comes back 'too-large' / 'room-full' — silently dropping is what
- *  turned an oversize asset into a permanent resend loop. */
+/** Tell the sender why a frame was refused, ECHOING its client-supplied id
+ *  (`k`) so the sender knows exactly WHICH frame died. Without the echo a
+ *  client has to infer it from ack ordering and the reported size — workable
+ *  but inferential, and guessing wrong means dropping the wrong op from the
+ *  resend log, i.e. silent permanent divergence.
+ *
+ *  Clients MUST stop re-queueing an op refused as 'too-large' / 'room-full' /
+ *  'storage-failed'; silently dropping is what turned an oversize asset into a
+ *  permanent resend loop. 'rate-limited' is transient — retry it. */
 function refuse(ws, code, detail) {
   try { ws.send(JSON.stringify({ ctl: 'refused', code, ...detail })) } catch { /* gone */ }
 }
+
+/** Recover a frame id from a RAW frame without parsing it. The size check
+ *  deliberately runs before JSON.parse — parsing an attacker-supplied 32 MB
+ *  string is itself a CPU abuse vector — so for oversize frames this bounded
+ *  regex over the head is the only way to name the frame. Clients emit "k"
+ *  first for exactly this reason. Absent/!matching = undefined, and the client
+ *  falls back to its own heuristic. */
+const rawFrameId = (raw) =>
+  raw.slice(0, 160).match(/"k"\s*:\s*"([A-Za-z0-9_-]{1,32})"/)?.[1]
 
 // --- signed writes (see docs/collab-design.md) ------------------------------
 // A room whose name starts with 'w' is SIGNED: the name commits to an ECDSA
@@ -256,7 +274,7 @@ export class Room {
     // ack, the peer permanently behind, and the need/vv catch-up re-sending the
     // same doomed frame forever.
     if (data.length > MAX_FRAME) {
-      return refuse(ws, 'too-large', { max: MAX_FRAME, got: data.length })
+      return refuse(ws, 'too-large', { max: MAX_FRAME, got: data.length, k: rawFrameId(data) })
     }
     // keepalive fallback: if the runtime auto-response isn't active this reaches
     // us — reply "pong" so a pinging client never mistakes a live socket for dead.
@@ -273,7 +291,9 @@ export class Room {
     meta.bytes = (meta.bytes || 0) + data.length
     ws.serializeAttachment(meta)
     if (meta.count > RATE_BURST) return
-    if (meta.bytes > RATE_BYTES) return refuse(ws, 'rate-limited', { retryInMs: RATE_WINDOW_MS })
+    if (meta.bytes > RATE_BYTES) {
+      return refuse(ws, 'rate-limited', { retryInMs: RATE_WINDOW_MS, k: rawFrameId(data) })
+    }
     let f
     try {
       f = JSON.parse(data)
@@ -321,7 +341,7 @@ export class Room {
       // retrying into a full room is the resend loop all over again.
       const used = (await this.state.storage.get('bytes')) || 0
       if (used + weight > ROOM_BYTE_CAP) {
-        return refuse(ws, 'room-full', { cap: ROOM_BYTE_CAP, used })
+        return refuse(ws, 'room-full', { cap: ROOM_BYTE_CAP, used, k: f.k })
       }
       const seq = ((await this.state.storage.get('seq')) || 0) + 1
       // Storage can still refuse (platform value limits move); surface it
@@ -330,7 +350,7 @@ export class Room {
       try {
         await this.state.storage.put(OP_KEY(seq), { i: f.i, d: f.d })
       } catch (e) {
-        return refuse(ws, 'storage-failed', { bytes: weight, detail: String(e && e.message || e).slice(0, 120) })
+        return refuse(ws, 'storage-failed', { bytes: weight, k: f.k, detail: String(e && e.message || e).slice(0, 120) })
       }
       await this.state.storage.put('seq', seq)
       await this.state.storage.put('bytes', used + weight)
@@ -351,7 +371,7 @@ export class Room {
         try {
           await this.state.storage.put('snap', { q: f.q, i: f.i, d: f.d })
         } catch (e) {
-          return refuse(ws, 'storage-failed', { bytes: weight, detail: String(e && e.message || e).slice(0, 120) })
+          return refuse(ws, 'storage-failed', { bytes: weight, k: f.k, detail: String(e && e.message || e).slice(0, 120) })
         }
         const dead = await this.state.storage.list({ start: OP_KEY(1), end: OP_KEY(f.q + 1) })
         // Give the pruned bytes back, or the cap becomes a one-way ratchet and
