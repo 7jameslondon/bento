@@ -110,11 +110,18 @@ templates, never code).
 
 ## 8. i18n
 
-~1KB `t()` with English-string-as-key (missing key = English). Catalogs are
-compiled in; new UI strings must land in **all** catalogs in the same PR.
-Never call `t()` at module scope (frozen at import). `select()` localizes
-display labels only — model values stay English words. Audit with
-`setLocale('x-pseudo')`.
+~1KB `t()` with English-string-as-key (missing key = English). Never call
+`t()` at module scope (frozen at import). `select()` localizes display labels
+only — model values stay English words. Audit with `setLocale('x-pseudo')`.
+
+Catalogs come in two tiers. A **bundled core** is compiled in — the per-locale
+files under `slides/src/i18n/` are the authored source, packed key-once into
+`packed.ts` by `scripts/build-i18n.mjs` (CI gates that it is current). New UI
+strings must land in **all** core catalogs in the same PR. Every other language
+is a **signed pack**, released centrally and spliced into the file on demand;
+see `i18n-packs.md`. Packs are additive — a file that never fetches one behaves
+exactly as before — and both tiers fall back per string to the English key,
+which is what lets a stale or partial pack degrade instead of break.
 
 ## 9. What is kernel vs what is app
 
