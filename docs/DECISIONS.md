@@ -181,3 +181,31 @@ One HTML file = document + viewer + editor, working offline from file://.
 The splice contract on `#bento-doc` is frozen forever (shipped updaters
 depend on it). Everything else is negotiable; this isn't. See
 docs/PLATFORM.md §1–2.
+
+## 2026-07-25 — Large assets travel out-of-band; the relay stays blind
+
+Assets over 64KB (`BLOB_INLINE_MAX`) no longer ride inside CRDT ops. They are
+encrypted client-side, uploaded once to the relay's R2 bucket, and referenced
+from the document by a content-addressed key; peers fetch and decrypt on
+receipt. This was forced by measurement, not preference: Durable Object storage
+values cap at ~2MB, so the previous inline path produced frames the relay
+accepted-then-dropped, and the client re-sent forever. Details and threat model
+in `docs/blob-offload.md`.
+
+Three properties are load-bearing and must not be traded away:
+
+- **The relay cannot read a blob.** It pipes ciphertext without buffering. The
+  key is `HMAC(roomKey, sha256(plaintext))`, so identical bytes dedupe *within*
+  a room and are unlinkable *across* rooms — a plain content hash would have
+  let the relay confirm two rooms hold the same file.
+- **R2 is optional.** Absent binding = `/b/` answers 501, clients inline small
+  assets and same-origin tabs still resolve from the local cache. A
+  self-hoster without a bucket degrades; they are not broken. This follows
+  from the relay being dumb infrastructure (see the vault entry).
+- **Failures are visible, never silent-but-wrong.** An unresolved blob leaves
+  the asset absent and renders empty rather than blank-looking-fine. The whole
+  change set exists because the old failure mode was invisible.
+
+Operational consequence: the relay must be deployed **before** a client that
+depends on the blob endpoints — the standing rule for this split, same as the
+keepalive and access-verification changes.
