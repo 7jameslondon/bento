@@ -4,18 +4,30 @@
 import UIKit
 import WebKit
 import UniformTypeIdentifiers
+import CryptoKit
 
 /// Hosts one open deck in a WKWebView and bridges saving to UIDocument.
 ///
 /// TWO decisions here carry the design:
 ///
-/// 1. The deck is served through a CUSTOM SCHEME, never `loadFileURL`. A
+/// 1. The document is served through a CUSTOM SCHEME, never `loadFileURL`. A
 ///    file:// page in WKWebView gets an opaque, unstable origin, which makes
 ///    localStorage and IndexedDB unreliable — that would silently break the
 ///    autosave backstop, the per-device collab member key, and the language and
 ///    reduce-motion preferences. A custom scheme is a stable secure origin, and
 ///    it keeps cross-origin fetches to the sync relay well-defined rather than
 ///    arriving as `Origin: null`.
+///
+///    The host is PER DOCUMENT, derived from the file's own path, not a single
+///    shared `deck`. This app opens ANY self-contained HTML document, not only
+///    Bento's, so a shared origin would let one document read another's
+///    localStorage and IndexedDB — fine when every file is yours, a real leak
+///    between unrelated third-party apps. Derived rather than random because
+///    the origin IS the storage boundary: a fresh host per launch would wipe
+///    that storage on every open. The trade is that moving or renaming a file
+///    gives it a new origin and orphans its local state; that state is a
+///    cache-and-backstop, never the document itself, which is why this is the
+///    right way round.
 ///
 /// 2. The web content is the DOCUMENT'S OWN runtime. The app bundles no shell
 ///    for rendering and has no opinion about which version a deck carries, so a
@@ -34,6 +46,14 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// its suggested name from the deck TITLE, so it rarely matches.
     private var openDocumentVended = false
     private var pendingExportName: String?
+
+    /// Stable per-document host: a truncated SHA-256 of the file's path. Hex
+    /// only, so it is always a valid host component.
+    private lazy var originHost: String = {
+        let path = document.fileURL.standardizedFileURL.path
+        let digest = SHA256.hash(data: Data(path.utf8))
+        return digest.compactMap { String(format: "%02x", $0) }.joined().prefix(24).description
+    }()
 
     init(document: BentoDocument) {
         self.document = document
@@ -60,7 +80,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.allowsBackForwardNavigationGestures = false
         view.addSubview(webView)
-        webView.load(URLRequest(url: URL(string: "bento-app://deck/index.html")!))
+        webView.load(URLRequest(url: URL(string: "bento-app://\(originHost)/index.html")!))
     }
 
     // MARK: - serving the deck

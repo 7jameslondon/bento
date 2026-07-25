@@ -1,6 +1,13 @@
 # bento/host — iOS
 
-A thin native host so decks can be **saved in place** on iOS.
+A thin native host that runs **any self-contained HTML document** and lets it
+**save itself in place** on iOS.
+
+Bento decks are the reason it exists, but nothing in the Swift is Bento-specific
+— it never parses the document, it is a courier. Any single-file HTML app that
+saves itself through the File System Access API works the same way, which on iOS
+is otherwise impossible: every browser there is WebKit and none of them ship
+that API.
 
 ## Why this exists
 
@@ -63,11 +70,19 @@ of this bridge did exactly that and prompted on every single save.
 
 ## Two implementation details that carry weight
 
-- **The deck is served through a custom scheme** (`bento-app://`), never
+- **The document is served through a custom scheme** (`bento-app://`), never
   `loadFileURL`. A `file://` page in WKWebView gets an opaque, unstable origin,
   which makes `localStorage` and IndexedDB unreliable — silently breaking the
   autosave backstop, the per-device collab member key, and language/motion
   preferences. It also keeps relay fetches from arriving as `Origin: null`.
+- **The host is PER DOCUMENT**, a truncated SHA-256 of the file's path, not a
+  shared `deck`. Since this app opens any HTML document, a shared origin would
+  let one document read another's `localStorage` and IndexedDB — fine when every
+  file is yours, a real leak between unrelated third-party apps. Derived rather
+  than random because the origin IS the storage boundary: a random host per
+  launch would wipe that storage on every open. The trade is that moving or
+  renaming a file gives it a new origin and orphans its local state — which is a
+  cache and a backstop, never the document itself.
 - **`bridge.js` is injected `.atDocumentStart`.** Bento decides whether it can
   save during boot; injected later, the editor has already concluded it cannot.
 
