@@ -289,6 +289,49 @@ one: per-vault and per-IP rate limits, a dead-drop size and TTL cap, relayed
 bandwidth metering, and a documented policy for what happens when a limit is
 hit (degrade, don't silently drop).
 
+### Making room creation cost something
+
+Room creation is unauthenticated by design — the token is trust-on-first-use,
+and there are no accounts because "no signup" is a product property we are not
+giving up. That means anyone can use the hosted relay as a free persistent
+pub/sub backend. The caps above bound what *one room* costs; they do nothing
+about *many rooms*.
+
+Layers, cheapest first:
+
+1. **Edge rate limiting** (Cloudflare WAF rule on the route, keyed by IP). No
+   code, blocks volumetric abuse before it reaches a Durable Object. Blunt —
+   NAT and IPv6 rotation defeat it — but it is free and stops the lazy case.
+2. **Signed rooms only for new rooms.** Legacy `r`-rooms stay permissive;
+   refuse to create new ones. An abuser must then generate a keypair, which is
+   cheap — but the *point* is that it yields a stable pubkey to meter, ban and
+   revoke against. Identity is more useful here than the crypto cost.
+3. **Proof of work at room CREATION.** A Hashcash-style stamp: find a nonce
+   such that `sha256(roomName || nonce)` has N leading zero bits. Bound to the
+   room name so work is not reusable. Verification is a single hash — the
+   asymmetry is the whole point.
+
+**Why proof of work fits here specifically.** It buys a cost curve without
+accounts, which is the one thing a CAPTCHA or a login would take away. And it
+is aimed correctly: creating *a* room should be free-ish, creating a hundred
+thousand should not. A normal user creates a room rarely — the cost is
+invisible. Attach it to every connection instead and you have merely taxed
+legitimate users and drained phone batteries.
+
+**Adaptive difficulty is the real lever.** Advertise the current difficulty in
+the capability handshake (`pow: { bits: 16 }`) and raise it under load. Normal
+operation ~16 bits is imperceptible; under attack 24+ bits costs an abuser
+seconds per room while a genuine user notices once.
+
+**Honest limits.** PoW does not stop a determined, funded abuser — it prices
+out bulk, not intent. It is also regressive on mobile (a phone burns battery
+where a botnet does not care), which is another argument for creation-only.
+And it must be a **capability, not a requirement**: a self-hosted relay serving
+one household should advertise `pow: null` and skip it entirely. Rejected for
+this role: Turnstile (Cloudflare-only, so it breaks the self-hosted story, and
+needs a browser origin that `file://` documents do not have) and accounts (the
+product does not have them and should not need them).
+
 **Metadata leakage, stated plainly** — the hosted relay operator can see
 public keys, IP addresses, connection times, blob sizes and traffic timing. It
 cannot see documents, titles, or the index. This should be written in the
