@@ -18,7 +18,11 @@ on:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded runs on PR branches — only the tip matters there. NOT on
+  # main: every merge commit is a distinct state, and the post-merge run is the
+  # safety net for interaction bugs between PRs merged close together. Four
+  # merges in a few minutes once left two merge commits only partly verified.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:

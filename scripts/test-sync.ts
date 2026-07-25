@@ -664,6 +664,50 @@ const castCount = (d: Doc) =>
     A.doc.slides.find((s: any) => s.id === sid).elements.find((e: any) => e.id === 'cast').y
   ok(y('s1') === 41 && y('s2') === 42, 'fork edits landed on their own copies')
 }
+
+{
+  // LARGE TEXT. The rig only ever generated short strings, which is how a
+  // stack overflow in applyTxtToState survived 46k checks: tokenize() is
+  // per-character, so ~200KB of text is ~200k tokens, and inserting them with
+  // splice(idx, 0, ...toks) spread them as CALL ARGUMENTS and blew the stack.
+  // The throw happened inside diff(), so session.flush() failed and NOTHING
+  // synced for the rest of the session. Guard the whole class here.
+  console.log('large text: 300KB element diffs, merges and converges…')
+  const A = new Replica('A')
+  const B = new Replica('B')
+  const big = 'word '.repeat(60_000) // ~300KB
+  const ea = A.mutate((d) => { d.slides[0].elements[0].html = big + ' AAA' })
+  const eb = B.mutate((d) => { d.slides[0].elements[0].html = d.slides[0].elements[0].html + ' BBB' })
+  A.receive(eb)
+  B.receive(ea)
+  ok(A.fingerprint() === B.fingerprint(), 'large-text merge converged')
+  const html = A.doc.slides[0].elements[0].html
+  ok(html.includes('AAA') && html.includes('BBB'), 'large-text merge kept both edits')
+  ok(html.length > 200_000, `large text survived the merge (${html.length} chars)`)
+}
+{
+  // DIFF FAILURE RECOVERY. A differ bug must not wedge the session: the shadow
+  // only advances after a successful diff, so an uncaught throw re-diffs the
+  // same delta forever. session.ts recovers by advancing the shadow and
+  // shipping a snapshot — but those discarded ops CONSUMED sequence numbers,
+  // leaving a permanent hole that stalls peers on the gap buffer. This asserts
+  // the snapshot actually clears that stall.
+  console.log('diff failure: seq gap from discarded ops recovers via snapshot…')
+  const A = new Replica('A')
+  const B = new Replica('B')
+  B.receive(A.mutate((d) => { d.title = 't1' }))
+  // ops A mints then DISCARDS, exactly as a mid-diff throw would: seqs spent,
+  // ops never broadcast
+  A.mutate((d) => { d.title = 't2' })
+  A.mutate((d) => { d.title = 't3' })
+  const later = A.mutate((d) => { d.title = 't4' })
+  B.receive(later)
+  ok(B.doc.title === 't1', 'peer stalls on the sequence gap (as designed)')
+  // the recovery session.ts performs
+  B.state.mergeSnapshot(B.doc, JSON.parse(JSON.stringify(A.doc)), JSON.parse(JSON.stringify(A.state.toJSON())))
+  ok(B.doc.title === 't4', 'snapshot cleared the gap and caught the peer up')
+  ok(A.fingerprint() === B.fingerprint(), 'diff-failure recovery converged')
+}
 {
   console.log('pre-v2 saved state and snapshots are discarded…')
   const A = new Replica('A')
