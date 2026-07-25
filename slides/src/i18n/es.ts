@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Spanish — machine-drafted, native review welcome
 import type { Catalog } from '../i18n'
 

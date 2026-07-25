@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The bento/spaces document model. This JSON is what lives inside the
 // #bento-doc block — the format IS the product (docs/PLATFORM.md §3).
 //

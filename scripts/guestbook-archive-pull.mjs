@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Pull the daemon's KV archives down to disk so nothing is lost to the 90-cap.
 //
 // The daemon prunes KV `archives/` to the newest 90. At the launch 15-min roll

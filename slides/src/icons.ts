@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Minimal inline icon set (lucide-style, stroke = currentColor). No deps.
 
 const svg = (body: string, viewBox = '0 0 24 24') =>

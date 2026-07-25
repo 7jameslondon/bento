@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The speaker-notes window. It outlives any single present session: the editor
 // opens it (its own user gesture) BEFORE presenting, and present mode adopts it.
 // Opening the notes and going fullscreen are then two separate gestures, so

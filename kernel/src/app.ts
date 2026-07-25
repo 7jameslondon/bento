@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Per-app identity for the kernel. Every Bento app calls configureApp() once,
 // first thing at boot, before any kernel module is used.
 //

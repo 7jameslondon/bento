@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The starter deck — what a freshly built bento/slides file opens with.
 //
 // It is the product demo, the launch asset and the feature tour in one: every

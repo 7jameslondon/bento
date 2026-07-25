@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // bento-guestbook-daemon — the sustainable home of the public guestbook.
 // Storage: Workers KV (R2 is not enabled on this account; KV fits — values
 // are ~500 KB against a 25 MB limit, archives pruned to the newest 90).

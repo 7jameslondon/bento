@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // The kernel document envelope — the ONLY doc fields kernel modules may read.
 // Every app's document model (bento/slides, bento/spaces, …) satisfies this
 // structurally; the kernel never sees an app's content shape (slides, blocks,

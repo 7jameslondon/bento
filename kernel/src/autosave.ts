@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Local auto-save + lightweight version history, backed by IndexedDB.
 //
 // Two concerns, one store:

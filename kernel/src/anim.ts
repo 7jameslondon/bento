@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Bento's animation engine — the in-house replacement for GSAP, sized to
 // exactly what the presenter and editor use:
 //   anim.to / anim.fromTo(target, vars) with channels:

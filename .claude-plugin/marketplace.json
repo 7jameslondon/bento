@@ -1,6 +1,6 @@
 {
   "name": "bento",
-  "owner": { "name": "The Bento/Suite authors", "url": "https://bento.page" },
+  "owner": { "name": "The Bento authors", "url": "https://bento.page" },
   "plugins": [
     {
       "name": "bento-slides",

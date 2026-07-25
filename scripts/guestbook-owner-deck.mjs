@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// Copyright (c) 2026 The Bento/Suite authors
+// Copyright (c) 2026 The Bento authors
 // Build an OWNER deck for the CURRENT live guestbook epoch, on demand — open it
 // to moderate (People panel → Remove). The daemon mints epochs server-side and
 // stashes the owner key in KV; this fetches it (admin-gated) and splices it into
