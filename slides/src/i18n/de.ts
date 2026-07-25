@@ -4,6 +4,10 @@
 import type { Catalog } from '../i18n'
 
 export const de: Catalog = {
+  "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Nicht gespeicherte Änderungen — ⌘S lädt eine aktualisierte Kopie herunter (dieser Browser kann die Datei nicht überschreiben)",
+  "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "Speichern — aktualisierte Kopie herunterladen (⌘S). Dieser Browser kann die geöffnete Datei nicht überschreiben.",
+  "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "Dieser Browser kann Dateien nicht direkt überschreiben. ⌘S lädt stattdessen eine aktualisierte Kopie herunter — deine Arbeit wird außerdem in diesem Browser gespeichert und beim erneuten Öffnen angeboten.",
+  "Got it": "Verstanden",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Dieses Bild ist zu groß für die Live-Freigabe (max. etwa 1 MB). Es ist in deiner Kopie gespeichert, aber Mitarbeitende sehen es nicht.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Diese Änderung ist zu groß für die Live-Freigabe (max. etwa 1 MB). Sie ist in deiner Kopie gespeichert, aber Mitarbeitende sehen sie nicht.",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Diese Live-Sitzung hat keinen Platz mehr. Deine Änderung ist in deiner Kopie gespeichert, aber Mitarbeitende sehen sie nicht.",

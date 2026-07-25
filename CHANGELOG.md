@@ -24,6 +24,12 @@ pre-1.0.
   a document name — it shows in the window title and becomes the suggested
   filename — so it reads better in title case. The `bento/slides` wordmark is
   unchanged.
+- **Safari and Firefox are told the truth about saving.** Those browsers (and
+  every browser on iPhone and iPad) can't rewrite a file in place — Bento hands
+  back an updated copy instead. The editor used to say the opposite in its
+  tooltips and only admit it in a passing message *after* the first save. It now
+  says what will actually happen before any work is at stake, once per browser,
+  and the Save button describes the real behaviour.
 
 ## [1.0.10] — 2026-07-25
 
