@@ -11,13 +11,13 @@ pre-1.0.
 
 ## [Unreleased]
 
+## [1.0.10] — 2026-07-25
+
 - **Table defaults can follow the deck theme.** A deck may now define table
   colours, typography, spacing, borders, and corner radius in `theme.table`.
   Tables inserted from the toolbar inherit those defaults, and switching back
   from the Minimal preset restores the themed header treatment. Existing decks
   without table defaults keep the same built-in appearance.
-
-## [1.0.10] — 2026-07-25
 
 - **Fix: deleting a slide could empty the deck entirely.** The "a deck needs at
   least one slide" guard counted the slides you had rather than the ones that
