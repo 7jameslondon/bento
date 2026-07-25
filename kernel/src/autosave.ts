@@ -67,9 +67,22 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
   })
 }
 
-export async function putRecovery(doc: KernelDoc): Promise<void> {
-  await tx(RECOVERY, 'readwrite', (s) =>
+/**
+ * Write the single latest recovery snapshot for this doc.
+ *
+ * Returns whether it ACTUALLY stored. `tx()` resolves null on every failure
+ * rather than throwing — no IndexedDB at all, a blocked open, a failed
+ * transaction — which is right for a best-effort backstop but means a caller
+ * cannot assume success. That distinction is load-bearing now that the editor
+ * tells the author their work is "backed up in this browser": Safari in private
+ * browsing and some `file://` contexts have no usable IndexedDB, and on iOS
+ * that is exactly where a shared deck tends to be opened. Claiming a backstop
+ * that isn't there would be worse than saying nothing.
+ */
+export async function putRecovery(doc: KernelDoc): Promise<boolean> {
+  const key = await tx(RECOVERY, 'readwrite', (s) =>
     s.put({ docId: doc.docId, at: Date.now(), title: doc.title, json: JSON.stringify(doc) } as Snapshot))
+  return key != null
 }
 
 export async function getRecovery(docId: string): Promise<Snapshot | null> {

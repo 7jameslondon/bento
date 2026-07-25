@@ -11,6 +11,11 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **The screen stays awake while you present.** Phones and laptops used to dim
+  and lock partway through a talk if you left a slide up for a couple of
+  minutes. Bento now holds the screen on for the length of the show and lets go
+  when you exit — and takes the lock again if you switch away and come back.
+
 - **Safari and Firefox are told the truth about saving.** Those browsers (and
   every browser on iPhone and iPad) can't rewrite a file in place — Bento hands
   back an updated copy instead. The editor used to say the opposite in its

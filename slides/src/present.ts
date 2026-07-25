@@ -443,6 +443,35 @@ export function startPresentation(
   // element is what goes fullscreen, so the speaker popup stays independent.
   // Requests can be denied (iframes, no user activation) — tab-fill mode is
   // the graceful floor, and stays the mode for testing/sharing via F.
+  /**
+   * Keep the screen awake for the length of the show.
+   *
+   * This matters most on a PHONE, which is where a shared deck usually gets
+   * presented from: iOS dims and locks on its own idle timer, and a presenter
+   * advancing a slide every couple of minutes trips it mid-talk. Desktop
+   * benefits too — fullscreen alone does not defeat a screensaver.
+   *
+   * Best-effort by construction: the API is absent on older iOS (<16.4) and
+   * Firefox, and the request is REJECTED unless the page is visible, so this
+   * must never throw into the caller. The lock is also dropped by the browser
+   * whenever the tab is hidden — switching apps mid-show and coming back would
+   * otherwise leave the screen sleeping again — so re-acquire on visibility.
+   */
+  let wakeLock: { release(): Promise<void> } | null = null
+  const acquireWakeLock = async () => {
+    const wl = (navigator as any).wakeLock
+    if (!wl || wakeLock || document.visibilityState !== 'visible') return
+    try { wakeLock = await wl.request('screen') } catch { /* denied or unsupported */ }
+  }
+  const releaseWakeLock = () => {
+    const held = wakeLock
+    wakeLock = null
+    void held?.release?.().catch(() => {})
+  }
+  const onVisibility = () => { if (document.visibilityState === 'visible') void acquireWakeLock() }
+  document.addEventListener('visibilitychange', onVisibility)
+  void acquireWakeLock()
+
   const enterFullscreen = () => {
     overlay.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {})
   }
@@ -480,6 +509,8 @@ export function startPresentation(
     window.removeEventListener('resize', onResize)
     document.removeEventListener('keydown', onKeydown, true)
     document.removeEventListener('fullscreenchange', onFsChange)
+    document.removeEventListener('visibilitychange', onVisibility)
+    releaseWakeLock()
     reduceQuery.removeEventListener?.('change', onMotionQuery)
     clearInterval(speakerTimer)
     if (speaker && !speaker.closed) {
