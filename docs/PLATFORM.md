@@ -118,11 +118,18 @@ display labels only — model values stay English words. Audit with
 
 ## 9. What is kernel vs what is app
 
-Shared (extract once, evolve carefully, serialize changes — see
-`docs/PARALLEL-WORK.md`):
-save/splice, autosave, encryption, collab engine + relay protocol, signed
-update, i18n runtime, compressed-shell build + conformance gate, and (for
-Slides+Dash) the charts engine and table rendering.
+Shared — **`kernel/src/`**, extracted and in use (evolve carefully, serialize
+changes — see `docs/PARALLEL-WORK.md`): `save.ts` (splice + bento/enc
+encryption), `autosave.ts`, `update.ts`, `anim.ts`, `charts.ts`, the `i18n.ts`
+engine, `app.ts` (per-app identity via `configureApp`), `doc.ts` (the
+`KernelDoc` envelope). Apps import these through facades at their own paths.
+
+Also shared but NOT yet in `kernel/`: the collab engine (`slides/src/sync/`)
+and the relay (`server/`). Both are slides-shaped today and genericizing the
+CRDT is its own project — treat them as kernel-zone for serialization.
+
+Shared build tooling: `scripts/postbuild-compress.mjs` (parameterised per app
+via `--generator` / `--title`) and `scripts/shell-gate.mjs`.
 
 Per-app (own it, don't prematurely abstract):
 the document model, the renderer, the editor UX, starter documents, panels.
