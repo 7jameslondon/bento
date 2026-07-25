@@ -11,6 +11,31 @@ pre-1.0.
 
 ## [Unreleased]
 
+## [1.0.9] — 2026-07-25
+
+- **Fix: large text could silently kill live collaboration.** A text box of
+  roughly 200KB or more crashed the change-differ — and because that runs on
+  every edit, *nothing* synced afterwards, on any slide, with no error shown.
+  Collaboration simply stopped. Fixed, and a failed diff can no longer wedge a
+  session either: it now recovers by sending a full snapshot, so a future bug
+  of that shape degrades instead of silently breaking.
+
+- **Fix: adding a large image while collaborating failed silently.** An image
+  over about half a megabyte was dropped on its way to your collaborators —
+  they saw a broken picture, and your editor kept retrying it forever. Bento
+  now tells you when something is too large to share live (and says so once,
+  instead of looping). The size limit itself roughly doubled. Larger media
+  still can't be added mid-session; that needs a deeper change, and it's next.
+
+- **The wordmark is lowercase.** `bento/slides`, matching what the file has
+  always called itself internally, and the website now uses the `bento/.`
+  platform mark.
+
+- Under the hood: shared machinery (saving, encryption, auto-save, updates,
+  animation, charts, translations) moved into a common kernel so the coming
+  apps use exactly the same document lifecycle as slides. No behaviour change
+  — the built file is byte-identical apart from the rebrand.
+
 ## [1.0.8] — 2026-07-24
 
 - **Reduce motion during a presentation.** A calmer show for motion sensitivity,
