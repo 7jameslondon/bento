@@ -19,6 +19,11 @@ pre-1.0.
   follows the same name. Where the save dialog opens is set by the browser and
   can't be pointed at a folder by the page, but it now remembers the last place
   you saved, so the second update onwards starts in the right directory.
+- **The starter deck is called “Bento Slides Showcase” again.** The lowercase
+  rebrand swept the deck's own title along with the app's, but a deck title is
+  a document name — it shows in the window title and becomes the suggested
+  filename — so it reads better in title case. The `bento/slides` wordmark is
+  unchanged.
 
 ## [1.0.10] — 2026-07-25
 

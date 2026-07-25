@@ -311,7 +311,10 @@ const DOTS_PAPER =
 
 export function starterDoc(): BentoDoc {
   const doc = newDoc()
-  doc.title = 'bento/slides showcase'
+  // The DECK's title, not the app's — it reads as a document name (window title,
+  // suggested filename), so it stays in title case. The lowercase `bento/slides`
+  // wordmark is app chrome and is unaffected.
+  doc.title = 'Bento Slides Showcase'
   doc.theme.fontFamily = BODY
   doc.theme.accent = PEACH
   // new charts (＋ Chart, table→chart) inherit the deck's midnight-&-peach family
