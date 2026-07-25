@@ -104,6 +104,122 @@ relay's entire job is routing envelopes and checking signatures.
 For v1 it is acceptable for web clients to always take the relayed path;
 documents are small and the dead-drop absorbs bulk transfer.
 
+## Wire efficiency
+
+The shipped collab relay carries roughly **1.78× the bytes it needs to**, and
+compresses nothing. Both are fixable, and the fixes belong in this design
+rather than being retrofitted after a second product depends on the format.
+
+### Where the overhead goes
+
+Tracing an 8 MB binary asset through today's path:
+
+| step | size | why |
+|---|---|---|
+| binary asset | 8.0 MB | |
+| → data URI in `doc.assets` | 10.7 MB | **base64 #1** — the document is JSON inside a `<script>` block, so binary *must* be text |
+| → JSON op batch | ~10.7 MB | negligible |
+| → AES-GCM ciphertext | ~10.7 MB | +16-byte tag |
+| → base64 for the `d` field | 14.2 MB | **base64 #2** |
+| → `JSON.stringify({p:1,i,d})` | 14.2 MB | |
+
+Two rounds of base64, each ×1.333, compounding to ×1.78.
+
+**Base64 #1 is inherent to the document and correct** — a `.bento.html` is JSON
+in a script tag. It is *not* inherent to the wire.
+
+**Base64 #2 is pure waste.** It exists only because frames are JSON text
+messages, and WebSocket has native binary frames.
+
+### Three fixes, in priority order
+
+**1. Compress before encrypting.** Nothing is compressed today: encrypting
+first makes the payload incompressible, and `permessage-deflate` cannot help
+either. Media is already compressed and won't benefit — but *ordinary editing
+traffic* (typing, moving elements, style changes) is JSON that compresses
+5–10×, and it is the overwhelming majority of frames in a live session. Both
+primitives already exist in the codebase: `deflateRawSync` in the build
+pipeline and `CompressionStream` in the browser (the shell loader already uses
+`DecompressionStream`). No new dependency.
+
+> **Documented caveat:** compress-then-encrypt leaks information through
+> ciphertext length — the CRIME/BREACH class. Here the attacker must already be
+> an authorised collaborator injecting chosen content and measuring frame
+> sizes, which is a weak position, but this must be a recorded decision rather
+> than an accident. Revisit if untrusted parties ever share a room.
+
+**2. Binary frames.** Sending the ciphertext as an `ArrayBuffer` removes
+base64 #2 — a flat **25% off every frame**, not just media. Requires: the IV
+carried as a length-prefixed header (or the leading 12 bytes) instead of a
+JSON field; the relay accepting non-string messages (it currently drops them
+outright — `typeof data !== 'string'` → `return`) and storing `Uint8Array`
+values; and signatures computed over bytes rather than `${i}.${d}`.
+
+**3. Content-addressed blobs.** Assets leave the op log entirely: the op
+carries a hash and a pointer, the encrypted blob is stored raw. This removes
+base64 #1 *from the wire* and fixes three other things at once — dedupe (the
+same image referenced twice is stored once), replay (a late joiner no longer
+downloads every historical asset), and pruning (see below). Same primitive as
+the dead-drop.
+
+Net effect: **×1.78 → ×1.33 → ×1.00.**
+
+### Assets are whole-value registers today
+
+`crdt.ts` emits a single `set` op whose value is the entire data URI, so any
+change re-sends the whole asset — and **every snapshot re-sends every asset**,
+because `session.snapshot()` serialises the whole document. Content-addressing
+is what fixes this; chunking would not.
+
+### Not chunking
+
+Cloudflare raised the WebSocket message limit from 1 MiB to **32 MiB**
+(2025-10-31), so a single frame comfortably carries the current 8 MB embed
+budget (14.2 MB on the wire). Chunking would solve a problem that no longer
+exists at these sizes.
+
+If a single asset ever exceeds ~18 MB binary, the answer is a **resumable
+multipart upload to the blob store** — an ordinary, well-understood problem —
+not splitting CRDT ops across frames, which would require reassembly state and
+orphan collection inside a relay that cannot read its own payloads.
+
+### Migration path
+
+The wire format cannot change under shipped clients, and once self-hosters run
+their own relays we cannot control deploy order at all. So:
+
+1. Wire revisions are advertised through the **capability handshake**
+   (`wire:1` text+base64, `wire:2` binary, `wire:3` binary+compressed).
+   Clients negotiate down; a new client on an old relay simply sends `wire:1`.
+2. **The relay accepts every past revision indefinitely.** Old frames are not
+   deprecated, they are just not produced any more.
+3. Compression is per-frame and self-describing, so a mixed room works: a
+   `wire:3` client and a `wire:1` client can share a room, each sending what
+   the other understands.
+4. Ship the relay side of a revision **before** any client produces it.
+
+## Current relay: known issues this design must fix
+
+Recorded here because the recommendation is to grow `server/sync-worker/` into
+this relay rather than start beside it.
+
+- **`MAX_FRAME` is 1 MB, an outdated self-imposed limit** (the platform now
+  allows 32 MiB). Consequence: any asset over **~549 KB of binary** produces an
+  op the relay silently drops with `return` — no NACK, nothing the client can
+  see. Peers receive the element but not the asset, and render a broken image.
+- **Silent drops become a retry loop.** The peer's version vector stays behind,
+  the `need`/`vv` catch-up asks for the missing op, the sender re-sends the
+  same oversized frame from its log, and the relay drops it again — forever.
+  Bandwidth burned on an op that can never land.
+- **Snapshots die the same way, and take pruning with them.** A snapshot
+  carries the whole document, so a deck over ~750 KB exceeds the cap. Since the
+  relay only prunes covered ops when a snapshot lands, **the op log then grows
+  unbounded for the room's 30-day life** — the decks that cost the most storage
+  are exactly the ones where pruning has silently stopped.
+- **Raising `MAX_FRAME` alone would be a mistake**: it multiplies the
+  worst-case abuse write by 32×. It must land together with a per-room storage
+  cap and byte-based rate limiting.
+
 ## The dead-drop (optional capability)
 
 A vault on a laptop is asleep most of the day. The dead-drop is an encrypted
@@ -170,6 +286,11 @@ relay rather than starting a second service beside it.
 
 ## Sequencing
 
+0. **Fix the shipped relay first** (see *Current relay: known issues*): raise
+   `MAX_FRAME` together with a per-room storage cap and byte-based rate
+   limits, and make oversize rejection loud instead of silent. This is a live
+   correctness bug plus an unbounded cost exposure, and it is independent of
+   everything below.
 1. **Capability handshake + identity verification.** Nothing else works
    without it, and retrofitting negotiation is the expensive mistake.
 2. **Announce / resolve / relayed frames.** Correct but slow: everything
