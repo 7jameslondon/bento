@@ -61,9 +61,18 @@ verify the manifest signature against the public key embedded in every shell.
    live **guestbook daemon** onto the freshly-published shell as a best-effort
    final step (see below) — no separate command needed.
 
-5. Also attach `site/releases/slides/Bento_Slides.bento.html` to a GitHub
-   Release for the tag — download counts, release-watch notifications, and a
-   permanent per-version archive.
+5. **The GitHub release is created for you** by `publish-site.mjs` — it makes
+   the release for the tag, attaches
+   `site/releases/slides/Bento_Slides.bento.html`, and takes the notes from
+   this version's CHANGELOG section (so the two can't drift). It is idempotent:
+   an existing release is left alone and only a missing asset is uploaded, so
+   re-running publish is safe.
+
+   It is deliberately **not** best-effort. If `gh` is unauthenticated, or the
+   asset is missing afterwards, publish exits non-zero and tells you the exact
+   command to run. This used to be a manual step, and it was silently missed
+   for v1.0.10 — the site was live and self-updating while the repo showed no
+   release at all. Documentation didn't prevent that, so the check now does.
 6. Sanity check: open the PREVIOUS version's file, About (topbar logo) →
    Check for updates → should offer the new version, and the downloaded copy
    must boot with the document intact.

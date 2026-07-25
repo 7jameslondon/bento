@@ -20,9 +20,10 @@
 // Destination repo: $BENTO_SITE_DIR, else ../bento-site beside this repo.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -108,6 +109,75 @@ const ver = (() => {
   } catch { return '?' }
 })()
 console.log(`\n✓ published to bento-site @ ${head} (app v${ver})`)
+
+// ---- GitHub release --------------------------------------------------------
+// Publishing the site makes a version downloadable and self-updatable, but the
+// GitHub release is how people who arrive from the repo get the file at all —
+// and being a separate manual step in RELEASING.md, it was simply forgotten for
+// v1.0.10. Documentation did not prevent that; doing it here does.
+//
+// Idempotent: an existing release is left alone, and only a missing asset is
+// uploaded, so re-running publish is always safe. NOT best-effort — unlike the
+// guestbook re-seed below, a failure here is reported loudly and exits non-zero,
+// because a silent skip is the exact failure being fixed.
+const releaseShell = join(site, 'releases/slides/Bento_Slides.bento.html')
+const tag = `v${ver}`
+
+const ghAvailable = (() => {
+  try { capture('gh', ['auth', 'status'], { stdio: ['ignore', 'pipe', 'pipe'] }); return true }
+  catch { return false }
+})()
+
+if (ver === '?') {
+  console.warn('⚠ could not read the published version — skipping the GitHub release step')
+} else if (!ghAvailable) {
+  die(`site is published, but gh is unavailable or unauthenticated — the GitHub release for ${tag} was NOT created.\n  Fix: gh auth login, then:  gh release create ${tag} ${releaseShell} --title ${tag} --notes-file <notes>`)
+} else {
+  const exists = (() => {
+    try { capture('gh', ['release', 'view', tag], { stdio: ['ignore', 'pipe', 'pipe'] }); return true }
+    catch { return false }
+  })()
+
+  if (!exists) {
+    // Notes come from the CHANGELOG section for this version, so the release
+    // and the file in the repo can never drift apart.
+    let notes = 'See CHANGELOG.md.'
+    try {
+      const cl = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+      const start = cl.indexOf(`## [${ver}]`)
+      const rest = cl.indexOf('\n## [', start + 1)
+      if (start >= 0) {
+        notes = cl.slice(cl.indexOf('\n', start) + 1, rest > 0 ? rest : undefined).trim()
+      }
+    } catch { /* fall back to the pointer above */ }
+    const intro = "Download the single file below and open it in any modern browser — it's the document, the viewer and the editor in one. Shipped files self-update through the signed release channel.\n\n"
+    const notesFile = join(tmpdir(), `bento-release-${ver}.md`)
+    writeFileSync(notesFile, intro + notes)
+    run('gh', ['release', 'create', tag, releaseShell, '--title', tag, '--notes-file', notesFile])
+    console.log(`✓ GitHub release ${tag} created with the signed shell attached`)
+  } else {
+    const assets = (() => {
+      try { return capture('gh', ['release', 'view', tag, '--json', 'assets', '-q', '.assets[].name']) }
+      catch { return '' }
+    })()
+    if (!assets.includes('Bento_Slides.bento.html')) {
+      run('gh', ['release', 'upload', tag, releaseShell, '--clobber'])
+      console.log(`✓ attached the signed shell to the existing release ${tag}`)
+    } else {
+      console.log(`✓ GitHub release ${tag} already published`)
+    }
+  }
+
+  // Assert rather than assume: "publish succeeded" must mean the release is
+  // actually there, with the file on it.
+  const check = (() => {
+    try { return capture('gh', ['release', 'view', tag, '--json', 'assets', '-q', '.assets[].name']) }
+    catch { return '' }
+  })()
+  if (!check.includes('Bento_Slides.bento.html')) {
+    die(`GitHub release ${tag} is missing Bento_Slides.bento.html after publishing — attach it before announcing.`)
+  }
+}
 
 // ---- keep the LIVE guestbook daemon on the freshly-published shell ---------
 // bento.page/guestbook.bento.html is served by the Cloudflare daemon from KV,
