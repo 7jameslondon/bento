@@ -112,6 +112,24 @@ export function addPack(pack: LanguagePack, appName?: string): boolean {
   return true
 }
 
+/**
+ * Drop a loaded pack. Removes its picker entry too — unless the language is
+ * ALSO in the bundled core, in which case the pack was only correcting it and
+ * the core entry must survive. Falls the active locale back to English if the
+ * language just disappeared underneath it.
+ */
+export function removePack(lang: string): boolean {
+  if (!PACKS[lang]) return false
+  delete PACKS[lang]
+  const stillBundled = PACKED ? COLUMN[lang] !== undefined : !!CATALOGS[lang]
+  if (!stillBundled) {
+    CHOICES = CHOICES.filter((c) => c.code !== lang)
+    if (current === lang) setLocale('en')
+  }
+  current = null
+  return true
+}
+
 /** Languages available only because a pack was loaded. */
 export const loadedPacks = (): string[] => Object.keys(PACKS)
 
@@ -189,4 +207,4 @@ export function t(en: string, vars?: Record<string, string | number>): string {
 
 // dev convenience: window.bento.i18n exposes locale switching for testing;
 // the pseudo locale is reachable by setLocale('x-pseudo') in any build.
-export const i18nApi = { t, locale, setLocale, choices: localeChoices, addPack, loadedPacks }
+export const i18nApi = { t, locale, setLocale, choices: localeChoices, addPack, removePack, loadedPacks }

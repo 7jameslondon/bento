@@ -23,7 +23,8 @@ import { insertElements, insertSlides, parseClip, serializeElements, serializeSl
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
-import { t, setLocale, locale, LOCALE_CHOICES } from '../i18n'
+import { t, setLocale, locale, localeChoices, LOCALE_CHOICES, applyDirection, isRtl } from '../i18n'
+import { availablePacks, fetchPack, markFileSaved, packCoverage, packsInFile, stageForFile, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -32,6 +33,9 @@ const i18nT = t
 /** Per-BROWSER, not per-deck: whether the "this browser can't rewrite files"
  *  notice has been acknowledged. It is a property of the browser. */
 const SAVE_NOTICE_KEY = 'bento-save-notice'
+
+/** Show the language search once the available list outgrows a glance. */
+const SEARCH_FROM = 8
 
 const SHAPE_MENU: Array<{ kind: ShapeKind; label: string; icon: string; draw?: 'line' | 'path' | 'connector' | 'free' | 'poly'; tip: string }> = [
   { kind: 'rect', label: 'Rectangle', icon: ICONS.rect, tip: 'A rectangle — rounded corners, fills, gradients and shadows in the panel' },
@@ -391,8 +395,11 @@ export class Editor {
   private updatePanelChevrons() {
     const glyph = (side: 'left' | 'right') => {
       const collapsed = (side === 'left' ? this.sidebar : this.props).classList.contains('ed-collapsed')
-      // chevron points where clicking will move the boundary
-      return side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      // chevron points where clicking will move the boundary. 'left'/'right'
+      // name the DOM order, not the screen: under an RTL chrome the slide list
+      // sits on the right, so the arrow that means "open me" turns around too.
+      const g = side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      return isRtl() ? (g === '›' ? '‹' : '›') : g
     }
     for (const side of ['left', 'right'] as const) {
       const b = this.panelToggles[side]
@@ -435,7 +442,10 @@ export class Editor {
       document.body.classList.add('ed-col-resizing')
       const move = (ev: MouseEvent) => {
         const dx = ev.clientX - startX
-        this.panelW[side] = Math.min(max, Math.max(min, startW + (side === 'left' ? dx : -dx)))
+        // clientX is physical; which way widens the panel depends on which
+        // screen edge it is docked to, and RTL swaps the two panels over.
+        const widens = (side === 'left') !== isRtl() ? dx : -dx
+        this.panelW[side] = Math.min(max, Math.max(min, startW + widens))
         this.applyPanelWidths()
       }
       const up = () => {
@@ -978,24 +988,207 @@ export class Editor {
     await this.save(true)
   }
 
+  /**
+   * Languages dialog, organised by WHERE a language lives — because that is
+   * the only thing about it a user actually has to decide:
+   *
+   *   In this file          travels with the deck; everyone who opens it has it
+   *   On this computer      this browser only; every deck you open here
+   *   Available to add      published, not here yet
+   *
+   * The two scopes behave very differently and used to be explained in one
+   * buried sentence. Naming them as sections makes the consequence — "will the
+   * person I send this to see it?" — readable at a glance instead of inferred.
+   *
+   * "In this file" today means the languages compiled into the build. Packs
+   * spliced into a saved file will list there too, under the same heading,
+   * which is why the section is worded around the FILE rather than around
+   * "built in".
+   */
+  private async openLanguages() {
+    document.querySelector('.ed-about-overlay')?.remove()
+    const overlay = div('ed-about-overlay')
+    const box = div('ed-about')
+    const h = div('ed-about-h')
+    h.textContent = t('Languages')
+    box.appendChild(h)
+
+    const listHost = div('ed-lang-manage')
+    box.appendChild(listHost)
+
+    const paint = async () => {
+      listHost.textContent = ''
+      const bundled = LOCALE_CHOICES.filter((c) => c.code !== 'en')
+
+      const section = (label: string, blurb: string) => {
+        const s = div('ed-lang-sec')
+        s.textContent = label
+        listHost.appendChild(s)
+        const b = div('ed-lang-blurb')
+        b.textContent = blurb
+        listHost.appendChild(b)
+      }
+      const row = (label: string, sub: string, actions: HTMLElement[] = [], host: HTMLElement = listHost) => {
+        const r = div('ed-lang-row')
+        const txt = div('ed-lang-txt')
+        const n = document.createElement('b')
+        n.textContent = label
+        const s = document.createElement('span')
+        s.textContent = sub
+        txt.append(n, s)
+        r.appendChild(txt)
+        if (actions.length) {
+          const acts = div('ed-lang-acts')
+          for (const a of actions) acts.appendChild(a)
+          r.appendChild(acts)
+        }
+        host.appendChild(r)
+      }
+
+      section(t('In this file'), t('Travels with the deck — anyone you send it to gets these too.'))
+      row('English, ' + bundled.map((c) => c.label).join(', '), t('Included in every Bento'))
+      for (const p of packsInFile()) {
+        const rm = document.createElement('button')
+        rm.className = 'ed-btn'
+        rm.textContent = t('Remove')
+        rm.title = t('Take out of the file — applies when you next save')
+        rm.addEventListener('click', () => {
+          unstageFromFile(p.lang)
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(
+          p.label || p.lang,
+          p.pending ? t('Added when you next save') : t('Saved in this file'),
+          [rm],
+        )
+        // Say how much English this pack will actually show. A pack is frozen
+        // at the version it was built for while the app keeps gaining strings,
+        // so a translated deck slowly reverts — silently, per string. Naming
+        // the number turns "why is some of this English?" into a fact, and the
+        // sentence says it fixes itself so nobody goes hunting for a button.
+        const cov = packCoverage(p)
+        if (cov.missing > 0) {
+          const warn = div('ed-lang-warn')
+          warn.textContent = t(
+            'Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.',
+            { v: p.version ?? '?', n: String(cov.missing) },
+          )
+          listHost.appendChild(warn)
+        }
+      }
+
+      const all = await availablePacks()
+      section(t('Available to add'), t('Goes into the deck itself, so it travels with the file. Written when you next save.'))
+      if (!all.length) {
+        const none = div('ed-hint')
+        none.textContent = t('Nothing new right now.')
+        listHost.appendChild(none)
+      }
+      // Search + a scrolling list: this section is the one that grows without
+      // bound as more languages ship, while the two above stay short. Matching
+      // on the endonym AND the code means someone who knows "nl" but not
+      // "Nederlands" (or the reverse) finds it either way.
+      if (all.length > SEARCH_FROM) {
+        const search = document.createElement('input')
+        search.type = 'search'
+        search.className = 'ed-lang-search'
+        search.placeholder = t('Search languages')
+        search.addEventListener('input', () => renderAvail(search.value))
+        listHost.appendChild(search)
+      }
+      const scroller = div(all.length > SEARCH_FROM ? 'ed-lang-scroll' : '')
+      listHost.appendChild(scroller)
+
+      const renderAvail = (q = '') => {
+        scroller.textContent = ''
+        // Nothing on offer at all is already stated above — saying it twice,
+        // once as 'No language matches ""', is worse than saying it once.
+        if (!all.length) return
+        const needle = q.trim().toLowerCase()
+        const hits = needle
+          ? all.filter((p) => p.label.toLowerCase().includes(needle) || p.lang.toLowerCase().includes(needle))
+          : all
+        if (!hits.length) {
+          const none = div('ed-hint')
+          none.textContent = t('No language matches “{q}”.', { q: q.trim() })
+          scroller.appendChild(none)
+          return
+        }
+        for (const p of hits) addRow(p, scroller)
+      }
+
+      // One destination. A pack lives in the FILE — see packs.ts for why the
+      // "on this computer" option was removed rather than kept alongside.
+      const addRow = (p: import('../packs').PackListing, host: HTMLElement) => {
+        const add = document.createElement('button')
+        add.className = 'ed-btn'
+        add.textContent = t('Add')
+        add.title = t('Put it in the deck — written when you next save.')
+        add.addEventListener('click', async () => {
+          add.disabled = true
+          add.textContent = t('Adding…')
+          const got = await fetchPack(p)
+          if (typeof got === 'string') {
+            this.toast(languageInstallError(got))
+            add.disabled = false
+            add.textContent = t('Add')
+            return
+          }
+          stageForFile(got)
+          this.toast(t('{lang} will be saved with this deck', { lang: p.label }))
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(p.label, p.lang, [add], host)
+      }
+
+      renderAvail()
+    }
+    await paint()
+
+    const row = div('ed-about-row')
+    const close = document.createElement('button')
+    close.className = 'ed-btn'
+    close.textContent = t('Done')
+    close.addEventListener('click', () => overlay.remove())
+    row.appendChild(close)
+    box.appendChild(row)
+
+    overlay.appendChild(box)
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) overlay.remove() })
+    document.body.appendChild(overlay)
+  }
+
   /** Globe → locale picker. UI language follows the VIEWER, never the file. */
   private languageDropdown(): HTMLElement {
     const wrap = div('ed-dropdown')
     const trigger = btn(ICONS.globe, '', () => wrap.classList.toggle('open'), t('Language'))
     const menu = div('ed-menu ed-lang-menu')
-    for (const c of LOCALE_CHOICES) {
+    // localeChoices(), NOT the frozen LOCALE_CHOICES const: installing a pack
+    // appends a language at runtime, and a static list could never show it.
+    for (const c of localeChoices()) {
       const b = btn('', c.label, () => {
         wrap.classList.remove('open')
         setLocale(c.code)
+        // switching to (or away from) Arabic/Hebrew/… turns the chrome around
+        applyDirection()
         this.build()
         this.rebuildSidebar()
       })
       if (c.code === locale()) b.classList.add('ed-lang-on')
       menu.appendChild(b)
     }
-    // right-anchor so the menu never overflows the window edge
-    menu.style.left = 'auto'
-    menu.style.right = '0'
+    menu.appendChild(div('ed-menu-sep'))
+    menu.appendChild(btn('', t('Manage languages…'), () => {
+      wrap.classList.remove('open')
+      void this.openLanguages()
+    }))
+    // end-anchored so the menu never overflows the window edge — as a class,
+    // not inline left/right, so it follows the chrome's direction (.ed-lang-menu
+    // in styles.css, alongside the Save menu's identical rule)
     wrap.append(trigger, menu)
     document.addEventListener('pointerdown', (ev) => {
       if (!wrap.contains(ev.target as Node)) wrap.classList.remove('open')
@@ -1636,6 +1829,7 @@ export class Editor {
         this.session?.stampInto(doc)
         await writeUpdatedFile(await serializeAuto(doc))
         this.store.setDirty(false)
+        markFileSaved() // the packs went out with those bytes too
         this.flashSaved()
         return
       } catch { /* keep dirty; the IndexedDB snapshot is the backstop */ }
@@ -1876,6 +2070,8 @@ export class Editor {
       const result = await saveFile(this.store.doc, forcePicker)
       if (result === 'cancelled') return
       this.store.setDirty(false)
+      // staged language packs are in the bytes now — stop calling them pending
+      markFileSaved()
       // record a recovery baseline + a version checkpoint at each manual save
       if (!isEncryptionActive()) { void putRecovery(this.store.doc); void addVersion(this.store.doc); this.lastVersionAt = Date.now() }
       // Saving is the opt-in: a named, saved deck is "live by default" from
@@ -2291,6 +2487,26 @@ export class Editor {
  * never receive it, and no later sync repairs that. Built at display time
  * because t() must never be frozen into a module-level const.
  */
+/**
+ * Turn a pack-install failure into a sentence. Built at display time because
+ * t() must never be frozen into a module-level const.
+ */
+function languageInstallError(code: import('../packs').PackError): string {
+  switch (code) {
+    case 'offline':
+      return t('Couldn’t download that language — check your connection and try again.')
+    case 'bad-pack':
+      return t('That language pack couldn’t be read.')
+    case 'wrong-app':
+      return t('That language pack was built for a different Bento app.')
+    // Says what happened and what was done about it, without pretending to
+    // know whether it was an attack or a bungled upload — we cannot tell, and
+    // the answer is the same either way: it was not installed.
+    case 'unverified':
+      return t('That language pack failed its security check, so it wasn’t added.')
+  }
+}
+
 function syncNoticeText(n: import('../sync/session').SyncNotice): string {
   switch (n.code) {
     case 'too-large':

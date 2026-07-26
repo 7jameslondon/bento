@@ -28,9 +28,73 @@ export function readEmbeddedDoc(): string | null {
   return text || null
 }
 
+/**
+ * Extra plaintext blocks the app wants written into every saved shell —
+ * language packs today (docs/i18n-packs.md), whatever else later. The kernel
+ * stays ignorant of what they mean: it is told an id, a type and a JSON body,
+ * and guarantees only that they survive a save the same way #bento-doc does.
+ *
+ * The full set is re-declared on every serialize, so dropping one from the
+ * list removes it from the next saved file — that is how "remove from this
+ * file" works without a second API.
+ */
+export interface ShellBlock {
+  id: string
+  type: string
+  /** JSON text; `<` is escaped on write exactly as the doc block's is */
+  body: string
+  attrs?: Record<string, string>
+}
+let shellBlocks: () => ShellBlock[] = () => []
+let managedTypes: string[] = []
+
+/**
+ * Register the provider consulted on every serialize, and the block types it
+ * OWNS. Call once, at boot.
+ *
+ * The types are declared rather than inferred from what the provider returns,
+ * because the empty list is meaningful: "this file should carry no language
+ * pack" has to clear the blocks the file arrived with, and a set derived from
+ * the blocks about to be written would be empty exactly then — leaving the
+ * last removed pack in the file (it would come back on the next open).
+ */
+export function registerShellBlocks(fn: () => ShellBlock[], types: string[]): void {
+  shellBlocks = fn
+  managedTypes = types
+}
+
+/** Every extra block currently in THIS document (as loaded from disk). */
+export function readShellBlocks(type: string): Array<{ id: string; body: string; el: Element }> {
+  return Array.from(document.querySelectorAll(`script[type="${type}"]`)).map((el) => ({
+    id: el.id,
+    body: (el.textContent ?? '').trim(),
+    el,
+  }))
+}
+
 /** Serialize a raw data-block body into an app shell. */
 function serializeBody(shell: Document, body: string, title: string): string {
   const clone = shell.cloneNode(true) as Document
+
+  // Re-declare the app's extra blocks: drop every one of a managed type, then
+  // write the current set back. Removing a language from the file is therefore
+  // just "stop listing it" — no deletion path to get wrong. The clear-set is
+  // the DECLARED types, never the types about to be written: an empty write
+  // set still has to clear (that is what removing the file's last pack looks
+  // like).
+  const wanted = shellBlocks()
+  for (const type of new Set([...managedTypes, ...wanted.map((b) => b.type)])) {
+    for (const stale of Array.from(clone.querySelectorAll(`script[type="${type}"]`))) stale.remove()
+  }
+  for (const b of wanted) {
+    const el = clone.createElement('script')
+    el.setAttribute('type', b.type)
+    el.id = b.id
+    for (const [k, v] of Object.entries(b.attrs ?? {})) el.setAttribute(k, v)
+    // same <-escape as the doc block: these can never contain "</script>"
+    el.textContent = '\n' + b.body.replace(/</g, '\\u003c') + '\n'
+    clone.head.appendChild(el)
+  }
 
   let block = clone.getElementById(DATA_BLOCK_ID)
   if (!block) {

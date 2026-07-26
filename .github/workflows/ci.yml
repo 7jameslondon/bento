@@ -51,6 +51,15 @@ jobs:
         # packed.ts would silently ship yesterday's translations.
         run: node scripts/build-i18n.mjs --check
 
+      - name: Language packs build and index cleanly
+        # Emits every pack and builds the index payload WITHOUT signing (--dry
+        # writes nothing and needs no key — signing stays local, see the header).
+        # Catches a malformed pack catalog (missing label, duplicate language,
+        # wrong app) here rather than mid-release.
+        run: |
+          node scripts/build-i18n.mjs --packs "$RUNNER_TEMP/packs"
+          node scripts/sign-packs.mjs "$RUNNER_TEMP/packs" --dry
+
       - name: Typecheck
         working-directory: slides
         run: node_modules/.bin/tsc -b
@@ -83,6 +92,12 @@ jobs:
 
       - name: Splice conformance gate (spaces)
         run: node scripts/shell-gate.mjs spaces/dist-single/Bento_Spaces.bento.html
+
+      - name: Language pack verification rig
+        # Packs come off the network, so the signature + hash-pin chain is the
+        # only thing between a hostile channel and the strings in the UI.
+        # Tampered pack, tampered index, unsigned index — each must be refused.
+        run: node scripts/test-packs.ts
 
       - name: CRDT convergence rig
         # 40 seeds locally; deeper on CI where the seconds are free.

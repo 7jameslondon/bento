@@ -14,6 +14,107 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-26 — A language pack lives in the FILE and nowhere else
+
+No browser-local install. A "keep it on this computer" option (localStorage)
+was **built and then removed**, because `localStorage` is scoped per ORIGIN
+and that is fatally misaligned with how Bento is used: the download comes from
+`bento.page` (an https origin) and the file is then opened from disk (a
+`file://` origin). A language added on the website was therefore GONE the
+moment the user saved the deck and reopened it locally — the exact journey the
+product encourages, and "I added Korean and it vanished" is not a bug a user
+can diagnose.
+
+One home also matches the platform: the file *is* the software, so a language
+belongs to the deck. The trade — adding a language requires saving the file —
+is stated plainly in the UI ("Added when you next save") rather than hidden.
+Adding is staged on click and written on the next save because on browsers
+without File System Access, writing on click means silently downloading a
+second copy of the user's deck.
+
+Corollary: anything that remembers pack *content* outside the file
+reintroduces this. Viewer *preferences* (locale, reduce-motion) stay
+browser-local on purpose; that asymmetry is deliberate. Details:
+`docs/i18n-packs.md`, `slides/src/packs.ts`.
+
+## 2026-07-26 — The pack carrier is generic; pack POLICY is not. This is not a plugin system.
+
+The kernel mechanism is already extension-agnostic and should stay that way:
+`registerShellBlocks` / `readShellBlocks` (`kernel/src/save.ts`) carry
+arbitrary typed blocks in the shell and know nothing about languages, and
+`registerUpdatePrepare` (`kernel/src/update.ts`) is a generic "refresh
+version-bound extras" hook. Signature verification and hash pinning are being
+made generic in the kernel too (branch `claude/i18n-pack-verify`). Reuse all
+of that freely.
+
+**Do not generalize the policy.** Language packs are DATA and their worst case
+is bounded — a tampered or stale pack shows wrong or English words. That bound
+is why degrade-per-string, keep-on-refresh-failure, and auto-refresh on update
+are the right rules *for packs*.
+
+Anything carrying CODE is categorically different: unbounded failure (it would
+hold the document, the file handle, and the collab keys), and it breaks the
+property that makes self-update trustworthy — that the shell only ever runs
+bytes from a signed release. Such a thing would need its own policy (pinned at
+install, never auto-refreshed) and must not inherit the pack rules by reusing
+the pack machinery.
+
+So: reuse the carrier and the crypto; do not treat "we have packs" as evidence
+that a plugin system is designed or wanted. It is not.
+
+## 2026-07-26 — Side-loaded artifacts: sign the index, pin the bytes, fail closed
+
+Language packs are fetched over the network, so they get the **same two-step
+the app shell's own update already gets**: an envelope signed with the release
+key (`{payload, sig}`, ECDSA P-256 / SHA-256) whose payload pins each
+artifact's `sha256`, and a download that is accepted only if its bytes hash to
+that pin. Signature over the pin, pin over the bytes. **No second key and no
+second trust root** — `PUBLIC_KEY_JWK` in `kernel/src/update.ts` is it.
+
+The mechanism lives in the kernel (`verifySigned`, `fetchPinned`) because it is
+the same for anything side-loaded; the *policy* stays in the app
+(`slides/src/packs.ts`). Keep that boundary: the kernel helpers verify BYTES,
+they do not decide what is safe to use. Packs are DATA with a bounded failure
+mode (wrong words on screen), which is why a pack that fails a refresh is kept
+at its existing version rather than dropped. Anything side-loaded that ever
+carries CODE needs stricter policy — pinned at install, never auto-refreshed —
+and must not inherit the pack rules by reusing the same fetch.
+
+**Fail closed, no legacy path.** An unsigned or unpinned index yields no
+listings at all. Nothing is published yet, so there is no permissive fallback
+to keep — and one added later would mean whoever answers for the channel picks
+the strings in the UI.
+
+**A pack already inside a file is NOT re-verified** (`readPacksFromShell`). It
+was verified at the door, and once spliced it carries exactly the trust the
+document does — anyone who can rewrite that block can rewrite the checking
+code too. Re-verifying would need the network at boot, which breaks offline
+use. Proof rig: `node scripts/test-packs.ts` (throwaway key, real crypto).
+
+## 2026-07-26 — Language packs are published under a SIGNED INDEX, separate from the manifest
+
+Amends the "Signing and release" paragraph of `docs/i18n-packs.md`, which said
+the update manifest would gain a `packs` array. It does not.
+
+`release.mjs` emits the packs and signs **one index** over all of them at
+`releases/slides/packs.json` — the same `{payload, sig}` envelope, the same
+offline key, and literally the same signing code as the manifest (extracted to
+`scripts/sign-payload.mjs`). Each listing pins its pack's `sha256`; individual
+packs are not separately signed. Clients verify the index once, then hash each
+download against its signed hash.
+
+Why not inside the manifest: shipped files ignore a manifest that is not
+strictly newer than themselves (downgrade-replay protection), so pack hashes
+carried there could never be corrected **between** app releases — and a fixed
+translation is not a new app version. A separate index is re-issuable any day,
+and `manifest.json` keeps meaning exactly one thing: here is the app shell.
+Signed code and signed data stay two artifacts.
+
+Still one key, still local-only signing, and `publish-site.mjs` now gates the
+index the way it already gates the shell (indexed pack missing, hash drifted,
+or packs staged with no index = refuse to publish). Details and the exact
+payload shape: `docs/i18n-packs.md` §"Signing and release"; `scripts/sign-packs.mjs`.
+
 ## 2026-07-25 — i18n: a bundled core of 9 languages, everything else a signed pack
 
 The 7 non-English catalogs cost **115,572 B** of the shell even after key-once
@@ -264,3 +365,42 @@ something is actually failing.
 Human review is a practice, not a GitHub setting, for as long as the team is
 one person. Restore a real approval count the moment a second reviewer exists;
 the future-action exclusion list in the amended entry still applies.
+
+## RTL is two separable problems; only one of them is the document's
+
+**Decided:** 2026-07-26. Supersedes nothing; establishes the split.
+
+Content bidi and chrome mirroring get confused constantly, and treating them
+as one feature produces the wrong answer to both.
+
+*Content* direction is a correctness bug and belongs to the document: an
+Arabic sentence puts its full stop in the wrong place without `dir="auto"`,
+and it is wrong for everyone who opens the file. Cheap, uncontroversial, do it.
+
+*Chrome* mirroring is a UI convention. Nothing is incorrect without it; the
+editor merely feels foreign to an RTL reader. It was deliberately sequenced
+AFTER an RTL language pack existed, because mirroring a UI whose every label
+is still English is worse than not mirroring — and because the point of
+shipping a pack first is to learn whether RTL users actually turn up.
+
+The invariant that falls out of the split — **the document never mirrors** —
+is recorded in `PLATFORM.md` §8 and binds every Bento app. A document that
+looks different depending on the viewer's locale is a format-level bug.
+
+Cost, measured rather than guessed: ~430 bytes in the shipped shell for the
+whole chrome conversion, and **zero** for the languages themselves, because
+every RTL language is a pack. Size was never the constraint here. The real
+constraint is that 32 of the editor's ~36 direction-adjacent coordinate sites
+live in `canvas.ts` (Moveable/Selecto), which cannot be verified by an agent —
+synthetic drags on Moveable handles do not register at all. Pinning the
+document surfaces LTR was sufficient to leave that math untouched, and that is
+the outcome to preserve: if a future change makes chrome direction reach
+`canvas.ts`, stop and reconsider rather than refactoring the coordinate code.
+
+**No plural system.** Hebrew (and later Arabic) ship without one. Of 15
+count-bearing strings only 6 take a real count; the rest are index labels
+(`Axis {n}`, `slide {n}`) or abbreviated times. Six strings do not justify
+changing the catalog format, the build script, the CI gate and every catalog.
+Translators phrase them count-agnostically instead (`מחוברים: {n}`), which is
+standard practice when a framework lacks plurals and costs nothing at runtime.
+Revisit only if a language arrives where the workaround genuinely fails.
