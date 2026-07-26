@@ -404,3 +404,43 @@ changing the catalog format, the build script, the CI gate and every catalog.
 Translators phrase them count-agnostically instead (`מחוברים: {n}`), which is
 standard practice when a framework lacks plurals and costs nothing at runtime.
 Revisit only if a language arrives where the workaround genuinely fails.
+
+## One English word, two meanings = two keys
+
+**Decided:** 2026-07-26. Consequence of English-string-as-key; binds every
+Bento app that uses `kernel/src/i18n.ts`.
+
+Gettext-style catalogs key on the English source string, which quietly assumes
+that one English word means one thing. It often doesn't. `Loop` was the
+animation loop AND the media playback toggle; `solid` was a fill style AND a
+line style. Every language had to pick one word and be wrong in the other
+place — Swedish wants *enfärgad* for a solid colour and *heldragen* for a
+solid line, and no amount of translator care fixes that from inside the
+catalog. Both were found independently by pack authors, which is the signal:
+if a translator has to ask "which one is this?", the key is broken, not them.
+
+**The rule.** When one English string reaches `t()` from two call sites that
+mean different things, the more specific site takes a QUALIFIED key
+(`Loop animation`, `solid colour`) and the plainer one keeps the bare word.
+Do not add a context-prefix convention — the key is also what English users
+read, so it has to be a sentence, not `fill.solid`.
+
+**Model words never move.** Values like `solid`/`gradient` are format words
+stored in the document. Disambiguate the LABEL only: `labeledSelect()` takes
+`[value, label]` pairs precisely so the displayed string and the stored string
+can diverge. A "fix" that changes what is written to `doc` is a format change
+wearing an i18n costume.
+
+**The cost, so it is paid deliberately.** Re-keying invalidates that entry in
+every bundled catalog AND in every pack, silently — the string simply falls
+back to English. So it happens BEFORE packs are published, in one PR, with
+the affected keys listed for pack authors to pick up. After packs ship,
+re-keying is a coordinated break across every language and should be weighed
+against living with a slightly wrong word.
+
+**Interpolated values are strings too.** `t('This {kind} is…', { kind })` with
+a model word for `kind` puts an English noun inside a translated sentence.
+Localise at the call site (`{ kind: t(kind) }`) — and check the sentence still
+agrees grammatically, since a substituted noun carries gender in half the
+languages we ship (French needed "Ce fichier {kind}" once `vidéo` could land
+in it).
