@@ -33,6 +33,7 @@ const CHOICES: LocaleChoice[] = [
   { code: 'fr', label: 'Français' },
   { code: 'it', label: 'Italiano' },
   { code: 'de', label: 'Deutsch' },
+  { code: 'pt', label: 'Português' },
 ]
 
 registerI18n({
@@ -45,6 +46,10 @@ registerI18n({
       'zh-SG': 'zh-Hans',
       'zh-TW': 'zh-Hant',
       'zh-HK': 'zh-Hant',
+      // Brazilian terminology; pt-PT differs enough to deserve its own
+      // catalog later (docs/i18n-packs.md) — until then it maps here.
+      'pt-BR': 'pt',
+      'pt-PT': 'pt',
     },
   },
   choices: CHOICES,

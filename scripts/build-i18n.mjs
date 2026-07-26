@@ -35,7 +35,7 @@ const outPath = join(dir, 'packed.ts')
 // Column order. Adding a locale = add its file and append it HERE (appending
 // keeps existing columns stable, so a stale packed.ts can never silently
 // shift every translation by one).
-const LOCALES = ['ja', 'zh-Hans', 'zh-Hant', 'es', 'fr', 'de', 'it']
+const LOCALES = ['ja', 'zh-Hans', 'zh-Hant', 'es', 'fr', 'de', 'it', 'pt']
 
 const files = readdirSync(dir).filter((f) => f.endsWith('.ts') && f !== 'packed.ts')
 const missing = LOCALES.filter((l) => !files.includes(`${l}.ts`))
