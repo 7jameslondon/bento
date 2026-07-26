@@ -92,8 +92,12 @@ Needs **full Xcode** (Command Line Tools alone is not enough) and XcodeGen:
 
 ```sh
 brew install xcodegen
-cd tray && xcodegen && open BentoTray.xcodeproj
+cd tray/ios && xcodegen && open BentoTray.xcodeproj
 ```
+
+Source lives under `tray/<platform>/` — `tray/ios/` today. The design below
+(the polyfill and its protocol) is platform-neutral; only the transport lookup
+and the native file layer are not.
 
 `BentoTray.xcodeproj` is generated, never committed — a `.pbxproj` in git is a
 merge-conflict magnet.

@@ -28,5 +28,5 @@ working/
 scripts/.cache/
 
 # generated Xcode project — regenerate with `cd tray && xcodegen`
-tray/*.xcodeproj/
-tray/BentoTray/Resources/starter.bento.html
+tray/ios/*.xcodeproj/
+tray/ios/Resources/starter.bento.html
