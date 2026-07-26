@@ -96,20 +96,53 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         return b
     }()
 
-    /// Hide the bar whenever height is scarce, and show the floating exit
-    /// instead. Done EXPLICITLY: `hidesBarsWhenVerticallyCompact` was tried
-    /// first and simply did not fire for a modally-presented navigation
-    /// controller — the bar stayed put in landscape.
+    /// The host shows ONE small control and nothing else.
+    ///
+    /// The nav bar is hidden in BOTH orientations now. The document already has
+    /// its own toolbar, so a native bar above it was a second row of chrome
+    /// competing with the first — it pushed Bento's topbar down and spent 44pt
+    /// of a screen that has none to spare. Portrait is not as tight as
+    /// landscape, but the bar was no more justified there; it was only ever a
+    /// way to offer an exit, and the floating control does that for a fraction
+    /// of the space.
+    ///
+    /// (`hidesBarsWhenVerticallyCompact` was tried early on and simply does not
+    /// fire for a modally-presented navigation controller.)
     private func syncChrome() {
-        if isPresentingFullscreen {
-            navigationController?.setNavigationBarHidden(true, animated: false)
-            floatingExit.isHidden = true
-            return
-        }
-        let short = traitCollection.verticalSizeClass == .compact
-        navigationController?.setNavigationBarHidden(short, animated: false)
-        floatingExit.isHidden = !short
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        floatingExit.isHidden = isPresentingFullscreen
         view.bringSubviewToFront(floatingExit)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        publishSafeArea()
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        publishSafeArea()
+    }
+
+    /// Hand the real insets to the page as CSS custom properties.
+    ///
+    /// This exists because env(safe-area-inset-*) is DEAD in this WKWebView:
+    /// the native view reports 62/0/34/0 while CSS reads 0px, with or without
+    /// contentInsetAdjustmentBehavior. A page therefore cannot keep its chrome
+    /// clear of the status bar or home indicator by the standard mechanism, and
+    /// the host is the only thing that knows the numbers.
+    ///
+    /// Published as `--tray-safe-*` on the root element. A page that never
+    /// heard of this host is unaffected: the variables go unread and it gets the
+    /// same full-bleed treatment a browser would give it.
+    private func publishSafeArea() {
+        let i = view.safeAreaInsets
+        let js = "(function(){var r=document.documentElement.style;"
+            + "r.setProperty('--tray-safe-top','\(Int(i.top))px');"
+            + "r.setProperty('--tray-safe-right','\(Int(i.right))px');"
+            + "r.setProperty('--tray-safe-bottom','\(Int(i.bottom))px');"
+            + "r.setProperty('--tray-safe-left','\(Int(i.left))px');})();"
+        webView.evaluateJavaScript(js)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -159,11 +192,12 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.allowsBackForwardNavigationGestures = false
         webView.navigationDelegate = self
-        // The page must reach every physical edge. Left at .automatic, UIKit
-        // insets the scroll view by the safe area, so in landscape the deck
-        // stopped short of the left, right and bottom edges — visible as bands
-        // down three sides during a slideshow. The document decides its own
-        // margins; the host must not add any.
+        // Full bleed. WKWebView does NOT hand safe-area insets to CSS here —
+        // measured both ways: with `.never` the page filled the screen and
+        // env(safe-area-inset-*) read 0px on all four sides; with the default it
+        // read 0px AND inset the content (innerHeight 956 -> 860). Since env()
+        // is unusable either way, take the full screen and publish the insets
+        // ourselves — see publishSafeArea().
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         view.addSubview(webView)
         observeFullscreen()
