@@ -33,3 +33,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: page.bento.tray
         TARGETED_DEVICE_FAMILY: "1,2"   # iPhone and iPad
         SWIFT_VERSION: "5.0"
+        # Assets.xcassets is picked up by the source glob above; this names the
+        # icon set inside it. Without it the catalog still compiles and the app
+        # still ships — with no icon at all, silently.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

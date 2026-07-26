@@ -9,7 +9,13 @@
   edge while staying fat at the corners, which reads as a mistake rather than a
   frame. 4.2 survives masking as an even rim down to the 40px notification size.
 
-  Export at 1024x1024 for App Store Connect (opaque, no alpha).
+  This is the SOURCE. The build consumes a 1024x1024 PNG export of it at
+  ../ios/Assets.xcassets/AppIcon.appiconset/icon-1024.png — one copy, kept
+  where the asset catalog needs it, and the same file App Store Connect wants
+  (opaque, no alpha). After editing this file, re-export:
+
+    chrome --headless --screenshot=<dest> --window-size=1024,1024 \
+           --default-background-color=00000000 tray-icon.svg
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 32 32"
      role="img" aria-label="Bento Tray">
