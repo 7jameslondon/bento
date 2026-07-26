@@ -25,6 +25,7 @@ import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { gatePackIndex } from './sign-packs.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const site = join(root, 'site')
@@ -85,6 +86,28 @@ if (existsSync(shellFile)) {
     )
   }
   console.log(`• shell-consistency gate: ${decks.length} example deck(s) embed the released shell ✓`)
+}
+
+// ---- gate: the pack index MUST describe the packs being published ----------
+// Same principle as the shell: signed bytes are served bytes. The index pins
+// each pack's sha256, so a pack rebuilt after signing (or one dropped into the
+// directory by hand) would be rejected by every client with an integrity error
+// the user cannot act on. Catch it here instead.
+const packIndex = join(site, 'releases/slides/packs.json')
+const packsDir = join(site, 'releases/slides/packs')
+if (existsSync(packIndex)) {
+  if (!existsSync(packsDir)) die(`${packIndex.slice(site.length + 1)} exists but there are no packs beside it — re-run release.mjs`)
+  try {
+    gatePackIndex(packIndex, packsDir)
+    console.log('• pack-index gate: every published pack matches its signed hash ✓')
+  } catch (e) {
+    die(`${e.message}\n  Re-sign with: node scripts/sign-packs.mjs ${packsDir} --out ${packIndex}`)
+  }
+} else if (existsSync(packsDir) && readdirSync(packsDir).some((f) => f.endsWith('.pack.json'))) {
+  // Unsigned packs on the CDN are worse than no packs: nothing would verify
+  // them, and a client that fell back to "just fetch it" would be trusting
+  // the host. Refuse rather than publish an unverifiable language.
+  die(`language packs are staged at ${packsDir.slice(site.length + 1)} but packs.json is MISSING — an unsigned pack must never be published.\n  Fix: node scripts/sign-packs.mjs ${packsDir} --out ${packIndex}`)
 }
 
 // ---- mirror site/ → dest (authoritative; never touches dest/.git) ----------

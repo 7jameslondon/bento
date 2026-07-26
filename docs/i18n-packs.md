@@ -101,13 +101,65 @@ Per-language maps, not the bundled positional-array shape: a pack is edited
 and reviewed as one language, and positional arrays would couple every pack to
 a column order.
 
-### Signing and release
+### Signing and release — the signed pack index
 
-Packs reuse the existing release machinery **exactly** — ECDSA P-256 over the
-sha256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
-(`PLATFORM.md` §6). The private key stays offline; `release.mjs` emits and
-signs packs beside the shell, and the manifest gains a `packs` array listing
-`{lang, version, sha256, url}`. No new trust root, no second key.
+Packs reuse the existing release machinery **exactly** — ECDSA P-256 /
+SHA-256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
+(`PLATFORM.md` §6). The private key stays offline and `release.mjs` runs
+locally. No new trust root, no second key.
+
+**The INDEX is signed; individual packs are not.** `release.mjs` emits the
+packs and then signs one index over all of them:
+
+```
+https://bento.page/releases/slides/
+  manifest.json                          signed — the app shell
+  packs.json                             signed — the pack index
+  packs/bento-slides-1.0.11-ko.pack.json  the packs themselves
+```
+
+`packs.json` is the same envelope as the manifest, produced by the same code
+(`scripts/sign-payload.mjs`, shared by `sign-release.mjs` and `sign-packs.mjs`):
+
+```json
+{ "payload": "<the exact json string that was signed>", "sig": "<base64>" }
+```
+
+and the payload is
+
+```json
+{ "app": "bento-slides", "version": "1.0.11", "at": "<iso>",
+  "packs": [ { "lang": "ko", "label": "한국어", "version": "1.0.11",
+               "url": "packs/bento-slides-1.0.11-ko.pack.json",
+               "sha256": "<hex, lowercase>", "bytes": 60114 } ] }
+```
+
+`sig` is ECDSA P-256 / SHA-256 over `payload`'s **UTF-8 string bytes**, IEEE
+P1363 (raw r‖s), base64 — byte-identical in construction to the manifest, so
+the client verifies both with the same handful of lines.
+
+The client's job is therefore the same two-step the shell already performs for
+its own update: **verify the index signature once, then hash each downloaded
+pack against its signed `sha256`.** A pack that does not match its pinned hash
+is refused. `url` is relative to the channel unless absolute — so a dev
+channel (`localStorage 'bento-packs-url'`) serves its own packs rather than
+silently reaching back to bento.page.
+
+Two reasons this is a separate artifact from `manifest.json` rather than a
+`packs` array inside it:
+
+- **Packs publish on their own clock.** A corrected translation is not a new
+  app version — but shipped files ignore a manifest that is not strictly
+  *newer* than themselves (downgrade-replay protection), so a hash carried in
+  the manifest could never be corrected *between* releases. A separate index is
+  re-issuable any day.
+- **The manifest keeps meaning one thing:** here is the app shell. The update
+  channel ships signed *code*; the pack channel ships signed *data*.
+
+`publish-site.mjs` gates on this before pushing: every indexed pack must exist
+and match its signed hash, no published pack may be missing from the index, and
+staged packs without an index refuse to publish at all. Signed bytes are served
+bytes — for the index exactly as for the shell.
 
 ### Loading
 
@@ -184,8 +236,11 @@ second one.
 - [x] Pack format + `build-i18n.mjs --packs` emitting them — #81
 - [x] Kernel `addPack()` loading path — #81
 - [x] Korean, the first pack (662/662) — #81
-- [x] `release.mjs` emits packs; their hashes ride in the **signed manifest
-      payload** — no second key, no second signature
+- [x] `release.mjs` emits packs and publishes `packs.json`, a **signed index**
+      pinning each pack's sha256 — same envelope, same offline key, no second
+      trust root. Gated at publish time.
+- [ ] Client: verify the index signature + each pack's pinned hash
+      (`slides/src/packs.ts` — the shape it must expect is specified above)
 - [ ] In-app "Add language…" (fetch → verify → splice, compressed)
 - [ ] **Update carries packs forward**
 - [ ] Shell smoke check covers a pack-carrying shell (note: `shell-gate.mjs`

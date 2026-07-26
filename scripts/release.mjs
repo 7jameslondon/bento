@@ -13,8 +13,9 @@
 //     slides/index.html                      live demo (the shell itself)
 //     releases/slides/Bento_Slides.bento.html   the download
 //     releases/slides/manifest.json          signed update manifest
-//     releases/slides/packs/*.pack.json      language packs (hashes signed
-//                                            inside the manifest payload)
+//     releases/slides/packs/*.pack.json      language packs
+//     releases/slides/packs.json             signed pack index (pins each
+//                                            pack's sha256)
 //
 // The bytes that get SIGNED are the bytes that get SERVED — everything is
 // staged from one local build, so the manifest sha256 always matches the
@@ -58,22 +59,31 @@ cpSync(shellSrc, join(site, 'slides/index.html'))
 // scripts/shell-gate.mjs (shared with CI, which runs it on every PR build).
 gateShell(join(site, 'releases/slides/Bento_Slides.bento.html'))
 
-// Language packs: every non-core language, emitted from its catalog and
-// staged beside the shell. Their hashes go INTO the signed manifest payload
-// (docs/i18n-packs.md), so no separate signing step and no second key.
-const packsOut = join(site, 'releases/slides/packs')
-execFileSync('node', [join(root, 'scripts/build-i18n.mjs'), '--packs', packsOut], { stdio: 'inherit' })
+const key = opt('key', null)
 
 // Sign the manifest against the staged bytes.
 const signArgs = [
   join(root, 'scripts/sign-release.mjs'),
   join(site, 'releases/slides/Bento_Slides.bento.html'),
   '--out', join(site, 'releases/slides/manifest.json'),
-  '--packs', packsOut,
 ]
-const key = opt('key', null)
 if (key) signArgs.push('--key', key)
 execFileSync('node', signArgs, { stdio: 'inherit' })
+
+// Language packs: every non-core language, emitted from its catalog, staged
+// beside the shell and listed in packs.json — a SIGNED index (same envelope,
+// same offline key as the manifest) that pins each pack's sha256. The index is
+// what "Add language…" reads; nothing is trusted without it.
+// Both steps are no-ops until a pack catalog exists (docs/i18n-packs.md).
+const packsOut = join(site, 'releases/slides/packs')
+execFileSync('node', [join(root, 'scripts/build-i18n.mjs'), '--packs', packsOut], { stdio: 'inherit' })
+const packArgs = [
+  join(root, 'scripts/sign-packs.mjs'), packsOut,
+  '--out', join(site, 'releases/slides/packs.json'),
+  '--version', version,
+]
+if (key) packArgs.push('--key', key)
+execFileSync('node', packArgs, { stdio: 'inherit' })
 
 writeFileSync(join(site, 'CNAME'), 'bento.page\n')
 // The site is fully pre-built static — disable Jekyll so every file is served
