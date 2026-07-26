@@ -71,6 +71,11 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     override func viewDidLoad() {
         super.viewDidLoad()
         let cfg = WKWebViewConfiguration()
+        // Element fullscreen. iPhone SAFARI has never offered this to web pages,
+        // which is why Bento's present mode falls back to filling its view — but
+        // WKWebView exposes it as an opt-in, so a hosted document can present
+        // properly where the same file in the browser cannot. (Spotted in #87.)
+        cfg.preferences.isElementFullscreenEnabled = true
         cfg.setURLSchemeHandler(self, forURLScheme: "bento-tray")
         cfg.userContentController.add(self, name: "bentoFile")
 

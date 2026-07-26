@@ -83,6 +83,15 @@ of this bridge did exactly that and prompted on every single save.
   launch would wipe that storage on every open. The trade is that moving or
   renaming a file gives it a new origin and orphans its local state — which is a
   cache and a backstop, never the document itself.
+- **Element fullscreen is enabled** (`preferences.isElementFullscreenEnabled`).
+  iPhone Safari has never offered element fullscreen to web pages, which is why
+  Bento's present mode falls back to filling its view in a browser — but
+  WKWebView exposes it as an opt-in. So a hosted document presents properly
+  where the very same file in Safari cannot: verified on an iPhone 17 Pro Max,
+  the status bar, the nav bar and Bento's own toolbar all disappear, the deck
+  letterboxes on black with a native ✕, and swiping advances slides. This is a
+  case where the wrapper is not merely restoring parity with desktop but doing
+  something the browser cannot. Credit to #87 for finding the flag.
 - **`bridge.js` is injected `.atDocumentStart`.** Bento decides whether it can
   save during boot; injected later, the editor has already concluded it cannot.
 
@@ -164,9 +173,8 @@ on the failure path and leaked once per document opened. The scope is dropped
 only after close completes; dropping it earlier can fail the final write for a
 file outside the container.
 
-Known limitation: the nav bar stays visible during a slideshow. The host cannot
-tell when an arbitrary page has gone presentation-mode, and iPhone Safari has no
-real fullscreen, so Bento falls back to filling its view.
+The nav bar does NOT intrude on a slideshow, because presenting takes real
+element fullscreen — see below. It is chrome for editing only.
 
 ### Platform notes worth keeping
 
