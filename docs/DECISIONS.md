@@ -14,6 +14,38 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-25 — i18n: a bundled core of 9 languages, everything else a signed pack
+
+The 7 non-English catalogs cost **115,572 B** of the shell even after key-once
+packing — more than any dependency, and an English-only shell is 28.8%
+smaller. But we want *more* languages, not fewer. So: **bundle a core, ship
+everything else as signed downloadable packs.**
+
+- **Bundled (9):** the existing 8 (en, ja, zh-Hans, zh-Hant, es, fr, de, it)
+  plus **Portuguese**. Nothing regresses for current users; Portuguese is
+  added because Brazil has a real English-proficiency gap and it is in the
+  cheapest cost tier.
+- **Everything else:** a pack, signed with the existing release key and
+  released centrally alongside each app release, fetched only on explicit user
+  action and spliced into the file.
+
+**No further languages get bundled by default** — demand declares itself
+through contributions (#17 offers Korean), and a pack can be revised without
+cutting an app release.
+
+Measured facts worth not re-deriving: cost is **~14 KB per language regardless
+of script** (CJK is the *cheapest* — 2.6× the bytes per character but a third
+of the characters). Simplified↔Traditional conversion on the fly does **not**
+pay: only 43.3% of characters match, because the difference is vocabulary
+(软件/軟體) not glyph form, and deflate already recovers the genuine redundancy.
+Rank candidate languages by the **English-proficiency gap in the segment that
+uses this tool**, not by speaker counts — which is why Hindi is not in the core
+despite 610M speakers.
+
+Full design, risks and status: **`docs/i18n-packs.md`**. The risk that will
+ship broken if ignored: **self-update must carry packs forward** — `update.ts`
+re-splices the document into a *new shell*, and packs live in the shell.
+
 ## 2026-07-25 — Every PR gets human review before merging to main (for now)
 
 At this stage of development the maintainer reviews **every** PR before it
