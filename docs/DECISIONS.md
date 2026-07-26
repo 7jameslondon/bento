@@ -62,6 +62,59 @@ the pack machinery.
 So: reuse the carrier and the crypto; do not treat "we have packs" as evidence
 that a plugin system is designed or wanted. It is not.
 
+## 2026-07-26 — Side-loaded artifacts: sign the index, pin the bytes, fail closed
+
+Language packs are fetched over the network, so they get the **same two-step
+the app shell's own update already gets**: an envelope signed with the release
+key (`{payload, sig}`, ECDSA P-256 / SHA-256) whose payload pins each
+artifact's `sha256`, and a download that is accepted only if its bytes hash to
+that pin. Signature over the pin, pin over the bytes. **No second key and no
+second trust root** — `PUBLIC_KEY_JWK` in `kernel/src/update.ts` is it.
+
+The mechanism lives in the kernel (`verifySigned`, `fetchPinned`) because it is
+the same for anything side-loaded; the *policy* stays in the app
+(`slides/src/packs.ts`). Keep that boundary: the kernel helpers verify BYTES,
+they do not decide what is safe to use. Packs are DATA with a bounded failure
+mode (wrong words on screen), which is why a pack that fails a refresh is kept
+at its existing version rather than dropped. Anything side-loaded that ever
+carries CODE needs stricter policy — pinned at install, never auto-refreshed —
+and must not inherit the pack rules by reusing the same fetch.
+
+**Fail closed, no legacy path.** An unsigned or unpinned index yields no
+listings at all. Nothing is published yet, so there is no permissive fallback
+to keep — and one added later would mean whoever answers for the channel picks
+the strings in the UI.
+
+**A pack already inside a file is NOT re-verified** (`readPacksFromShell`). It
+was verified at the door, and once spliced it carries exactly the trust the
+document does — anyone who can rewrite that block can rewrite the checking
+code too. Re-verifying would need the network at boot, which breaks offline
+use. Proof rig: `node scripts/test-packs.ts` (throwaway key, real crypto).
+
+## 2026-07-26 — Language packs are published under a SIGNED INDEX, separate from the manifest
+
+Amends the "Signing and release" paragraph of `docs/i18n-packs.md`, which said
+the update manifest would gain a `packs` array. It does not.
+
+`release.mjs` emits the packs and signs **one index** over all of them at
+`releases/slides/packs.json` — the same `{payload, sig}` envelope, the same
+offline key, and literally the same signing code as the manifest (extracted to
+`scripts/sign-payload.mjs`). Each listing pins its pack's `sha256`; individual
+packs are not separately signed. Clients verify the index once, then hash each
+download against its signed hash.
+
+Why not inside the manifest: shipped files ignore a manifest that is not
+strictly newer than themselves (downgrade-replay protection), so pack hashes
+carried there could never be corrected **between** app releases — and a fixed
+translation is not a new app version. A separate index is re-issuable any day,
+and `manifest.json` keeps meaning exactly one thing: here is the app shell.
+Signed code and signed data stay two artifacts.
+
+Still one key, still local-only signing, and `publish-site.mjs` now gates the
+index the way it already gates the shell (indexed pack missing, hash drifted,
+or packs staged with no index = refuse to publish). Details and the exact
+payload shape: `docs/i18n-packs.md` §"Signing and release"; `scripts/sign-packs.mjs`.
+
 ## 2026-07-25 — i18n: a bundled core of 9 languages, everything else a signed pack
 
 The 7 non-English catalogs cost **115,572 B** of the shell even after key-once

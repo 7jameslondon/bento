@@ -103,13 +103,65 @@ Per-language maps, not the bundled positional-array shape: a pack is edited
 and reviewed as one language, and positional arrays would couple every pack to
 a column order.
 
-### Signing and release
+### Signing and release — the signed pack index
 
-Packs reuse the existing release machinery **exactly** — ECDSA P-256 over the
-sha256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
-(`PLATFORM.md` §6). The private key stays offline; `release.mjs` emits and
-signs packs beside the shell, and the manifest gains a `packs` array listing
-`{lang, version, sha256, url}`. No new trust root, no second key.
+Packs reuse the existing release machinery **exactly** — ECDSA P-256 /
+SHA-256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
+(`PLATFORM.md` §6). The private key stays offline and `release.mjs` runs
+locally. No new trust root, no second key.
+
+**The INDEX is signed; individual packs are not.** `release.mjs` emits the
+packs and then signs one index over all of them:
+
+```
+https://bento.page/releases/slides/
+  manifest.json                          signed — the app shell
+  packs.json                             signed — the pack index
+  packs/bento-slides-1.0.11-ko.pack.json  the packs themselves
+```
+
+`packs.json` is the same envelope as the manifest, produced by the same code
+(`scripts/sign-payload.mjs`, shared by `sign-release.mjs` and `sign-packs.mjs`):
+
+```json
+{ "payload": "<the exact json string that was signed>", "sig": "<base64>" }
+```
+
+and the payload is
+
+```json
+{ "app": "bento-slides", "version": "1.0.11", "at": "<iso>",
+  "packs": [ { "lang": "ko", "label": "한국어", "version": "1.0.11",
+               "url": "packs/bento-slides-1.0.11-ko.pack.json",
+               "sha256": "<hex, lowercase>", "bytes": 60114 } ] }
+```
+
+`sig` is ECDSA P-256 / SHA-256 over `payload`'s **UTF-8 string bytes**, IEEE
+P1363 (raw r‖s), base64 — byte-identical in construction to the manifest, so
+the client verifies both with the same handful of lines.
+
+The client's job is therefore the same two-step the shell already performs for
+its own update: **verify the index signature once, then hash each downloaded
+pack against its signed `sha256`.** A pack that does not match its pinned hash
+is refused. `url` is relative to the channel unless absolute — so a dev
+channel (`localStorage 'bento-packs-url'`) serves its own packs rather than
+silently reaching back to bento.page.
+
+Two reasons this is a separate artifact from `manifest.json` rather than a
+`packs` array inside it:
+
+- **Packs publish on their own clock.** A corrected translation is not a new
+  app version — but shipped files ignore a manifest that is not strictly
+  *newer* than themselves (downgrade-replay protection), so a hash carried in
+  the manifest could never be corrected *between* releases. A separate index is
+  re-issuable any day.
+- **The manifest keeps meaning one thing:** here is the app shell. The update
+  channel ships signed *code*; the pack channel ships signed *data*.
+
+`publish-site.mjs` gates on this before pushing: every indexed pack must exist
+and match its signed hash, no published pack may be missing from the index, and
+staged packs without an index refuse to publish at all. Signed bytes are served
+bytes — for the index exactly as for the shell.
 
 ### Verification: what is checked, and what deliberately is not
 
@@ -148,6 +200,50 @@ inherit these rules.
 merge step: a pack's strings layer over the bundled core for its language.
 Lookup misses fall back per string to the English key, which is what makes a
 partial or stale pack degrade gracefully rather than break.
+
+### What the client checks (implemented)
+
+```
+embedded release key  ->  signs the index
+index                 ->  pins each pack's sha256
+pinned sha256         ->  the bytes we accept
+```
+
+You cannot substitute a pack without breaking its hash, and you cannot fix the
+hash without breaking the signature. Two kernel helpers do it, and nothing
+else in the codebase does release-channel crypto:
+
+- `verifySigned(raw, what?)` — envelope + signature, returns the payload.
+- `fetchPinned(url, sha256)` — fetch, hash, compare; `null` on any mismatch.
+
+They verify BYTES. They do not decide what is safe to use — that policy is the
+caller's, and packs are DATA (see the decision log entry, 2026-07-26). Anything
+side-loaded that ever carries CODE needs stricter policy — pinned at install,
+never auto-refreshed — and must not inherit the pack rules by reusing this
+fetch.
+
+`slides/src/packs.ts` composes them and **fails closed**. It expects the index
+payload specified above: an object whose `app` is this app's id (the signing
+key is platform-wide, so the id is what stops a validly signed index for
+another app) carrying a `packs` array. An unsigned index, an index for another
+app, a listing with no pin, or bytes that don't match all yield nothing to add
+and a `'unverified'` error in the UI. There is no permissive fallback for an
+unsigned index — nothing is published yet, so there is nothing to be
+compatible with, and a fallback shipped now would be permanent.
+
+Two things deliberately NOT checked:
+
+- **Packs already inside a file** (`readPacksFromShell`). Verified at the
+  door; once spliced, a pack carries the trust the document does, and
+  re-verifying would require the network at boot — the opposite of the
+  product's promise.
+- **A refresh that fails.** `refreshPacksForVersion` keeps the pack the file
+  already holds rather than dropping it. The unverified bytes are refused; the
+  previously verified ones stay. Degraded beats absent.
+
+Rig: `node scripts/test-packs.ts` (in CI) — tampered pack, tampered index,
+unsigned index, index signed for another app, missing pin, and the good path,
+against real WebCrypto with a throwaway key standing in for the release key.
 
 ### Incorporation into the file
 
@@ -298,27 +394,45 @@ turns native review into a continuous process instead of a release blocker.
   already has deflate+base64 payload blocks that would roughly halve it, at
   the cost of a second block shape for the gate to reason about.
 
+## Splicing a pack into a file — compress it
+
+Measured on the Korean pack: **56.8 KB raw JSON, 26.4 KB** through the
+deflate+base64 pipeline the shell already uses for its runtime payloads.
+
+Leave the artifact on the CDN **uncompressed** — GitHub Pages gzips it in
+transit anyway (17–20 KB on the wire), and a readable `.json` is worth keeping
+for translators. But the splice step MUST compress, because a spliced pack
+lives in every saved copy of that file forever: **30 KB per file, per
+language, permanently**, and unfixable once files are in the wild. Reuse
+`postbuild-compress.mjs`'s existing block format rather than inventing a
+second one.
+
 ## Status
 
-Answered: **is this shipped?** Anything marked *branch* is designed and
-written but not merged — do not describe it as shipped.
+Answered: **is this shipped?** Anything marked *branch* is written and green
+but not yet on `main` — do not describe it as shipped.
 
-- [x] Key-once packing of the bundled catalogs (PR #75) — the prerequisite:
-      it shrank the core, and its kernel change (`registerI18n` accepting a
-      packed table) is the loading path packs reuse.
-- [x] Portuguese catalog, bundled (PR #79)
-- [x] Pack format + `build-i18n.mjs --packs` emission, Korean first (PR #81)
-- [x] Runtime loading: `addPack`/`removePack`, per-string fallback
-      (`kernel/src/i18n.ts`)
+- [x] Key-once packing of the bundled catalogs — #75. The prerequisite: it
+      shrank the core, and its kernel change (`registerI18n` accepting a packed
+      table) is the loading path packs reuse.
+- [x] Portuguese catalog, bundled — #79
+- [x] Pack format + `build-i18n.mjs --packs` emission, Korean first — #81
+- [x] Kernel loading path: `addPack`/`removePack`, per-string fallback — #81
+- [x] `release.mjs` emits packs at release time — #91
+- [x] **Signed pack index** (`packs.json`) published to the channel, pinning
+      each pack's sha256 — same envelope, same offline key, no second trust
+      root; gated at publish time — #93
 - [x] In-app "Add language…" / "Remove", staged and written on the next save
-      — *branch `claude/i18n-pack-ui`, PR #86*
-- [x] **Update carries packs forward** + `refreshPacksForVersion` — same branch
-- [x] Per-pack staleness note from `packCoverage` — same branch
-- [x] `shell-gate.mjs` covers a pack-carrying shell — *branch
-      `claude/i18n-pack-gate`, stacked on #86*
-- [ ] `release.mjs` publishing packs + the signed manifest `packs` array —
-      *branch `claude/i18n-pack-release`*
-- [ ] Client-side signature/hash verification of fetched packs —
-      *branch `claude/i18n-pack-verify`*
-- [ ] A published pack index at the release channel (`packs.json`), so
-      "Available to add" is non-empty in the wild
+      — #86
+- [x] Update carries packs forward (`refreshPacksForVersion`) — #86
+- [x] Per-pack staleness note from `packCoverage` — #86
+- [x] Client verifies the index signature and each pack's pinned hash, fails
+      closed; proof rig `scripts/test-packs.ts` — #94
+- [x] `shell-gate.mjs` covers a pack-carrying shell, including an adversarial
+      block both below AND above `#bento-doc`; mutation-tested — *branch
+      `claude/i18n-pack-gate`, PR #95*
+- [x] Removing a file's LAST pack now actually sticks — *PR #96*
+- [x] Hebrew (he), 683/683 — the first RTL language — *PR #100*
+- [ ] A pack index live on the channel in the wild — needs an actual release
+      cut, so "Available to add" stays empty until then.
+- [ ] Native-speaker review of the Hebrew pack before it is published.

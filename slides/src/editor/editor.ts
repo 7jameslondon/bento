@@ -2483,7 +2483,7 @@ export class Editor {
  * Turn a pack-install failure into a sentence. Built at display time because
  * t() must never be frozen into a module-level const.
  */
-function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app'): string {
+function languageInstallError(code: import('../packs').PackError): string {
   switch (code) {
     case 'offline':
       return t('Couldn’t download that language — check your connection and try again.')
@@ -2491,6 +2491,11 @@ function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app'): strin
       return t('That language pack couldn’t be read.')
     case 'wrong-app':
       return t('That language pack was built for a different Bento app.')
+    // Says what happened and what was done about it, without pretending to
+    // know whether it was an attack or a bungled upload — we cannot tell, and
+    // the answer is the same either way: it was not installed.
+    case 'unverified':
+      return t('That language pack failed its security check, so it wasn’t added.')
   }
 }
 

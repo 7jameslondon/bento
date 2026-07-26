@@ -34,7 +34,8 @@ verify the manifest signature against the public key embedded in every shell.
    shell and the manifest version — single source of truth).
 2. Commit, tag: `git tag vX.Y.Z`.
 3. `node scripts/release.mjs` — builds, signs, assembles `./site/`
-   (CNAME, landing page, live demo, download, signed manifest).
+   (CNAME, landing page, live demo, download, signed manifest, language packs
+   + their signed index).
 4. Publish `./site/` to the public site repo — one step:
 
    ```sh
@@ -77,10 +78,45 @@ verify the manifest signature against the public key embedded in every shell.
    Check for updates → should offer the new version, and the downloaded copy
    must boot with the document intact.
 
+## Language packs
+
+`release.mjs` also emits every non-core language pack
+(`scripts/build-i18n.mjs --packs`) into `site/releases/slides/packs/` and signs
+an INDEX over them at `site/releases/slides/packs.json`
+(`scripts/sign-packs.mjs`) — same envelope, same offline key and the same
+signing code as the manifest (`scripts/sign-payload.mjs`). The index pins each
+pack's sha256; shipped files verify the index signature once and then hash each
+downloaded pack against it. Design and payload shape: `docs/i18n-packs.md`.
+
+Both steps are no-ops until a pack catalog exists, so nothing changes for a
+release with no packs.
+
+Preview what would be signed, without the key and without writing anything:
+
+```sh
+node scripts/build-i18n.mjs --packs /tmp/packs
+node scripts/sign-packs.mjs /tmp/packs --dry     # prints the exact payload
+```
+
+Re-publishing packs **without cutting an app release** is supported and is the
+reason the index is its own artifact (a corrected translation is not a new app
+version). Re-emit, re-sign the index, publish:
+
+```sh
+node scripts/sign-packs.mjs site/releases/slides/packs \
+  --out site/releases/slides/packs.json --version <app version>
+node scripts/publish-site.mjs "packs: fix the Korean plural forms"
+```
+
+`publish-site.mjs` refuses to push if any published pack does not match its
+signed hash, if an indexed pack is missing, or if packs are staged with no
+index at all — an unsigned pack must never reach the CDN.
+
 ## Rules
 
 - Never edit files on `gh-pages` by hand — the manifest signature covers the
   shell's exact bytes; any drift bricks the update check (integrity refusal).
+  The same holds for `packs.json` and everything under `packs/`.
 - Version only goes up. Shipped files refuse manifests that aren't strictly
   newer than themselves (downgrade-replay protection), so a "rollback" is a
   new higher version that reverts the code.

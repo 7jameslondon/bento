@@ -675,6 +675,7 @@ export const zhHant: Catalog = {
   "Available to add": "可新增",
   "Adding…": "正在新增…",
   "That language pack couldn’t be read.": "無法讀取該語言包。",
+  "That language pack failed its security check, so it wasn’t added.": "該語言包未通過安全檢查，因此未加入。",
   "That language pack was built for a different Bento app.": "該語言包是為另一個 Bento 應用程式建置的。",
   "Manage languages…": "管理語言…",
   "In this file": "此檔案內",

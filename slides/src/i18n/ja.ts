@@ -675,6 +675,7 @@ export const ja: Catalog = {
   "Available to add": "追加できる言語",
   "Adding…": "追加中…",
   "That language pack couldn’t be read.": "その言語パックを読み取れませんでした。",
+  "That language pack failed its security check, so it wasn’t added.": "その言語パックはセキュリティ検証に失敗したため、追加されませんでした。",
   "That language pack was built for a different Bento app.": "その言語パックは別の Bento アプリ用です。",
   "Manage languages…": "言語を管理…",
   "In this file": "このファイル内",
