@@ -980,15 +980,21 @@ export class Editor {
   }
 
   /**
-   * Languages dialog: what is built in, what this browser has installed, and
-   * what the release channel is offering.
+   * Languages dialog, organised by WHERE a language lives — because that is
+   * the only thing about it a user actually has to decide:
    *
-   * An installed pack belongs to the READER, not the file — it lives in this
-   * browser next to the locale preference, because language never enters the
-   * document format (PLATFORM.md §3). So installing one costs nothing: no
-   * re-splice, no new file, no touching a document you may not own. The dialog
-   * says so, because "add a language" sounding like it edits the deck would be
-   * a fair thing to worry about.
+   *   In this file          travels with the deck; everyone who opens it has it
+   *   On this computer      this browser only; every deck you open here
+   *   Available to add      published, not here yet
+   *
+   * The two scopes behave very differently and used to be explained in one
+   * buried sentence. Naming them as sections makes the consequence — "will the
+   * person I send this to see it?" — readable at a glance instead of inferred.
+   *
+   * "In this file" today means the languages compiled into the build. Packs
+   * spliced into a saved file will list there too, under the same heading,
+   * which is why the section is worded around the FILE rather than around
+   * "built in".
    */
   private async openLanguages() {
     document.querySelector('.ed-about-overlay')?.remove()
@@ -998,10 +1004,6 @@ export class Editor {
     h.textContent = t('Languages')
     box.appendChild(h)
 
-    const note = div('ed-hint')
-    note.textContent = t('Added languages are kept in this browser, not in the deck — the file you send someone is unchanged.')
-    box.appendChild(note)
-
     const listHost = div('ed-lang-manage')
     box.appendChild(listHost)
 
@@ -1010,10 +1012,13 @@ export class Editor {
       const installed = installedPacks()
       const bundled = LOCALE_CHOICES.filter((c) => c.code !== 'en')
 
-      const section = (label: string) => {
+      const section = (label: string, blurb: string) => {
         const s = div('ed-lang-sec')
         s.textContent = label
         listHost.appendChild(s)
+        const b = div('ed-lang-blurb')
+        b.textContent = blurb
+        listHost.appendChild(b)
       }
       const row = (label: string, sub: string, action?: HTMLElement) => {
         const r = div('ed-lang-row')
@@ -1028,37 +1033,45 @@ export class Editor {
         listHost.appendChild(r)
       }
 
-      section(t('Built in'))
-      row('English, ' + bundled.map((c) => c.label).join(', '), t('always available, no download'))
+      section(t('In this file'), t('Travels with the deck — anyone you send it to gets these too.'))
+      row('English, ' + bundled.map((c) => c.label).join(', '), t('Included in every Bento'))
 
-      if (installed.length) {
-        section(t('Added to this browser'))
-        for (const p of installed) {
-          const rm = document.createElement('button')
-          rm.className = 'ed-btn'
-          rm.textContent = t('Remove')
-          rm.addEventListener('click', () => {
-            uninstallPack(p.lang)
-            // the active locale may have just vanished — rebuild everything
-            this.build()
-            this.rebuildSidebar()
-            void paint()
-          })
-          row(p.label || p.lang, p.version ? t('pack for v{v}', { v: p.version }) : t('language pack'), rm)
-        }
+      section(
+        t('On this computer'),
+        t('This browser only, for every deck you open here. Files you send stay unchanged.'),
+      )
+      if (!installed.length) {
+        const none = div('ed-hint')
+        none.textContent = t('None yet — add one below.')
+        listHost.appendChild(none)
+      }
+      for (const p of installed) {
+        const rm = document.createElement('button')
+        rm.className = 'ed-btn'
+        rm.textContent = t('Remove')
+        rm.title = t('Remove from this computer')
+        rm.addEventListener('click', () => {
+          uninstallPack(p.lang)
+          // the active locale may have just vanished — rebuild everything
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(p.label || p.lang, p.version ? t('Language pack · built for v{v}', { v: p.version }) : t('Language pack'), rm)
       }
 
       const avail = await availablePacks()
-      section(t('Available to add'))
+      section(t('Available to add'), t('Adding one puts it on this computer. New languages arrive with each release.'))
       if (!avail.length) {
         const none = div('ed-hint')
-        none.textContent = t('Nothing to add right now — more languages are published with each release.')
+        none.textContent = t('Nothing new right now.')
         listHost.appendChild(none)
       }
       for (const p of avail) {
         const add = document.createElement('button')
         add.className = 'ed-btn'
         add.textContent = t('Add')
+        add.title = t('Download and use on this computer — the deck itself is not changed')
         add.addEventListener('click', async () => {
           add.disabled = true
           add.textContent = t('Adding…')
@@ -1069,7 +1082,7 @@ export class Editor {
             add.textContent = t('Add')
             return
           }
-          this.toast(t('{lang} added', { lang: p.label }))
+          this.toast(t('{lang} is ready to use', { lang: p.label }))
           this.build()
           this.rebuildSidebar()
           void paint()
@@ -1110,7 +1123,7 @@ export class Editor {
       menu.appendChild(b)
     }
     menu.appendChild(div('ed-menu-sep'))
-    menu.appendChild(btn('', t('Add or remove languages…'), () => {
+    menu.appendChild(btn('', t('Manage languages…'), () => {
       wrap.classList.remove('open')
       void this.openLanguages()
     }))
@@ -2419,13 +2432,13 @@ export class Editor {
 function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'): string {
   switch (code) {
     case 'offline':
-      return t('Couldn’t reach the language server — check your connection and try again.')
+      return t('Couldn’t download that language — check your connection and try again.')
     case 'bad-pack':
       return t('That language pack couldn’t be read.')
     case 'wrong-app':
       return t('That language pack was built for a different Bento app.')
     case 'no-space':
-      return t('Added for now, but this browser has no room to keep it — it will be gone after a reload.')
+      return t('It works now, but there’s no room to save it here — it will be gone after a reload.')
   }
 }
 

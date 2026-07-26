@@ -1964,3 +1964,4 @@ input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: poin
 .ed-lang-txt { display: flex; flex-direction: column; min-width: 0; }
 .ed-lang-txt b { font-size: 13px; font-weight: 600; }
 .ed-lang-txt span { font-size: 11.5px; color: var(--muted); }
+.ed-lang-blurb { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: -2px 0 6px; }
