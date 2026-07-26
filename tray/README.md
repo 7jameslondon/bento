@@ -99,6 +99,18 @@ of this bridge did exactly that and prompted on every single save.
   which makes `localStorage` and IndexedDB unreliable — silently breaking the
   autosave backstop, the per-device collab member key, and language/motion
   preferences. It also keeps relay fetches from arriving as `Origin: null`.
+- **Portrait insets the web view NATIVELY; landscape is full bleed.** In
+  portrait the page starts below the status bar and camera pill, so a
+  document's own toolbar is reachable. This is done by moving the web view, not
+  by asking the page to pad itself — `env(safe-area-inset-*)` is dead in this
+  WKWebView (measured: native 62/0/34/0, CSS 0px on all four sides, with
+  viewport-fit=cover and with either inset behaviour), and `--tray-safe-*` only
+  helps a page that has heard of this host. A third-party HTML file has no way
+  to know, so its top controls sat under the pill and could not be tapped.
+  Insetting the view works for every document with no cooperation at all.
+  Landscape stays edge to edge deliberately: there the unsafe strip is a thin
+  side gutter, not a band across the controls, and a maximised page is what you
+  want when presenting.
 - **The host is PER DOCUMENT**, a truncated SHA-256 of the file's path, not a
   shared `deck`. Since this app opens any HTML document, a shared origin would
   let one document read another's `localStorage` and IndexedDB — fine when every

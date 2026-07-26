@@ -114,14 +114,35 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         view.bringSubviewToFront(floatingExit)
     }
 
+    /// PORTRAIT: start the page below the status bar / camera pill, so a
+    /// document's own toolbar is reachable. LANDSCAPE: full bleed.
+    ///
+    /// Done NATIVELY rather than by asking the page to pad itself. env() is dead
+    /// in this WKWebView, and --tray-safe-* only helps a page that has heard of
+    /// this host — a third-party HTML file has no way to know, so its top
+    /// controls ended up under the pill and could not be tapped. Insetting the
+    /// web view works for every document without any cooperation.
+    ///
+    /// Landscape stays edge to edge on purpose: there the unsafe strip is a thin
+    /// side gutter rather than a band across the controls, and a maximised page
+    /// is what you want when presenting.
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let portrait = traitCollection.verticalSizeClass == .regular
+        let top = portrait ? view.safeAreaInsets.top : 0
+        webView.frame = CGRect(x: 0, y: top, width: view.bounds.width,
+                               height: max(0, view.bounds.height - top))
+        publishSafeArea(topHandledNatively: portrait)
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        publishSafeArea()
+        view.setNeedsLayout()
     }
 
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
-        publishSafeArea()
+        view.setNeedsLayout()
     }
 
     /// Hand the real insets to the page as CSS custom properties.
@@ -135,10 +156,13 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// Published as `--tray-safe-*` on the root element. A page that never
     /// heard of this host is unaffected: the variables go unread and it gets the
     /// same full-bleed treatment a browser would give it.
-    private func publishSafeArea() {
+    private func publishSafeArea(topHandledNatively: Bool) {
         let i = view.safeAreaInsets
+        // Report top as 0 when the web view is already inset by it, or a page
+        // that DOES read these would pad twice.
+        let top = topHandledNatively ? 0 : Int(i.top)
         let js = "(function(){var r=document.documentElement.style;"
-            + "r.setProperty('--tray-safe-top','\(Int(i.top))px');"
+            + "r.setProperty('--tray-safe-top','\(top)px');"
             + "r.setProperty('--tray-safe-right','\(Int(i.right))px');"
             + "r.setProperty('--tray-safe-bottom','\(Int(i.bottom))px');"
             + "r.setProperty('--tray-safe-left','\(Int(i.left))px');})();"
@@ -189,7 +213,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         }
 
         webView = WKWebView(frame: view.bounds, configuration: cfg)
-        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // frame is driven by viewDidLayoutSubviews, not autoresizing
         webView.allowsBackForwardNavigationGestures = false
         webView.navigationDelegate = self
         // Full bleed. WKWebView does NOT hand safe-area insets to CSS here —
