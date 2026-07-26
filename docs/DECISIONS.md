@@ -14,6 +14,54 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-26 — A language pack lives in the FILE and nowhere else
+
+No browser-local install. A "keep it on this computer" option (localStorage)
+was **built and then removed**, because `localStorage` is scoped per ORIGIN
+and that is fatally misaligned with how Bento is used: the download comes from
+`bento.page` (an https origin) and the file is then opened from disk (a
+`file://` origin). A language added on the website was therefore GONE the
+moment the user saved the deck and reopened it locally — the exact journey the
+product encourages, and "I added Korean and it vanished" is not a bug a user
+can diagnose.
+
+One home also matches the platform: the file *is* the software, so a language
+belongs to the deck. The trade — adding a language requires saving the file —
+is stated plainly in the UI ("Added when you next save") rather than hidden.
+Adding is staged on click and written on the next save because on browsers
+without File System Access, writing on click means silently downloading a
+second copy of the user's deck.
+
+Corollary: anything that remembers pack *content* outside the file
+reintroduces this. Viewer *preferences* (locale, reduce-motion) stay
+browser-local on purpose; that asymmetry is deliberate. Details:
+`docs/i18n-packs.md`, `slides/src/packs.ts`.
+
+## 2026-07-26 — The pack carrier is generic; pack POLICY is not. This is not a plugin system.
+
+The kernel mechanism is already extension-agnostic and should stay that way:
+`registerShellBlocks` / `readShellBlocks` (`kernel/src/save.ts`) carry
+arbitrary typed blocks in the shell and know nothing about languages, and
+`registerUpdatePrepare` (`kernel/src/update.ts`) is a generic "refresh
+version-bound extras" hook. Signature verification and hash pinning are being
+made generic in the kernel too (branch `claude/i18n-pack-verify`). Reuse all
+of that freely.
+
+**Do not generalize the policy.** Language packs are DATA and their worst case
+is bounded — a tampered or stale pack shows wrong or English words. That bound
+is why degrade-per-string, keep-on-refresh-failure, and auto-refresh on update
+are the right rules *for packs*.
+
+Anything carrying CODE is categorically different: unbounded failure (it would
+hold the document, the file handle, and the collab keys), and it breaks the
+property that makes self-update trustworthy — that the shell only ever runs
+bytes from a signed release. Such a thing would need its own policy (pinned at
+install, never auto-refreshed) and must not inherit the pack rules by reusing
+the pack machinery.
+
+So: reuse the carrier and the crypto; do not treat "we have packs" as evidence
+that a plugin system is designed or wanted. It is not.
+
 ## 2026-07-26 — Side-loaded artifacts: sign the index, pin the bytes, fail closed
 
 Language packs are fetched over the network, so they get the **same two-step

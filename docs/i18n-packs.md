@@ -1,8 +1,10 @@
 # Language packs — design
 
-*Design document, July 2026. Status: **agreed, not built**. Companion to
-`PLATFORM.md` §6 (signed self-update) and §8 (i18n). The bundled-core half is
-settled; the pack half is specified here and implemented incrementally.*
+*Design document, July 2026. Companion to `PLATFORM.md` §6 (signed
+self-update) and §8 (i18n). The bundled core, the pack format and the in-app
+"Add language…" flow are **built**; release-side publishing and client-side
+signature verification are landing on their own branches — see
+[Status](#status), which says per item what is shipped and what is not.*
 
 ## The problem
 
@@ -161,6 +163,37 @@ and match its signed hash, no published pack may be missing from the index, and
 staged packs without an index refuse to publish at all. Signed bytes are served
 bytes — for the index exactly as for the shell.
 
+### Verification: what is checked, and what deliberately is not
+
+> **Landing separately.** The design below is settled; the client-side
+> implementation is on branch `claude/i18n-pack-verify`. Until that merges,
+> `fetchPack` validates *shape* only (`lang`, `strings`, matching `app`) — do
+> not read this section as describing shipped behaviour.
+
+Two rules, and the asymmetry between them is the point.
+
+- **A pack fetched from the network is verified.** The pack *index* is signed
+  with the release key; each entry pins its pack by sha256. So a client
+  verifies the index signature once, then checks the bytes it downloaded
+  against the signed hash — the same two-step the shell itself goes through on
+  self-update. You cannot substitute a pack without breaking its hash, and you
+  cannot fix the hash without breaking the signature. A pack that fails is
+  refused, not degraded: a *wrong* pack is worse than no pack, and there is a
+  working English fallback right there.
+- **A pack already embedded in a file is NOT re-verified.** It carries exactly
+  the same trust as the document it travels with: someone who can rewrite a
+  block in your `.bento.html` can rewrite the document, the CRDT state and the
+  collab keys in the same file, so re-checking one block buys nothing.
+  Re-verification would also mean a *network round trip to open a deck*, which
+  breaks the property the whole format exists for — a file that works offline,
+  forever, from `file://`. The blast radius is bounded in a way that makes
+  this an easy trade: a pack is DATA, and its worst case is wrong words on
+  screen.
+
+That bound is load-bearing and does not transfer. See `docs/DECISIONS.md` —
+the carrier is generic, the policy is not, and nothing carrying **code** may
+inherit these rules.
+
 ### Loading
 
 `registerI18n` already accepts a packed table (kernel). Pack loading adds a
@@ -215,11 +248,89 @@ against real WebCrypto with a throwaway key standing in for the release key.
 ### Incorporation into the file
 
 A pack is fetched **only on explicit user action** ("Add language…"), verified,
-then spliced into the shell as an additional payload block and written out as
-a new file — the same fetch → verify → re-splice flow `update.ts` already
-performs. Nothing phones home by default; a file that never adds a language
-never talks to the network. Once spliced, the pack travels with the file and
-works offline forever, like everything else.
+then written into the shell as an additional plaintext data block. Nothing
+phones home by default; a file that never adds a language never talks to the
+network. Once written, the pack travels with the file and works offline
+forever, like everything else.
+
+Mechanically the block is a `<script type="application/bento+lang"
+id="bento-lang-<lang>">` in `<head>`, holding the pack JSON with `<` escaped as
+`\u003c` — exactly the treatment `#bento-doc` gets. The kernel side is
+deliberately ignorant: `registerShellBlocks` / `readShellBlocks`
+(`kernel/src/save.ts`) carry *typed blocks*, and know nothing about languages.
+The app registers `shellBlocksForPacks()` once, at boot, and every serialize
+re-declares the whole set.
+
+## Where a pack lives
+
+### A pack lives in the FILE and nowhere else
+
+This was decided the hard way: a second home — "install for this browser",
+backed by `localStorage` — was **built and then removed**. The reasoning must
+survive, because the idea looks obviously good and will otherwise be proposed
+again.
+
+`localStorage` is scoped per **origin**. Bento's actual journey crosses
+origins: the download comes from `bento.page` (an `https` origin), and the
+file is then opened from disk (a `file://` origin, where every file is
+effectively its own storage bucket anyway). So a language added on the website
+was **gone** the moment the user saved the deck and reopened it locally — the
+exact journey the product encourages. "I added Korean and it vanished" is not
+something a user can diagnose, and no wording fixes it.
+
+It also matches everything else here: the file *is* the software, so a
+language belongs to the deck. The trade is that adding a language requires
+saving the file, which the UI states plainly instead of hiding.
+
+Corollary for future work: anything that "remembers" a pack outside the file
+reintroduces this bug. Viewer *preferences* (chosen locale, reduce-motion) are
+browser-local on purpose; pack *content* never is.
+
+### Adding is staged on click, written on the next save
+
+Clicking Add registers the pack immediately — the editor switches language
+right away — and marks it pending. The row says **"Added when you next save"**,
+and the file gains it on the next save (`markFileSaved()` clears the pending
+flags once the bytes are out).
+
+It is staged rather than written-on-click because on every browser without the
+File System Access API, "write" means **silently downloading a second copy of
+the user's deck**. Handing someone an unexpected `deck (1).bento.html` because
+they asked for Korean is a worse surprise than asking them to save.
+
+Removal is meant to be symmetric and to need no deletion path: `serializeBody`
+drops every block of a managed type and rewrites the current set, so "remove
+from this file" is just *stop listing it*.
+
+> **Known gap (kernel, unfixed at time of writing).** `serializeBody` derives
+> the managed types from the blocks it is *about* to write, so when the set is
+> EMPTY it removes nothing. Removing the file's **last** pack therefore leaves
+> the old block in the saved file — every other removal works. The fix is for
+> the provider to declare its managed types rather than have them inferred.
+> Kernel zone, so it wants its own small PR (`docs/PARALLEL-WORK.md` §1).
+
+### Staying current
+
+Two mechanisms, because a pack is frozen at the version it was built for while
+the app around it keeps gaining strings — so a translated deck otherwise
+drifts back toward English one release at a time, silently, per string.
+
+- **Update refreshes packs.** `registerUpdatePrepare` (`kernel/src/update.ts`)
+  gives the app a moment after a release is verified and before the document
+  is serialized into the new shell; slides uses it to run
+  `refreshPacksForVersion(version)`, re-fetching each carried language at the
+  incoming version. It is **best effort and never fatal**: any pack that
+  cannot be re-fetched — offline, not published yet, anything — is kept as it
+  is. Degraded beats absent; losing a language the author baked in is far
+  worse than one that is a release out of date.
+- **The Languages dialog says when a pack is stale.** `packCoverage(pack)`
+  counts how many of the *running app's* strings the pack does not cover
+  (`PACKED`'s keys are exactly the strings the app asks for), and the row
+  reads "Built for v1.0.11 — 23 phrases still show in English. Updating Bento
+  refreshes it." Measured, not inferred from the version number: a pack built
+  against an older release may still cover everything, and a same-version pack
+  can be incomplete. Naming the number turns "why is some of this English?"
+  into a fact, and saying it fixes itself stops anyone hunting for a button.
 
 ## Risks
 
@@ -228,17 +339,34 @@ if it isn't designed in.** `update.ts` fetches a *new shell* and re-splices the
 current *document* into it. Packs live in the shell, not the document, so the
 naive path hands a Korean user back an English file after an update, silently
 and with no error to describe. Pack migration is part of the update path, not
-a follow-up.
+a follow-up. *Handled:* the registered block provider is consulted on every
+serialize, including the update one, so packs ride across by construction —
+and `registerUpdatePrepare` refreshes them to the incoming version first (see
+[Staying current](#staying-current)).
 
 **Pack/app version coupling.** Every release adds strings. A 1.0.10 pack in a
 1.1.0 shell must degrade per string to English, never fail to load. The
 manifest is versioned per pack; the policy for "pack older than app" is
 load-and-degrade.
 
-**Splice contract.** Packs are additional payload blocks. `#bento-doc` stays
-plaintext and the file must still survive `DOMParser → outerHTML`
-(`PLATFORM.md` §2). `shell-gate.mjs` must cover a shell carrying packs — the
-gate is what protects updaters already frozen in the wild.
+**Splice contract.** Packs are additional plaintext blocks beside `#bento-doc`,
+and a pack body is arbitrary translated text — it can contain `<`, quotes, and
+the literal sequence that closes a script tag. Unescaped, a single pack string
+could terminate its own block, or forge a second `#bento-doc` opening tag that
+an old updater (which splices into the FIRST regex match) would write into
+instead of the real one. Both would brick files already in the wild.
+
+*Handled:* `serializeBody` applies the same `<`→`\u003c` escape to registered
+blocks as to the document, and `scripts/shell-gate.mjs` now proves it. Because
+a fresh build carries no packs, the gate synthesises an adversarial one — a
+script-close sequence, a forged `#bento-doc` opening tag, an HTML comment
+opener, CJK/RTL/emoji, U+2028/U+2029 — inserts it both above and below the doc
+block, and re-runs the whole contract plus a lossless JSON round-trip and a
+v0.1.0-style text splice. A negative control (the same pack written unescaped)
+must fail, so the check cannot quietly become vacuous, and one source
+assertion keeps `kernel/src/save.ts` applying the escape on both write paths.
+The gate covers the splice contract only; it says nothing about whether a
+pack's *contents* are right.
 
 **RTL is not a pack.** Arabic, Urdu, Persian and Hebrew are among the largest
 gaps by population, but they need bidi and mirroring work in the CSS. Ranking
@@ -259,6 +387,12 @@ turns native review into a continuous process instead of a release blocker.
   self-contained? Slides, Spaces and Dash have overlapping but distinct string
   sets.
 - Should a saved deck record which packs it carries, for the People/About UI?
+  (Partly answered: the Languages dialog reads them straight out of the shell,
+  so nothing needs recording in the *document*.)
+- Should a spliced pack be compressed? It is written as plaintext JSON today,
+  which is simple and keeps the splice contract trivially checkable; the shell
+  already has deflate+base64 payload blocks that would roughly halve it, at
+  the cost of a second block shape for the gate to reason about.
 
 ## Splicing a pack into a file — compress it
 
@@ -275,18 +409,30 @@ second one.
 
 ## Status
 
-- [x] Key-once packing of the bundled catalogs — #75
+Answered: **is this shipped?** Anything marked *branch* is written and green
+but not yet on `main` — do not describe it as shipped.
+
+- [x] Key-once packing of the bundled catalogs — #75. The prerequisite: it
+      shrank the core, and its kernel change (`registerI18n` accepting a packed
+      table) is the loading path packs reuse.
 - [x] Portuguese catalog, bundled — #79
-- [x] Pack format + `build-i18n.mjs --packs` emitting them — #81
-- [x] Kernel `addPack()` loading path — #81
-- [x] Korean, the first pack (662/662) — #81
-- [x] `release.mjs` emits packs and publishes `packs.json`, a **signed index**
-      pinning each pack's sha256 — same envelope, same offline key, no second
-      trust root. Gated at publish time.
-- [ ] Client: verify the index signature + each pack's pinned hash
-      (`slides/src/packs.ts` — the shape it must expect is specified above)
-- [ ] In-app "Add language…" (fetch → verify → splice, compressed)
-- [ ] **Update carries packs forward**
-- [ ] Shell smoke check covers a pack-carrying shell (note: `shell-gate.mjs`
-      deliberately checks only the splice contract — it passed a build with a
-      silently corrupted stylesheet, so it is the wrong place for this)
+- [x] Pack format + `build-i18n.mjs --packs` emission, Korean first — #81
+- [x] Kernel loading path: `addPack`/`removePack`, per-string fallback — #81
+- [x] `release.mjs` emits packs at release time — #91
+- [x] **Signed pack index** (`packs.json`) published to the channel, pinning
+      each pack's sha256 — same envelope, same offline key, no second trust
+      root; gated at publish time — #93
+- [x] In-app "Add language…" / "Remove", staged and written on the next save
+      — #86
+- [x] Update carries packs forward (`refreshPacksForVersion`) — #86
+- [x] Per-pack staleness note from `packCoverage` — #86
+- [x] Client verifies the index signature and each pack's pinned hash, fails
+      closed; proof rig `scripts/test-packs.ts` — #94
+- [x] `shell-gate.mjs` covers a pack-carrying shell, including an adversarial
+      block both below AND above `#bento-doc`; mutation-tested — *branch
+      `claude/i18n-pack-gate`, PR #95*
+- [x] Removing a file's LAST pack now actually sticks — *PR #96*
+- [x] Hebrew (he), 683/683 — the first RTL language — *PR #100*
+- [ ] A pack index live on the channel in the wild — needs an actual release
+      cut, so "Available to add" stays empty until then.
+- [ ] Native-speaker review of the Hebrew pack before it is published.
