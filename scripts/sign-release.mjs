@@ -7,7 +7,7 @@
 //   node scripts/sign-release.mjs slides/dist-single/Bento_Slides.bento.html \
 //     [--url https://bento.page/releases/slides/Bento_Slides.bento.html] \
 //     [--version 0.2.0] [--notes "What changed"] [--key ~/.bento/release-key.json] \
-//     [--out manifest.json]
+//     [--out manifest.json] [--packs <dir>] [--packs-url <base>]
 //
 // The manifest is { payload: "<json string>", sig: "<base64>" } — the
 // signature covers the exact payload string bytes (no canonicalization
@@ -17,7 +17,7 @@
 // Version defaults to slides/package.json — keep them in lockstep.
 
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from 'node:crypto'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -44,12 +44,41 @@ const outPath = opt('out', join(dirname(shellPath), 'manifest.json'))
 const shell = readFileSync(shellPath)
 const sha256 = createHash('sha256').update(shell).digest('hex')
 
+/**
+ * Language packs ride INSIDE the signed payload (docs/i18n-packs.md).
+ *
+ * No second key and no second signature: the manifest signature covers the
+ * whole payload string, so listing each pack's sha256 here means the hashes
+ * are signed too. A client verifies the manifest once, then checks a
+ * downloaded pack against its signed hash — exactly the two-step the shell
+ * itself already goes through. Adding a separate pack-signing path would be
+ * a new trust root to get wrong for no gain.
+ */
+const packsDir = opt('packs', null)
+const packs = []
+if (packsDir) {
+  const baseUrl = opt('packs-url', url.replace(/\/[^/]*$/, '/packs'))
+  for (const name of readdirSync(packsDir).filter((f) => f.endsWith('.pack.json')).sort()) {
+    const bytes = readFileSync(join(packsDir, name))
+    const meta = JSON.parse(bytes.toString('utf8'))
+    packs.push({
+      lang: meta.lang,
+      label: meta.label,
+      version: meta.version,
+      bytes: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      url: `${baseUrl}/${name}`,
+    })
+  }
+}
+
 const payload = JSON.stringify({
   app: 'bento-slides',
   version,
   sha256,
   url,
   ...(notes ? { notes } : {}),
+  ...(packs.length ? { packs } : {}),
   at: new Date().toISOString(),
 })
 
@@ -71,4 +100,8 @@ writeFileSync(outPath, JSON.stringify({ payload, sig: sig.toString('base64') }, 
 console.log(`Signed release v${version}`)
 console.log(`  shell   ${shellPath} (${(shell.length / 1024).toFixed(0)} KB, sha256 ${sha256.slice(0, 16)}…)`)
 console.log(`  url     ${url}`)
+if (packs.length) {
+  const total = packs.reduce((n, p) => n + p.bytes, 0)
+  console.log(`  packs   ${packs.length} (${packs.map((p) => p.lang).join(', ')}) — ${(total / 1024).toFixed(0)} KB, hashes signed`)
+}
 console.log(`  out     ${outPath}`)

@@ -164,14 +164,30 @@ turns native review into a continuous process instead of a release blocker.
   sets.
 - Should a saved deck record which packs it carries, for the People/About UI?
 
+## Splicing a pack into a file — compress it
+
+Measured on the Korean pack: **56.8 KB raw JSON, 26.4 KB** through the
+deflate+base64 pipeline the shell already uses for its runtime payloads.
+
+Leave the artifact on the CDN **uncompressed** — GitHub Pages gzips it in
+transit anyway (17–20 KB on the wire), and a readable `.json` is worth keeping
+for translators. But the splice step MUST compress, because a spliced pack
+lives in every saved copy of that file forever: **30 KB per file, per
+language, permanently**, and unfixable once files are in the wild. Reuse
+`postbuild-compress.mjs`'s existing block format rather than inventing a
+second one.
+
 ## Status
 
-- [ ] Key-once packing of the bundled catalogs — **PR #75, in flight**. A
-      prerequisite: it shrinks the core and its kernel change (`registerI18n`
-      accepting a packed table) is the loading path packs will reuse.
-- [ ] Portuguese catalog, bundled
-- [ ] Pack format + `release.mjs` emitting and signing packs
-- [ ] Manifest `packs` array
-- [ ] In-app "Add language…" (fetch → verify → splice)
+- [x] Key-once packing of the bundled catalogs — #75
+- [x] Portuguese catalog, bundled — #79
+- [x] Pack format + `build-i18n.mjs --packs` emitting them — #81
+- [x] Kernel `addPack()` loading path — #81
+- [x] Korean, the first pack (662/662) — #81
+- [x] `release.mjs` emits packs; their hashes ride in the **signed manifest
+      payload** — no second key, no second signature
+- [ ] In-app "Add language…" (fetch → verify → splice, compressed)
 - [ ] **Update carries packs forward**
-- [ ] `shell-gate.mjs` covers a pack-carrying shell
+- [ ] Shell smoke check covers a pack-carrying shell (note: `shell-gate.mjs`
+      deliberately checks only the splice contract — it passed a build with a
+      silently corrupted stylesheet, so it is the wrong place for this)
