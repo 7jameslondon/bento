@@ -15,7 +15,7 @@
 //     element, shape = figur, chart = diagram, template = mal, state =
 //     tilstand, connector = kobling, stroke = strek, opacity = dekkevne.
 //   * t() has no plural machinery, so counted strings are phrased so that
-//     n = 1 is not wrong ("{n} tilkoblet", "{n} til", "{n} element(er)").
+//     n = 1 is not wrong ("{n} tilkoblet", "{n} til", "{n} uttrykk").
 //
 // Machine-drafted and NOT reviewed by a native speaker.
 import type { Catalog } from '../../i18n'
@@ -24,7 +24,7 @@ export const label = 'Norsk bokmål'
 
 export const strings: Catalog = {
   "Backed up in this browser": "Sikkerhetskopiert i denne nettleseren",
-  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Ulagrede endringer — lagret i denne nettleseren {when} og tilbudt tilbake hvis du åpner filen på nytt. ⌘S laster ned en oppdatert kopi.",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Ulagrede endringer — lagret i denne nettleseren kl. {when} og tilbys tilbake hvis du åpner filen på nytt. ⌘S laster ned en oppdatert kopi.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Ulagrede endringer — ⌘S laster ned en oppdatert kopi (denne nettleseren kan ikke skrive over filen)",
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "Lagre — last ned en oppdatert kopi (⌘S). Denne nettleseren kan ikke skrive over den åpne filen.",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "Denne nettleseren kan ikke skrive over filer direkte. ⌘S laster i stedet ned en oppdatert kopi — arbeidet ditt lagres også i denne nettleseren og tilbys tilbake hvis du åpner filen på nytt.",
@@ -36,7 +36,7 @@ export const strings: Catalog = {
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Denne live-økten har gått tom for plass. Endringen din lagres i din kopi, men samarbeidspartnere ser den ikke.",
   "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "Live-økten kunne ikke lagre endringen. Den lagres i din kopi, men samarbeidspartnere ser den ikke.",
   "Too many changes at once — live sync is catching up.": "For mange endringer på én gang — live-synkroniseringen henter inn.",
-  "Backdrop": "Uskarp bakgrunn",
+  "Backdrop": "Bakgrunn",
   "Blend": "Blanding",
   "Outline": "Kontur",
   "Outline color": "Konturfarge",
@@ -281,7 +281,7 @@ export const strings: Catalog = {
   "title": "tittel",
   "top": "øverst",
   "unnamed": "uten navn",
-  "you: {name} ✎": "deg: {name} ✎",
+  "you: {name} ✎": "du: {name} ✎",
   "zoom": "zoom",
   "zoom-in": "zoom inn",
   "zoom-out": "zoom ut",
@@ -611,9 +611,9 @@ export const strings: Catalog = {
   "This slide’s background colour": "Bakgrunnsfargen til dette lysbildet",
   "How this slide enters. Morph animates elements that share ids with the previous slide.": "Hvordan dette lysbildet kommer inn. Morph animerer elementer som deler id-er med det forrige lysbildet.",
   "A friendly name for this slide — shown in link pickers and state badges": "Et vennlig navn på dette lysbildet — vises i lenkevelgere og tilstandsmerker",
-  "What hovering does while presenting: reveal swaps content sets; focus-group dims the other groups": "Hva hovring gjør mens du presenterer: avdekk bytter innholdssett; fokusgruppe demper de andre gruppene",
-  "How strongly the non-hovered groups fade (focus-group mode)": "Hvor kraftig gruppene du ikke hovrer over, tones ned (fokusgruppe-modus)",
-  "The hover set everyone sees before any hover happens": "Hover-settet alle ser før noen hovrer over noe",
+  "What hovering does while presenting: reveal swaps content sets; focus-group dims the other groups": "Hva som skjer når du holder musepekeren over noe mens du presenterer: avdekk bytter innholdssett; fokusgruppe demper de andre gruppene",
+  "How strongly the non-hovered groups fade (focus-group mode)": "Hvor kraftig gruppene du ikke peker på, tones ned (fokusgruppe-modus)",
+  "The hover set everyone sees before any hover happens": "Hover-settet alle ser før musepekeren er over noe",
   "Which hover set to show on the canvas while you edit": "Hvilket hover-sett som vises på lerretet mens du redigerer",
   "What this text IS in a layout (title, body…) — applying a layout matches elements by role": "Hva denne teksten ER i et oppsett (tittel, brødtekst…) — når et oppsett brukes, matches elementene etter rolle",
   "Drop-shadow presets — the shadow follows the element’s real shape, corners and transparency": "Skyggeforvalg — skyggen følger elementets faktiske form, hjørner og gjennomsiktighet",
@@ -630,7 +630,7 @@ export const strings: Catalog = {
   "The motion path — edit it as draggable points on the canvas": "Bevegelsesbanen — rediger den som punkter du kan dra på lerretet",
   "Tempo across one lap — ease-in-out dwells at the ends, linear is constant": "Tempo gjennom én runde — mykt inn og ut dveler ved endene, lineært er konstant",
   "Puts this element in a hover set — visible only while that set is active": "Setter dette elementet i et hover-sett — bare synlig mens det settet er aktivt",
-  "Presentation group — with focus-group hover, the other groups dim": "Presentasjonsgruppe — med fokusgruppe-hovring dempes de andre gruppene",
+  "Presentation group — with focus-group hover, the other groups dim": "Presentasjonsgruppe — med fokusgruppe-hover dempes de andre gruppene",
   "Clicking this element during the show jumps to the chosen slide": "Et klikk på dette elementet under fremvisningen hopper til det valgte lysbildet",
   "Typeface for this text": "Skrifttype for denne teksten",
   "Font size in points": "Skriftstørrelse i punkter",
