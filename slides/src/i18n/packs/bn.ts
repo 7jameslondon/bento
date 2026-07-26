@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 The Bento authors
+// Bengali — a LANGUAGE PACK, not bundled: nothing imports this file, so it
+// never enters the module graph. scripts/build-i18n.mjs --packs emits it as
+// downloadable JSON. See docs/i18n-packs.md.
+//
+// Machine-drafted and NOT reviewed by a native speaker.
+//
+// REGISTER. Bengali computing vocabulary splits between Sanskritised coinages
+// (সংরক্ষণ, প্রতিলিপি, অভিমুখ) and everyday English borrowings written in
+// Bengali script (সেভ, কপি, ফন্ট). This catalog follows the BORROWED
+// convention for interface and computing terms, because that is what Bengali
+// speakers actually meet in Google Slides/Docs and in Microsoft Office:
+// স্লাইড, প্রেজেন্টেশন, ফন্ট, টেক্সট, টেবিল, চার্ট, লেআউট, থিম,
+// অ্যানিমেশন, ট্রানজিশন, সেভ, কপি, পেস্ট, ফাইল, ব্রাউজার, আপডেট, ভার্সন.
+// Where the everyday Bengali word IS the word people use it stays Bengali:
+// ছবি, রঙ, আকার, প্রস্থ, উচ্চতা, মন্তব্য, সারি, কলাম, শিরোনাম, ভাষা,
+// পাসওয়ার্ড-free things like শুরু/শেষ, পরের/আগের.
+//
+// One convention, applied throughout, so a reviewer can flip any single term
+// globally: সেভ→সংরক্ষণ, কপি→অনুলিপি and so on are each one substitution.
+//
+// PLURALS. t() has no plural machinery, so the six genuinely counted strings
+// are phrased count-agnostically, and index labels ("Axis {n}", "slide {n}")
+// are never pluralised. Bengali's plural marking is mild, which helps, but no
+// string here assumes n > 1.
+//
+// Western digits (0-9) throughout — never Bengali numerals. Page and slide
+// numbers are DOCUMENT content and must read identically for every viewer.
+import type { Catalog } from '../../i18n'
+
+export const label = 'বাংলা'
+
+export const strings: Catalog = {
+  "Backed up in this browser": "এই ব্রাউজারে ব্যাকআপ নেওয়া হয়েছে",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "সেভ না করা পরিবর্তন — {when}-এ এই ব্রাউজারে রাখা হয়েছে, আবার খুললে ফিরিয়ে দেওয়া হবে। ⌘S আপডেট করা কপি ডাউনলোড করে।",
+  "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "সেভ না করা পরিবর্তন — ⌘S আপডেট করা কপি ডাউনলোড করে (এই ব্রাউজার ফাইলটি নতুন করে লিখতে পারে না)",
+  "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "সেভ করুন — আপডেট করা কপি ডাউনলোড করুন (⌘S)। এই ব্রাউজার খোলা ফাইলটি নতুন করে লিখতে পারে না।",
+  "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "এই ব্রাউজার ফাইলকে তার নিজের জায়গায় নতুন করে লিখতে পারে না। তার বদলে ⌘S একটি আপডেট করা কপি ডাউনলোড করবে — আপনার কাজ এই ব্রাউজারেও রাখা থাকে এবং আবার খুললে ফিরিয়ে দেওয়া হয়।",
+  "Got it": "বুঝেছি",
+  "What’s new →": "নতুন কী আছে →",
+  "Read the release notes for v{v} (opens in a new tab)": "v{v}-এর রিলিজ নোট পড়ুন (নতুন ট্যাবে খোলে)",
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "এই ছবিটি লাইভ শেয়ার করার পক্ষে অনেক বড় (সর্বোচ্চ প্রায় 1 MB)। এটি আপনার কপিতে সেভ থাকে, কিন্তু সহযোগীরা দেখতে পাবেন না।",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "এই পরিবর্তনটি লাইভ শেয়ার করার পক্ষে অনেক বড় (সর্বোচ্চ প্রায় 1 MB)। এটি আপনার কপিতে সেভ থাকে, কিন্তু সহযোগীরা দেখতে পাবেন না।",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "এই লাইভ সেশনে আর জায়গা নেই। আপনার পরিবর্তন আপনার কপিতে সেভ আছে, কিন্তু সহযোগীরা দেখতে পাবেন না।",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "লাইভ সেশন সেই পরিবর্তনটি রাখতে পারেনি। এটি আপনার কপিতে সেভ আছে, কিন্তু সহযোগীরা দেখতে পাবেন না।",
+  "Too many changes at once — live sync is catching up.": "একসাথে অনেক বেশি পরিবর্তন — লাইভ সিঙ্ক পিছিয়ে থাকা কাজ সারছে।",
+  "Backdrop": "ব্যাকড্রপ",
+  "Blend": "ব্লেন্ড",
+  "Outline": "আউটলাইন",
+  "Outline color": "আউটলাইনের রঙ",
+  "Interior": "ভিতরের অংশ",
+  "filled": "ভরাট",
+  "hollow": "ফাঁপা",
+  "Reduced motion: on": "কম নড়াচড়া: চালু",
+  "Reduced motion: off": "কম নড়াচড়া: বন্ধ",
+  "Reduce motion — pause animations (also honours your OS setting)": "নড়াচড়া কমান — অ্যানিমেশন থামিয়ে রাখে (আপনার সিস্টেম সেটিংও মানে)",
+  "Reduce motion (M)": "নড়াচড়া কমান (M)",
+  "Visit bento.page (opens in a new tab)": "bento.page-এ যান (নতুন ট্যাবে খোলে)",
+  "New to Bento? Find templates, the gallery and the AI editing guide at {home} — or ⭐ it on {gh}.": "bento-তে নতুন? টেমপ্লেট, গ্যালারি আর AI দিয়ে এডিট করার গাইড পাবেন {home}-এ — কিংবা {gh}-এ ⭐ দিন।",
+  "Morph": "মর্ফ",
+  "Morph id": "মর্ফ আইডি",
+  "Pair with": "যার সাথে জোড়া",
+  "(pick an element)": "(একটি এলিমেন্ট বাছুন)",
+  "Morphs as <code>{id}</code>, overriding its own id. Set it back to <code>{own}</code> to clear.": "নিজের আইডির বদলে <code>{id}</code> হিসেবে মর্ফ হয়। বাতিল করতে আবার <code>{own}</code> করে দিন।",
+  "Elements sharing a morph id morph into each other across slides. Change this (or pick below) to pair with an element on another slide.": "একই মর্ফ আইডিওয়ালা এলিমেন্টগুলো স্লাইড থেকে স্লাইডে একে অন্যের মধ্যে মর্ফ হয়। অন্য স্লাইডের কোনো এলিমেন্টের সাথে জোড়া লাগাতে এটি বদলান (বা নিচ থেকে বাছুন)।",
+  "Morph id can’t be empty.": "মর্ফ আইডি খালি রাখা যাবে না।",
+  "Another element on this slide already uses that morph id.": "এই স্লাইডের আর একটি এলিমেন্ট আগে থেকেই ওই মর্ফ আইডি ব্যবহার করছে।",
+  "<b>Morph</b> animates elements that appear on both this slide and the previous one (copy a slide, then move things around).": "<b>মর্ফ</b> সেই এলিমেন্টগুলোকে অ্যানিমেট করে যেগুলো এই স্লাইডে আর তার আগের স্লাইডে — দুটোতেই আছে (একটি স্লাইড কপি করুন, তারপর জিনিসগুলো সরান)।",
+  "A <b>state</b> is hidden from arrow-key flow — viewers reach it by clicking a linked element. Shared element ids morph between states.": "<b>স্টেট</b> তীর-কি দিয়ে চলার পথ থেকে লুকানো থাকে — দর্শকরা লিঙ্ক করা এলিমেন্টে ক্লিক করে সেখানে পৌঁছান। একই এলিমেন্ট আইডি স্টেটগুলোর মধ্যে মর্ফ হয়।",
+  "A deck needs at least one slide": "একটি প্রেজেন্টেশনে অন্তত একটি স্লাইড থাকতে হবে",
+  "About bento/slides — version, updates, licenses": "bento/slides সম্পর্কে — ভার্সন, আপডেট, লাইসেন্স",
+  "Align": "অ্যালাইন",
+  "Ambient": "অ্যাম্বিয়েন্ট",
+  "Angle": "কোণ",
+  "Apply": "প্রয়োগ করুন",
+  "Arrange": "সাজান",
+  "Arrow": "তীর",
+  "Background": "ব্যাকগ্রাউন্ড",
+  "Black": "ব্ল্যাক",
+  "Blur": "ব্লার",
+  "Bold": "বোল্ড",
+  "Built-in": "বিল্ট-ইন",
+  "Bundle a .woff2/.woff/.ttf/.otf into this file and use it here": "একটি .woff2/.woff/.ttf/.otf ফাইল এই ফাইলের ভিতরে জুড়ে দিন আর এখানে ব্যবহার করুন",
+  "Change the name used for your new comments and replies": "আপনার নতুন মন্তব্য ও উত্তরে যে নাম ব্যবহার হবে সেটি বদলান",
+  "Chart": "চার্ট",
+  "Check for updates": "আপডেট আছে কিনা দেখুন",
+  "Check for updates automatically at launch": "চালু করার সময় নিজে থেকেই আপডেট খুঁজে দেখা হোক",
+  "Checked automatically at launch — you're on the latest version (v{v}).": "চালু করার সময় নিজে থেকেই দেখা হয়েছে — আপনি সবচেয়ে নতুন ভার্সনে আছেন (v{v})।",
+  "Checking…": "দেখা হচ্ছে…",
+  "Checks contact the release server and send nothing about you or this document — no ids, no telemetry.": "এই খোঁজ রিলিজ সার্ভারের সাথে যোগাযোগ করে, কিন্তু আপনার বা এই ডকুমেন্টের কোনো তথ্য পাঠায় না — কোনো আইডি নয়, কোনো টেলিমেট্রি নয়।",
+  "Click to reset": "রিসেট করতে ক্লিক করুন",
+  "Color": "রঙ",
+  "Comment": "মন্তব্য",
+  "Comment (C) — click an element or a spot on the slide": "মন্তব্য (C) — কোনো এলিমেন্টে বা স্লাইডের কোনো জায়গায় ক্লিক করুন",
+  "Comment · element": "মন্তব্য · এলিমেন্ট",
+  "Comment · point ({x}, {y})": "মন্তব্য · বিন্দু ({x}, {y})",
+  "Comment · slide": "মন্তব্য · স্লাইড",
+  "Comment:": "মন্তব্য:",
+  "Copied ✓": "কপি হয়েছে ✓",
+  "Copies this deck as plain JSON — paste it into an AI chat or any tool, then bring the edited JSON back here.": "এই প্রেজেন্টেশনটি সাধারণ JSON হিসেবে কপি করে — কোনো AI চ্যাটে বা যেকোনো টুলে পেস্ট করুন, তারপর এডিট করা JSON আবার এখানে ফিরিয়ে আনুন।",
+  "Copy document JSON": "ডকুমেন্ট JSON কপি করুন",
+  "Corner radius": "কোণের ব্যাসার্ধ",
+  "Couldn't check: {m}": "দেখা গেল না: {m}",
+  "Couldn’t access the clipboard": "ক্লিপবোর্ড ব্যবহার করা গেল না",
+  "Count up": "কাউন্ট আপ",
+  "Custom ({n})": "কাস্টম ({n})",
+  "Data": "ডেটা",
+  "Default set": "ডিফল্ট সেট",
+  "Delete": "মুছুন",
+  "Delete slide": "স্লাইড মুছুন",
+  "Delete this layout": "এই লেআউটটি মুছুন",
+  "Delete this slide? {parts}.": "এই স্লাইডটি মুছবেন? {parts}।",
+  "Dissolve the group (⇧⌘G)": "গ্রুপটি ভেঙে দিন (⇧⌘G)",
+  "Document replaced — ⌘Z undoes": "ডকুমেন্ট বদলে দেওয়া হয়েছে — ⌘Z দিয়ে ফেরানো যায়",
+  "Download updated copy": "আপডেট করা কপি ডাউনলোড করুন",
+  "Downloaded ✓": "ডাউনলোড হয়েছে ✓",
+  "Downloads a backup of the current version, then rewrites this file on disk as the new version — document untouched.": "এখনকার ভার্সনের একটি ব্যাকআপ ডাউনলোড করে, তারপর ডিস্কে থাকা এই ফাইলটিকে নতুন ভার্সন হিসেবে নতুন করে লেখে — ডকুমেন্টে হাত পড়ে না।",
+  "Downloads the new version with this document inside. The file you have now is not touched.": "এই ডকুমেন্ট ভিতরে রেখে নতুন ভার্সনটি ডাউনলোড করে। আপনার কাছে এখন যে ফাইলটি আছে তাতে হাত পড়ে না।",
+  "Drag anchor points on the slide; double-click adds and removes points": "স্লাইডের অ্যাঙ্কর পয়েন্টগুলো টেনে সরান; ডাবল-ক্লিক করলে পয়েন্ট যোগ হয় ও মুছে যায়",
+  "Drag to resize · double-click to reset": "আকার বদলাতে টানুন · রিসেট করতে ডাবল-ক্লিক করুন",
+  "Duplicate": "ডুপ্লিকেট করুন",
+  "Duplicate slide": "স্লাইড ডুপ্লিকেট করুন",
+  "Duplicates this slide as a hidden interactive state and links the selected element to it": "এই স্লাইডটিকে একটি লুকানো ইন্টারঅ্যাকটিভ স্টেট হিসেবে ডুপ্লিকেট করে আর বেছে নেওয়া এলিমেন্টটিকে তার সাথে লিঙ্ক করে",
+  "Elements select and move as one; Alt-click reaches a member (⌘G)": "এলিমেন্টগুলো একসাথে সিলেক্ট হয় ও নড়ে; Alt-ক্লিক করে ভিতরের একটিতে পৌঁছানো যায় (⌘G)",
+  "Ellipse": "উপবৃত্ত",
+  "End of deck": "প্রেজেন্টেশনের শেষ",
+  "End tip": "শেষ প্রান্তের চিহ্ন",
+  "Enter": "প্রবেশ",
+  "Export PDF (print)": "PDF এক্সপোর্ট করুন (প্রিন্ট)",
+  "Extra bold": "এক্সট্রা বোল্ড",
+  "Extra light": "এক্সট্রা লাইট",
+  "Fill": "ফিল",
+  "Fill & stroke": "ফিল ও স্ট্রোক",
+}
