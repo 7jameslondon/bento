@@ -1298,7 +1298,7 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
 .sv-timer:hover { color: #f7a600; }
 .sv-clock { font-size: 15px; color: #9fb0c3; }
 .sv-count { font-size: 15px; color: #9fb0c3; font-variant-numeric: tabular-nums; }
-.sv-ctrls { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
+.sv-ctrls { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .sv-btn {
   width: 34px;
   height: 30px;
@@ -1380,7 +1380,7 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
 .sv-thumb .sv-frame { box-shadow: none; border-radius: 0; }
 .sv-thumb-n {
   position: absolute;
-  inset-inline-start: 4px;
+  left: 4px;
   bottom: 4px;
   min-width: 16px;
   padding: 1px 5px;
@@ -2000,3 +2000,34 @@ dialog.ed-pwdialog .ed-pwerr { color: #C33; }
 .ed-stepper .ed-btn-icon { width: 24px; height: 24px; line-height: 1; font-size: 15px; padding: 0; }
 .ed-stepper-val { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; font-size: 13px; }
 input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: pointer; }
+
+/* ————— RTL chrome: the marks that don't flip themselves ————————————————————
+   Logical properties turn the LAYOUT around on their own. These are the few
+   glyphs that encode a direction in their SHAPE, so they have to be flipped by
+   hand. Every selector here is chrome — none of it can reach a slide, which
+   stays LTR-pinned (see the top of this file).
+
+   The speaker view (.sv-*) is deliberately absent: it is a separate window
+   sitting beside the projected show, and it never carries a dir attribute. */
+
+/* Accordion disclosure: a CSS triangle drawn with border-left, pointing "right"
+   at rest. Open (rotated 90°) points down either way; closed must point the way
+   the panel reads. */
+[dir="rtl"] .ed-sec-toggle.closed::before { transform: translateY(-50%) rotate(180deg); }
+
+/* Undo/redo arrows curl back toward where the text came from. */
+[dir="rtl"] .ed-group-history .ed-btn svg { transform: scaleX(-1); }
+
+/* The comment thread's "you are <name>" link rides the far edge of the head. */
+[dir="rtl"] .ed-comment-me { float: left; }
+
+/* Coordinates, sizes and JSON are LTR content whatever the interface language:
+   a base-RTL context renders "-5" as "5-" and reorders a JSON line's brackets.
+   Panel prose and every text field the user writes words into are untouched. */
+[dir="rtl"] .ed-row input[type='number'],
+[dir="rtl"] .ed-mini input,
+[dir="rtl"] .ed-axis-range input,
+[dir="rtl"] .ed-about-json,
+[dir="rtl"] .ed-chart-json {
+  direction: ltr;
+}

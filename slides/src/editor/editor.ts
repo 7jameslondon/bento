@@ -23,7 +23,7 @@ import { insertElements, insertSlides, parseClip, serializeElements, serializeSl
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
-import { t, setLocale, locale, LOCALE_CHOICES, applyDirection } from '../i18n'
+import { t, setLocale, locale, LOCALE_CHOICES, applyDirection, isRtl } from '../i18n'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -391,8 +391,11 @@ export class Editor {
   private updatePanelChevrons() {
     const glyph = (side: 'left' | 'right') => {
       const collapsed = (side === 'left' ? this.sidebar : this.props).classList.contains('ed-collapsed')
-      // chevron points where clicking will move the boundary
-      return side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      // chevron points where clicking will move the boundary. 'left'/'right'
+      // name the DOM order, not the screen: under an RTL chrome the slide list
+      // sits on the right, so the arrow that means "open me" turns around too.
+      const g = side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      return isRtl() ? (g === '›' ? '‹' : '›') : g
     }
     for (const side of ['left', 'right'] as const) {
       const b = this.panelToggles[side]
@@ -435,7 +438,10 @@ export class Editor {
       document.body.classList.add('ed-col-resizing')
       const move = (ev: MouseEvent) => {
         const dx = ev.clientX - startX
-        this.panelW[side] = Math.min(max, Math.max(min, startW + (side === 'left' ? dx : -dx)))
+        // clientX is physical; which way widens the panel depends on which
+        // screen edge it is docked to, and RTL swaps the two panels over.
+        const widens = (side === 'left') !== isRtl() ? dx : -dx
+        this.panelW[side] = Math.min(max, Math.max(min, startW + widens))
         this.applyPanelWidths()
       }
       const up = () => {
