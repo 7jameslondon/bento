@@ -225,6 +225,12 @@ names provisional.
   `yAxisIndex` (0/1). renderCartesian computes a range per axis, shares gridline
   rows (2nd axis labels on the right, its own nice scale via `fixedTicks`), and
   honours per-axis `min`/`max` + `axisLabel.formatter` ('{value}%'). **Visual
+  text styling**: charts-lite honours `legend.textStyle.fontSize/fontWeight`,
+  legend marker size/gap and numeric `top`/`bottom`, x/y
+  `axisLabel.fontSize/fontWeight`, axis and split-line widths, and line-series
+  `symbolSize`. Legend measurement treats CJK characters as full-width so
+  localized series names do not overlap.
+  **Visual
   chart editor** (panels.ts buildChartProps): structured UI over the option —
   Type, Legend + Second-axis toggles, a Series list (name · bar/line · left/right
   axis · colour · remove), per-axis min/max, and an editable categories×series
