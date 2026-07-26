@@ -55,6 +55,30 @@ methods. Two consequences:
   predates this app. A bespoke `window.__bentoHost` bridge would only have helped
   decks re-saved after it shipped — which is to say, none of the existing ones.
 
+### Saving from apps that are not Bento
+
+Two idioms, both supported, because "any self-contained HTML document" has to
+mean more than "any document that saves the way Bento does":
+
+- **File System Access.** The handle implements `kind`, `name`, `isSameEntry`,
+  `queryPermission`, `requestPermission`, `getFile` and `createWritable`; the
+  writable implements `write` (raw data AND the `{type:'write'|'seek'|'truncate'}`
+  params form), `seek`, `truncate`, `abort` and `close`. Bento only ever calls
+  `createWritable`/`write`/`close`, but a third-party page may reasonably call
+  `queryPermission()` before saving or `truncate()` to overwrite in place — a
+  live probe page reported those as `undefined` before this existed.
+  `getFile()` and `keepExistingData` need the bytes on disk, so the bridge has a
+  `read` op; only the OPEN document is readable, since an export target is
+  somewhere we were handed once and do not hold.
+
+- **`<a download>`.** The older and commoner idiom — TiddlyWiki, and most
+  "export this page" tools. WKWebView DROPS these silently without a download
+  delegate, so the button appears to do nothing, which is the worst possible
+  failure for a save. Downloads land in the app's Documents folder (visible in
+  Files under Bento Tray) with a collision-safe name and a confirmation. A
+  picker per save would punish an app that saves often, and a download cannot
+  overwrite the user's original anyway — that is what the FSA path is for.
+
 ### Which file a save targets
 
 Bento only reaches a picker when it holds **no handle**; afterwards ⌘S, autosave

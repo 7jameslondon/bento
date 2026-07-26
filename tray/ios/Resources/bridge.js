@@ -47,22 +47,66 @@
     // or export (read-only copy, invite, template) that must not overwrite it.
     //
     // Do NOT try to infer this by comparing suggestedName to the open file:
-    // Bento derives that name from the DECK TITLE, so it rarely matches the
-    // filename and every save would wrongly prompt.
+    // Bento derives that name from the DECK TITLE, so it rarely matches and
+    // every save would wrongly prompt.
     const name = await call('begin', { suggestedName: want })
+    return makeHandle(name)
+  }
+
+  // A FileSystemFileHandle faithful enough for apps that are not Bento.
+  // Bento itself only ever touches createWritable/write/close, but this host
+  // opens ANY self-contained HTML document, and a real app may well call
+  // queryPermission() before saving or truncate() to overwrite in place. Those
+  // returned `undefined` and threw — measured against a live third-party page,
+  // not guessed.
+  function makeHandle(name) {
     return {
-      name,
-      createWritable: async () => {
-        const parts = []
+      kind: 'file',
+      name: name,
+      isSameEntry: (other) => Promise.resolve(!!other && other.name === name),
+      // Permissions are meaningless here: the user already granted access by
+      // opening the document. Always-granted is the truthful answer.
+      queryPermission: () => Promise.resolve('granted'),
+      requestPermission: () => Promise.resolve('granted'),
+      getFile: async () => {
+        const text = await call('read', { name })
+        return new File([text == null ? '' : text], name, { type: 'text/html' })
+      },
+      createWritable: async (o) => {
+        // keepExistingData means "start from what is on disk", which requires
+        // reading it back — the spec default is an empty file.
+        let buf = (o && o.keepExistingData) ? (await call('read', { name })) || '' : ''
+        let pos = buf.length
+        const asText = async (d) => {
+          if (d == null) return ''
+          if (typeof d === 'string') return d
+          if (d instanceof Blob) return await d.text()
+          if (d instanceof ArrayBuffer || ArrayBuffer.isView(d)) return new TextDecoder().decode(d)
+          return String(d)
+        }
+        const put = (text) => {
+          if (pos > buf.length) buf = buf + '\0'.repeat(pos - buf.length)
+          buf = buf.slice(0, pos) + text + buf.slice(pos + text.length)
+          pos += text.length
+        }
         return {
           async write(data) {
-            parts.push(typeof data === 'string' ? data : await data.text())
+            // the params form: {type:'write'|'seek'|'truncate', data, position, size}
+            if (data && typeof data === 'object' && typeof data.type === 'string') {
+              if (data.type === 'seek') { pos = data.position || 0; return }
+              if (data.type === 'truncate') { buf = buf.slice(0, data.size || 0); if (pos > buf.length) pos = buf.length; return }
+              if (typeof data.position === 'number') pos = data.position
+              put(await asText(data.data))
+              return
+            }
+            put(await asText(data))
           },
-          async close() {
-            await call('write', { name, text: parts.join('') })
-          },
+          async seek(p) { pos = p || 0 },
+          async truncate(size) { buf = buf.slice(0, size || 0); if (pos > buf.length) pos = buf.length },
+          async abort() { buf = ''; pos = 0 },
+          async close() { await call('write', { name, text: buf }) },
         }
       },
     }
   }
-})()
+})();

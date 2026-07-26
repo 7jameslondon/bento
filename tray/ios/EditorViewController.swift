@@ -34,7 +34,8 @@ import CryptoKit
 ///    deck self-updates through Bento's normal signed channel and iOS users get
 ///    the same release as everyone else on the same day — no App Store
 ///    submission per release, no drift. What the app ships is file access.
-final class EditorViewController: UIViewController, WKScriptMessageHandler, WKURLSchemeHandler {
+final class EditorViewController: UIViewController, WKScriptMessageHandler, WKURLSchemeHandler,
+                                  WKNavigationDelegate, WKDownloadDelegate {
     private let document: BentoDocument
     private var webView: WKWebView!
 
@@ -157,6 +158,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView = WKWebView(frame: view.bounds, configuration: cfg)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.allowsBackForwardNavigationGestures = false
+        webView.navigationDelegate = self
         // The page must reach every physical edge. Left at .automatic, UIKit
         // insets the scroll view by the safe area, so in landscape the deck
         // stopped short of the left, right and bottom edges — visible as bands
@@ -199,6 +201,69 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     }
     func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 
+    // MARK: - downloads
+    //
+    // Not every self-contained HTML app saves through the File System Access
+    // API. The older and still commonest idiom is a Blob plus `<a download>` —
+    // TiddlyWiki, and most "export this page" tools. WKWebView DROPS those
+    // silently unless a download delegate exists, so the button appears to do
+    // nothing at all, which is the worst possible failure for a save.
+    //
+    // Downloads land in the app's Documents folder, which is visible in Files
+    // under Bento Tray. A picker per save would be punishing for an app that
+    // saves often, and a download cannot overwrite the user's original anyway —
+    // that is what the FSA path is for.
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse,
+                 decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+        decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction,
+                 didBecome download: WKDownload) { download.delegate = self }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse,
+                 didBecome download: WKDownload) { download.delegate = self }
+
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
+                  suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+        else { completionHandler(nil); return }
+        var dest = docs.appendingPathComponent(suggestedFilename)
+        // never clobber: downloads are new files by definition
+        var n = 2
+        let ext = dest.pathExtension
+        let stem = dest.deletingPathExtension().lastPathComponent
+        while FileManager.default.fileExists(atPath: dest.path) {
+            dest = docs.appendingPathComponent(ext.isEmpty ? "\(stem) \(n)" : "\(stem) \(n).\(ext)")
+            n += 1
+        }
+        lastDownloadName = dest.lastPathComponent
+        completionHandler(dest)
+    }
+
+    func downloadDidFinish(_ download: WKDownload) {
+        notify(String(format: NSLocalizedString("Saved “%@” to this app’s folder in Files.",
+                                                comment: "download finished"), lastDownloadName ?? "file"))
+    }
+
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        notify(NSLocalizedString("That download could not be saved.", comment: "download failed"))
+    }
+
+    private var lastDownloadName: String?
+
+    private func notify(_ message: String) {
+        let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        a.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: ""), style: .default))
+        present(a, animated: true)
+    }
+
     // MARK: - the save bridge
 
     func userContentController(_ c: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -215,6 +280,17 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
                 // never land on the open document.
                 pendingExportName = (m["suggestedName"] as? String) ?? "deck.bento.html"
                 reply(id, ok: true, value: pendingExportName!)
+            }
+
+        case "read":
+            // getFile() and createWritable({keepExistingData}) need the bytes
+            // currently on disk. Only the OPEN document is readable — an export
+            // target is somewhere we were handed once and do not hold.
+            let want = (m["name"] as? String) ?? ""
+            if want == document.fileURL.lastPathComponent {
+                reply(id, ok: true, value: String(data: document.html, encoding: .utf8) ?? "")
+            } else {
+                reply(id, ok: true, value: nil)
             }
 
         case "write":
