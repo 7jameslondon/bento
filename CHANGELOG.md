@@ -24,6 +24,25 @@ pre-1.0.
   a document name — it shows in the window title and becomes the suggested
   filename — so it reads better in title case. The `bento/slides` wordmark is
   unchanged.
+- **The screen stays awake while you present.** Phones and laptops used to dim
+  and lock partway through a talk if you left a slide up for a couple of
+  minutes. Bento now holds the screen on for the length of the show and lets go
+  when you exit — and takes the lock again if you switch away and come back.
+
+- **Safari and Firefox are told the truth about saving.** Those browsers (and
+  every browser on iPhone and iPad) can't rewrite a file in place — Bento hands
+  back an updated copy instead. The editor used to say the opposite in its
+  tooltips and only admit it in a passing message *after* the first save. It now
+  says what will actually happen before any work is at stake, once per browser,
+  and the Save button describes the real behaviour.
+
+  Those browsers also now show that your work *is* being kept safe. Bento has
+  always snapshotted the deck into the browser as you edit and offered it back
+  when you reopen, but on Safari and Firefox nothing ever said so — the only
+  signal was an amber dot that never cleared. It now reports when it last
+  backed up, while still showing the file itself as out of date, because it is.
+  (A password-protected deck is never snapshotted, so it stays quiet rather
+  than promise a safety net it doesn't have.)
 
 ## [1.0.10] — 2026-07-25
 

@@ -4,6 +4,12 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "Backed up in this browser": "このブラウザに保存しました",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "未保存の変更 — {when} にこのブラウザへ保存済みで、再度開いたときに復元できます。⌘S は更新されたコピーをダウンロードします。",
+  "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "未保存の変更 — ⌘S は更新されたコピーをダウンロードします（このブラウザはファイルを上書きできません）",
+  "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "保存 — 更新されたコピーをダウンロード（⌘S）。このブラウザは開いているファイルを上書きできません。",
+  "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "このブラウザはファイルを直接上書きできません。⌘S は代わりに更新されたコピーをダウンロードします。作業内容はこのブラウザにも保存され、再度開いたときに復元できます。",
+  "Got it": "了解",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "この画像はライブ共有には大きすぎます（上限は約 1 MB）。自分のコピーには保存されますが、共同編集者には表示されません。",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "この変更はライブ共有には大きすぎます（上限は約 1 MB）。自分のコピーには保存されますが、共同編集者には表示されません。",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "このライブセッションの容量がいっぱいです。変更は自分のコピーに保存されますが、共同編集者には表示されません。",

@@ -4,6 +4,12 @@
 import type { Catalog } from '../i18n'
 
 export const it: Catalog = {
+  "Backed up in this browser": "Salvato in questo browser",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Modifiche non salvate — conservate in questo browser alle {when} e riproposte alla riapertura. ⌘S scarica una copia aggiornata.",
+  "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Modifiche non salvate — ⌘S scarica una copia aggiornata (questo browser non può riscrivere il file)",
+  "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "Salva — scarica una copia aggiornata (⌘S). Questo browser non può riscrivere il file aperto.",
+  "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "Questo browser non può riscrivere i file sul posto. ⌘S scaricherà invece una copia aggiornata — il tuo lavoro viene conservato anche in questo browser e ti verrà riproposto alla riapertura.",
+  "Got it": "Ho capito",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Questa immagine è troppo grande per la condivisione dal vivo (circa 1 MB max). È salvata nella tua copia, ma i collaboratori non la vedranno.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Questa modifica è troppo grande per la condivisione dal vivo (circa 1 MB max). È salvata nella tua copia, ma i collaboratori non la vedranno.",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Questa sessione dal vivo ha esaurito lo spazio. La tua modifica è salvata nella tua copia, ma i collaboratori non la vedranno.",

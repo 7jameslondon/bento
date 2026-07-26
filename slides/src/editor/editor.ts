@@ -17,7 +17,7 @@ import { renderSlide, renderThumbnail } from '../render'
 import { SlideCanvas } from './canvas'
 import { PropsPanel } from './panels'
 import { startPresentation } from '../present'
-import { hasFileHandle, isEncryptionActive, saveFile, serializeAuto, serializeFile, setEncryptionPassword, writeUpdatedFile, writeUpdatedFileAs } from '../save'
+import { canWriteInPlace, hasFileHandle, isEncryptionActive, saveFile, serializeAuto, serializeFile, setEncryptionPassword, writeUpdatedFile, writeUpdatedFileAs } from '../save'
 import { addVersion, clearRecovery, clearVersions, docContentKey, getRecovery, listVersions, pruneOld, putRecovery, type Snapshot } from '../autosave'
 import { insertElements, insertSlides, parseClip, serializeElements, serializeSlides } from './clipboard'
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
@@ -28,6 +28,10 @@ import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
 const i18nT = t
+
+/** Per-BROWSER, not per-deck: whether the "this browser can't rewrite files"
+ *  notice has been acknowledged. It is a property of the browser. */
+const SAVE_NOTICE_KEY = 'bento-save-notice'
 
 const SHAPE_MENU: Array<{ kind: ShapeKind; label: string; icon: string; draw?: 'line' | 'path' | 'connector' | 'free' | 'poly'; tip: string }> = [
   { kind: 'rect', label: 'Rectangle', icon: ICONS.rect, tip: 'A rectangle — rounded corners, fills, gradients and shadows in the panel' },
@@ -221,7 +225,13 @@ export class Editor {
       }
     })
     this.dirtyDot = div('ed-dirty')
-    this.dirtyDot.title = t('Unsaved changes — ⌘S saves this file in place')
+    // Capability-aware: on Safari/Firefox (and every iOS browser) there is no
+    // File System Access API, so ⌘S CANNOT rewrite this file — it hands back a
+    // copy. Promising in-place saving and retracting it in a toast after the
+    // first save is worse than saying the true thing before any work is lost.
+    this.dirtyDot.title = canWriteInPlace()
+      ? t('Unsaved changes — ⌘S saves this file in place')
+      : t('Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)')
 
     const insert = div('ed-group ed-insert')
     insert.append(
@@ -262,7 +272,9 @@ export class Editor {
     }, 1500)
     const undoB = btn(ICONS.undo, '', () => this.store.undo(), t('Undo (⌘Z)'))
     const redoB = btn(ICONS.redo, '', () => this.store.redo(), t('Redo (⇧⌘Z)'))
-    const saveB = btn(ICONS.save, t('Save'), () => this.save(false), t('Save — rewrite this file in place (⌘S)'))
+    const saveB = btn(ICONS.save, t('Save'), () => this.save(false), canWriteInPlace()
+      ? t('Save — rewrite this file in place (⌘S)')
+      : t('Save — download an updated copy (⌘S). This browser can’t rewrite the open file.'))
     saveB.appendChild(this.dirtyDot) // the amber unsaved-changes dot lives ON Save
     const pdfB = btn(ICONS.pdf, '', () => this.exportPdf(), t('Export PDF (print)'))
     const helpB = btn('<b class="ed-help-q">?</b>', '', () => this.openHelp(), t('Shortcuts & tips (?)'))
@@ -1590,11 +1602,13 @@ export class Editor {
 
   private autosaveTimer = 0
   private lastVersionAt = 0
+  private lastBackupAt = 0
 
   private wireAutosave() {
     if (this.store.doc.readonly) return // player file — nothing to autosave
     void pruneOld()
     void this.checkRecovery()
+    this.noticeIfCannotWriteInPlace()
     this.store.on('doc', () => this.scheduleAutosave())
   }
 
@@ -1609,8 +1623,11 @@ export class Editor {
     if (doc.readonly) return
     // Never write an encrypted deck's plaintext to IndexedDB; its file
     // write-back below stays encrypted via serializeAuto.
+    let snapshotted = false
     if (!isEncryptionActive()) {
-      await putRecovery(doc)
+      // only true if it REALLY stored — see putRecovery; no IndexedDB (Safari
+      // private browsing, some file:// contexts) must not read as "backed up"
+      snapshotted = await putRecovery(doc)
       if (Date.now() - this.lastVersionAt > 120_000) { this.lastVersionAt = Date.now(); await addVersion(doc) }
     }
     // Silent file write-back once we hold a writable handle (Chrome/Edge).
@@ -1620,8 +1637,32 @@ export class Editor {
         await writeUpdatedFile(await serializeAuto(doc))
         this.store.setDirty(false)
         this.flashSaved()
+        return
       } catch { /* keep dirty; the IndexedDB snapshot is the backstop */ }
     }
+    // No handle (Safari/Firefox/iOS) or the write failed: the file on disk is
+    // STALE and the deck stays dirty — saying "Saved" here would be a lie. But
+    // the snapshot means the work is not lost, and that was previously
+    // invisible: nothing was shown at all, so the only signal was an amber dot
+    // that never cleared. Say what is actually true.
+    //
+    // Deliberately silent for an ENCRYPTED deck: those are never snapshotted to
+    // IndexedDB (plaintext-to-disk), so on a browser that cannot write back
+    // there is no backstop, and claiming one would be the worst kind of wrong.
+    if (snapshotted) {
+      this.lastBackupAt = Date.now()
+      this.flashSaved(t('Backed up in this browser'))
+      this.refreshDirtyHint()
+    }
+  }
+
+  /** Keep the dirty dot's tooltip honest about the backstop — the file is still
+   *  stale, but the work is recoverable, and the user should be able to find
+   *  that out by hovering the thing that is worrying them. */
+  private refreshDirtyHint() {
+    if (canWriteInPlace() || !this.lastBackupAt) return
+    const when = new Date(this.lastBackupAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    this.dirtyDot.title = t('Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.', { when })
   }
 
   private async checkRecovery() {
@@ -1632,6 +1673,33 @@ export class Editor {
     try { recovered = JSON.parse(snap.json) } catch { return }
     if (docContentKey(recovered) === docContentKey(doc)) return // the file already has these edits
     this.showRecoveryBanner(snap, recovered)
+  }
+
+  /**
+   * Say ONCE, before any work is at risk, that this browser cannot rewrite the
+   * open file. Shown on Safari/Firefox and every iOS browser (all WebKit, none
+   * of which ship the File System Access API).
+   *
+   * Timing is the point. The editor used to state the opposite in its tooltips
+   * and only correct itself in a toast AFTER the first save — by which time the
+   * author had already trusted "⌘S rewrites this file" and, on a deck opened
+   * from disk, had no idea their edits were going to Downloads instead.
+   *
+   * Once per browser, not per deck: it is a property of the browser, and
+   * repeating it every time a file opens would be nagging.
+   */
+  private noticeIfCannotWriteInPlace() {
+    if (canWriteInPlace()) return
+    if (localStorage.getItem(SAVE_NOTICE_KEY) === 'seen') return
+    const bar = div('ed-recover')
+    const msg = document.createElement('span')
+    msg.textContent = t('This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.')
+    const ok = document.createElement('button')
+    ok.className = 'ed-btn ed-btn-primary'
+    ok.textContent = t('Got it')
+    ok.addEventListener('click', () => { localStorage.setItem(SAVE_NOTICE_KEY, 'seen'); bar.remove() })
+    bar.append(msg, ok)
+    document.body.appendChild(bar)
   }
 
   private showRecoveryBanner(snap: Snapshot, recovered: import('../model').BentoDoc) {
@@ -1790,10 +1858,10 @@ export class Editor {
   }
 
   private savedTimer = 0
-  private flashSaved() {
+  private flashSaved(message = t('Saved')) {
     let tag = document.querySelector<HTMLElement>('.ed-autosaved')
     if (!tag) { tag = div('ed-autosaved'); document.querySelector('.ed-topbar .ed-title')?.after(tag) }
-    tag.textContent = t('Saved')
+    tag.textContent = message
     tag.classList.add('show')
     clearTimeout(this.savedTimer)
     this.savedTimer = window.setTimeout(() => tag!.classList.remove('show'), 1400)
