@@ -1,0 +1,23 @@
+<!--
+  bento/tray iOS app icon — same artwork as tray-logo.svg, full bleed.
+
+  No corner radius here: iOS applies its own squircle mask, and a rounded rect
+  drawn inside one shows as a dark seam along every edge. The 32-unit grid is
+  kept so icon and mark stay identical in proportion; artwork sits 2.3 units
+  (7.2%) clear of every edge and its outermost points are the tray's ends, which
+  are low and central — well inside where the squircle cuts.
+
+  Export at 1024x1024 for App Store Connect.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 32 32"
+     role="img" aria-label="Bento Tray">
+  <rect width="32" height="32" fill="#16273E"/>
+
+  <rect x="6" y="4.6" width="6.4" height="18.4" rx="2.3" fill="#5E7699"/>
+  <rect x="14.4" y="4.6" width="11.6" height="8.2" rx="2.3" fill="#FF9E8A"/>
+  <rect x="14.4" y="14.8" width="11.6" height="8.2" rx="2.3" fill="#F0EBE0"/>
+
+  <path d="M3.4 20.4 V23.2 A3 3 0 0 0 6.4 26.2 H25.6 A3 3 0 0 0 28.6 23.2 V20.4"
+        fill="none" stroke="#FF9E8A" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
