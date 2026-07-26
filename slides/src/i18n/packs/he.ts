@@ -4,10 +4,14 @@
 // never enters the module graph. scripts/build-i18n.mjs --packs emits it as
 // downloadable JSON. See docs/i18n-packs.md.
 //
-// Hebrew is the FIRST right-to-left language here. The catalog is only half
-// the job: the shell still lays out left-to-right, so this pack makes the
-// words Hebrew, not the interface mirrored. Direction/mirroring is tracked
-// separately — do not read a complete pack as "RTL is done".
+// Hebrew is the FIRST right-to-left language here. It was written while the
+// shell still laid out left-to-right; the chrome now mirrors, so the four
+// directional arrows in the VALUES point ← (U+2190) while their English keys
+// keep the → they were authored with. U+2192 is not Bidi_Mirrored, so an
+// arrow does NOT flip on its own in an RTL run — it has to be the other
+// character. There are NO bidi control characters in this file: strings
+// mixing Hebrew with a Latin token, a shortcut or a number are phrased so the
+// punctuation lands right, never steered with marks.
 //
 // Machine-drafted and NOT reviewed by a native speaker. Terminology follows
 // what Hebrew speakers see in Office and Google Slides (שקופית, מצגת, פריסה,
@@ -24,7 +28,7 @@ export const strings: Catalog = {
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "שמירה (⌘S) — הורדת עותק מעודכן. הדפדפן הזה אינו יכול לשכתב את הקובץ הפתוח.",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "הדפדפן הזה אינו יכול לשכתב קבצים במקומם. במקום זאת ⌘S יוריד עותק מעודכן — העבודה שלך נשמרת גם בדפדפן הזה ותוצע לשחזור בפתיחה הבאה.",
   "Got it": "הבנתי",
-  "What’s new →": "מה חדש →",
+  "What’s new →": "מה חדש ←",
   "Read the release notes for v{v} (opens in a new tab)": "קריאת הערות הגרסה של {v} (נפתח בכרטיסייה חדשה)",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "התמונה הזו גדולה מדי לשיתוף חי (מקסימום כ־1 MB). היא נשמרת בעותק שלך, אבל המשתתפים לא יראו אותה.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "השינוי הזה גדול מדי לשיתוף חי (מקסימום כ־1 MB). הוא נשמר בעותק שלך, אבל המשתתפים לא יראו אותו.",
@@ -271,7 +275,7 @@ export const strings: Catalog = {
   "reveal": "חשיפה",
   "right": "ימין",
   "slide": "החלקה",
-  "solid": "אחיד",
+  "solid": "רציף",
   "subtitle": "כותרת משנה",
   "title": "כותרת",
   "top": "למעלה",
@@ -384,7 +388,7 @@ export const strings: Catalog = {
   "Remove": "הסרה",
   "Add": "הוספה",
   "Double-click a cell to edit. Tab moves across, Enter down.": "לחיצה כפולה על תא פותחת עריכה. Tab עובר הצידה, Enter למטה.",
-  "Make a chart from this table →": "יצירת תרשים מהטבלה הזו →",
+  "Make a chart from this table →": "יצירת תרשים מהטבלה הזו ←",
   "Create a bar chart from the numbers in this table (first column = labels)": "יצירת תרשים עמודות מהמספרים שבטבלה הזו (העמודה הראשונה = תוויות)",
   "No numeric column found to chart": "לא נמצאה עמודה מספרית ליצירת תרשים",
   "Chart created from table": "נוצר תרשים מהטבלה",
@@ -465,7 +469,7 @@ export const strings: Catalog = {
   "Paste an image or text straight onto the canvas with ⌘V.": "⌘V מדביק תמונה או טקסט ישירות למשטח העריכה.",
   "Copy a slide (⌘C with nothing selected) and paste it into another Bento deck.": "העתיקו שקופית (⌘C ללא בחירה) והדביקו אותה במצגת bento אחרת.",
   "Make a chart from a table and it stays linked — edit the table, the chart updates.": "צרו תרשים מטבלה והוא יישאר מקושר — ערכו את הטבלה, והתרשים יתעדכן.",
-  "Your work auto-saves; restore earlier versions from About → Version history.": "העבודה נשמרת אוטומטית; שחזרו גרסאות קודמות דרך אודות → היסטוריית גרסאות.",
+  "Your work auto-saves; restore earlier versions from About → Version history.": "העבודה נשמרת אוטומטית; שחזרו גרסאות קודמות דרך אודות ← היסטוריית גרסאות.",
   "Slide copied — ⌘V in any deck to paste it": "השקופית הועתקה — ⌘V בכל מצגת כדי להדביק אותה",
   "📺 Use a second screen for notes": "📺 שימוש במסך שני להערות",
   "Second screen ready — press S for speaker notes": "המסך השני מוכן — הקישו S להערות המגיש",
@@ -487,7 +491,7 @@ export const strings: Catalog = {
   "Effects": "אפקטים",
   "Embedded in the file": "מוטמע בקובץ",
   "Fit & corners": "התאמה ופינות",
-  "Full guide at bento.page/help →": "המדריך המלא בכתובת bento.page/help →",
+  "Full guide at bento.page/help →": "המדריך המלא בכתובת bento.page/help ←",
   "Linked — the deck stays small but needs this URL to play.": "מקושר — המצגת נשארת קטנה אבל נדרשת הכתובת הזו לניגון.",
   "Media": "מדיה",
   "Muted": "מושתק",
@@ -612,7 +616,6 @@ export const strings: Catalog = {
   "Which hover set to show on the canvas while you edit": "איזו ערכת ריחוף להציג במשטח העריכה בזמן העריכה",
   "What this text IS in a layout (title, body…) — applying a layout matches elements by role": "מהו הטקסט הזה בתוך פריסה (כותרת, גוף…) — החלת פריסה מתאימה אובייקטים לפי תפקיד",
   "Drop-shadow presets — the shadow follows the element’s real shape, corners and transparency": "ערכות צל מוכנות — הצל עוקב אחרי הצורה האמיתית של האובייקט, הפינות והשקיפות",
-  "Colour with opacity — pick with the swatch, the % field is transparency": "צבע עם אטימות — בחרו בדגימת הצבע, שדה ה־% הוא השקיפות",
   "Entrance animation when the slide appears (plays on non-morph entries; equal order = together)": "אנימציית כניסה כשהשקופית מופיעה (פועלת בכניסות שאינן מורף; סדר זהה = יחד)",
   "How long the entrance takes, in seconds": "כמה זמן נמשכת הכניסה, בשניות",
   "Numbers in this text count up from zero when the slide enters": "מספרים בטקסט הזה נספרים כלפי מעלה מאפס עם כניסת השקופית",
@@ -684,6 +687,7 @@ export const strings: Catalog = {
   "Available to add": "זמינות להוספה",
   "Adding…": "מוסיף…",
   "That language pack couldn’t be read.": "לא ניתן לקרוא את חבילת השפה הזו.",
+  "That language pack failed its security check, so it wasn’t added.": "חבילת השפה הזו נכשלה בבדיקת האבטחה, ולכן לא נוספה.",
   "That language pack was built for a different Bento app.": "חבילת השפה הזו נבנתה עבור יישום bento אחר.",
   "Manage languages…": "ניהול שפות…",
   "In this file": "בקובץ הזה",
@@ -701,4 +705,14 @@ export const strings: Catalog = {
   "Goes into the deck itself, so it travels with the file. Written when you next save.": "נכנסת למצגת עצמה, ולכן נוסעת יחד עם הקובץ. תיכתב בשמירה הבאה.",
   "Put it in the deck — written when you next save.": "הוספה למצגת — תיכתב בשמירה הבאה.",
   "Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.": "נבנתה לגרסה {v} — ביטויים שעדיין מוצגים באנגלית: {n}. עדכון של bento ירענן אותה.",
+  "1 element": "רכיב אחד",
+  "{n} elements": "רכיבים: {n}",
+  "Diagram": "דיאגרמה",
+  "Video": "וידאו",
+  "Audio": "אודיו",
+  "video": "וידאו",
+  "audio": "אודיו",
+  "Loop animation": "אנימציה בלולאה",
+  "solid colour": "צבע אחיד",
+  "Colour with opacity — pick with the swatch, the % field is how opaque it is": "צבע עם אטימות — בחרו בדגימת הצבע, שדה ה־% הוא מידת האטימות",
 }
