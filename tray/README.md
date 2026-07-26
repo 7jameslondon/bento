@@ -86,6 +86,29 @@ of this bridge did exactly that and prompted on every single save.
 - **`bridge.js` is injected `.atDocumentStart`.** Bento decides whether it can
   save during boot; injected later, the editor has already concluded it cannot.
 
+## Getting documents in
+
+Four routes, all landing on the same in-place editing:
+
+1. **Files** — the app's folder appears under *On My iPhone → Bento Tray*, and
+   the Browse tab navigates the whole Files hierarchy: iCloud Drive, Dropbox,
+   Google Drive, anything with a File Provider. Tap a document to open it where
+   it lives; edits go back to that file.
+2. **Share sheet / "Open in"** — from Safari, Mail, Messages. The app declares
+   itself an `Editor` for `public.html` with `LSSupportsOpeningDocumentsInPlace`,
+   so it is offered for any HTML file.
+3. **AirDrop**, same mechanism.
+4. **"+"** for a new document from the bundled seed.
+
+Routes 2 and 3 need `scene(_:openURLContexts:)` — declaring the document type
+only makes the app *offered*, it does not deliver the file. Both cold launch
+(`options.urlContexts`) and warm delivery are handled, and the URL is wrapped in
+a security-scoped accessor: without it the read fails silently and the document
+opens blank.
+
+`LSHandlerRank` is `Alternate`, so Safari stays the default for HTML and Bento
+Tray appears as a choice rather than hijacking every `.html` on the device.
+
 ## Building
 
 Needs **full Xcode** (Command Line Tools alone is not enough) and XcodeGen:

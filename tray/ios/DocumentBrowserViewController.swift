@@ -67,6 +67,21 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
         openEditor(url)
     }
 
+    /// Open a document handed to us by the SYSTEM — the share sheet, "Open in",
+    /// AirDrop, or tapping a file in Files. `revealDocument` imports it into the
+    /// browser's storage when it lives somewhere we cannot keep hold of, and
+    /// surfaces it in the UI so the user can find it again afterwards.
+    func openIncoming(_ url: URL) {
+        revealDocument(at: url, importIfNeeded: true) { [weak self] revealed, error in
+            guard let self else { return }
+            // Falling back to the original URL matters: reveal fails for a file
+            // already inside our own container, which is exactly where a
+            // previously-imported document lives.
+            self.openEditor(revealed ?? url)
+            if let error { NSLog("reveal failed, opened in place: %@", String(describing: error)) }
+        }
+    }
+
     private func openEditor(_ url: URL) {
         // Security-scoped access: a document opened in place lives outside the
         // app container, so the URL must be scoped for the whole editing
