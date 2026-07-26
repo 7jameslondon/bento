@@ -18,6 +18,9 @@
 //     node scripts/build-i18n.mjs
 //
 import { PACKED, PACKED_LOCALES } from './i18n/packed'
+import { PACK_BLOCK_TYPE, readPacksFromShell, refreshPacksForVersion, shellBlocksForPacks } from './packs'
+import { registerShellBlocks } from '../../kernel/src/save.ts'
+import { registerUpdatePrepare } from '../../kernel/src/update.ts'
 import { registerI18n, locale as localeCode } from '../../kernel/src/i18n.ts'
 import type { LocaleChoice } from '../../kernel/src/i18n.ts'
 
@@ -55,7 +58,28 @@ registerI18n({
   choices: CHOICES,
 })
 
-/** Kept as a const export for call sites that read it directly. */
+// Packs embedded in this file, registered before the first t() — the same
+// module-evaluation-order guarantee that makes the facade own registration.
+// A pack lives in the FILE and nowhere else (see ./packs.ts for why).
+readPacksFromShell()
+
+// Every save re-declares the file's packs, so staging one is enough to make
+// it travel and dropping it is enough to remove it. The type is declared here
+// so the kernel clears pack blocks even when the list is empty — removing the
+// file's last pack must actually remove it.
+registerShellBlocks(shellBlocksForPacks, [PACK_BLOCK_TYPE])
+
+// A self-update fetches a NEW shell and re-splices this document into it. The
+// block provider above already carries the file's packs across; this also
+// brings them UP TO the new version, so a translated deck doesn't drift back
+// toward English one release at a time. Best effort — see refreshPacksForVersion.
+registerUpdatePrepare(async (version) => { await refreshPacksForVersion(version) })
+
+/**
+ * The BUNDLED locales only. Call sites that need the live list — including any
+ * language an installed pack added — must use `localeChoices()` instead: this
+ * const is frozen at import and can never grow.
+ */
 export const LOCALE_CHOICES = CHOICES
 
 export { t, locale, setLocale, i18nApi, localeChoices } from '../../kernel/src/i18n.ts'

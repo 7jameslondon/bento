@@ -30,8 +30,13 @@ build of every app must keep:
 
 - a `<script type="application/bento+json" id="bento-doc">` block that is
   **plaintext** (never inside the compressed payloads), same id, forever;
-- block content that is JSON with `<` escaped as `<` — it can never
+- block content that is JSON with `<` escaped as `\u003c` — it can never
   contain `</script>`;
+- the SAME escaping on every other plaintext data block the shell carries
+  (`application/bento+*`, written by `registerShellBlocks` — language packs
+  today): their bodies are not authored by us, so an unescaped one could
+  close its own block or forge a second `#bento-doc` opening tag for an old
+  updater to splice into;
 - a file that survives `DOMParser → splice → outerHTML` round-trips, with
   balanced script tags and a v0.1.0-style *text* splice still producing a
   well-formed document.
@@ -122,6 +127,26 @@ is a **signed pack**, released centrally and spliced into the file on demand;
 see `i18n-packs.md`. Packs are additive — a file that never fetches one behaves
 exactly as before — and both tiers fall back per string to the English key,
 which is what lets a stale or partial pack degrade instead of break.
+
+Four pack rules are platform-level, not app choices:
+
+- **A pack lives in the FILE and nowhere else.** No browser-local copy: the
+  download comes from an https origin and the file is then opened from
+  `file://`, so anything stored per-origin vanishes on the journey the product
+  encourages. A pack rides in an `application/bento+lang` block written by
+  `registerShellBlocks` (kernel `save.ts`), under the same `\u003c`-escaping
+  and the same §2 splice contract as `#bento-doc` — `scripts/shell-gate.mjs`
+  proves a pack-carrying shell conformant, with an adversarial pack, on every
+  build.
+- **Adding is staged, and written on the next save.** Writing on click means a
+  silent second download of the user's deck on every browser without File
+  System Access.
+- **Self-update carries packs forward** and refreshes them for the incoming
+  version (`registerUpdatePrepare` in kernel `update.ts`), best effort — a pack
+  that cannot be re-fetched is kept, never dropped.
+- **Fetched packs are verified against the signed release channel; embedded
+  packs are not re-verified** — they carry the same trust as the document
+  around them, and opening a file must never require the network.
 
 ### Direction (RTL) — two halves, never confuse them
 
