@@ -15,6 +15,23 @@ const DATA_BLOCK_ID = 'bento-doc'
 // inline <script> that carries this very code inside a built Bento file).
 const SCRIPT_CLOSE = '</scr' + 'ipt>'
 
+/**
+ * DOM the runtime injects at boot and that must NEVER reach a saved file.
+ *
+ * capturePristine() clones the live document, and the compressed shell's
+ * loader has already inflated the app stylesheet into a <style> by then (see
+ * scripts/postbuild-compress.mjs). Serializing the clone as-is wrote that
+ * ~100KB of CSS back as PLAINTEXT — and the next boot inflated the payload and
+ * appended another copy, so every save grew the file by another 100KB, forever.
+ * The CSS ships deflated in the #bento-rt-css payload for a reason; the saved
+ * file must carry it exactly once, compressed.
+ *
+ * So: anything injected before the pristine capture carries this attribute and
+ * is stripped from every serialized shell. The kernel does not care what the
+ * node is — only that the app declared it runtime-owned.
+ */
+const TRANSIENT_SELECTOR = '[data-bento-transient]'
+
 let pristine: Document | null = null
 
 /** Call first thing at boot, before any DOM mutation. */
@@ -75,6 +92,9 @@ export function readShellBlocks(type: string): Array<{ id: string; body: string;
 /** Serialize a raw data-block body into an app shell. */
 function serializeBody(shell: Document, body: string, title: string): string {
   const clone = shell.cloneNode(true) as Document
+
+  // Runtime-injected DOM is not part of the shell (see TRANSIENT_SELECTOR).
+  for (const el of Array.from(clone.querySelectorAll(TRANSIENT_SELECTOR))) el.remove()
 
   // Re-declare the app's extra blocks: drop every one of a managed type, then
   // write the current set back. Removing a language from the file is therefore

@@ -551,6 +551,11 @@ names provisional.
   blocks + ~1KB loader (DecompressionStream → blob import; pre-2023 browsers
   get a plain-HTML message). Byte order: chrome → NOTICE → tooling comment →
   PLAINTEXT #bento-doc → splash → payloads last. Shell ~560KB (was 1.33MB).
+  The loader's injected `<style>` carries `data-bento-transient` and
+  `serializeBody` (kernel/src/save.ts) strips marked nodes from the clone —
+  `capturePristine()` clones the LIVE document, so without that the inflated
+  CSS was saved back as plaintext and re-appended each boot (+100KB per save,
+  forever). Anything injected before the pristine capture must be marked.
   SPLICE CONTRACT (old updaters are frozen code): #bento-doc stays plaintext/
   same id, file survives DOMParser→splice→outerHTML, no stray script-close —
   release.mjs runs a conformance GATE before signing every release.

@@ -34,6 +34,13 @@ pre-1.0.
   Tokyo opens in French chrome for a French reader, and the deck itself is
   unchanged either way.
 
+- **Fix: saved files no longer grow by 100 KB on every save.** Each save wrote
+  a fresh, uncompressed copy of the app's stylesheet into the file, which the
+  next save then copied again — a deck saved ten times carried ten of them and
+  had put on a megabyte for nothing. The stylesheet belongs in the compressed
+  runtime payload, where it takes 27 KB and is written exactly once; a file
+  that already accumulated copies drops all of them the next time you save it.
+
 - **Fix: a large chart legend no longer crowds the axis labels.** Charts that
   don't set their own margins now leave room for the legend at whatever size
   it's set to, instead of assuming the default one.
