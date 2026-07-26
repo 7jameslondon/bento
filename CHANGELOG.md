@@ -11,6 +11,11 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Chart labels and legends now honor their visual options.** The lightweight
+  chart renderer applies configured font sizes and weights to axis labels and
+  legends, respects legend spacing and placement, and measures CJK legend text
+  correctly so localized series names no longer overlap.
+
 - **Updating a file now suggests that file's own name.** When an update asks
   where to save, the dialog is pre-filled with the name of the deck you have
   open rather than one derived from its title — so a file called
