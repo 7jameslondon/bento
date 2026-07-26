@@ -16,6 +16,14 @@
 // and proves the contract holds with it in the file (and, as a negative
 // control, that the same pack written *unescaped* is caught).
 //
+// A THIRD invariant is about size rather than correctness: the runtime ships
+// DEFLATED, and a save must not quietly turn it back into plaintext. The
+// loader inflates the app stylesheet into a <style> at boot, and a save clones
+// the live document — so unless that node is marked `data-bento-transient` for
+// `serializeBody` to strip, every save writes ~100KB of CSS into the file and
+// the next boot appends another copy. It is invisible in review and unbounded
+// in a shipped file, so the gate checks the artifact for it.
+//
 // The `<`-escape rule is deliberately restated here rather than imported: a
 // gate that shares code with the thing it gates cannot notice the thing
 // drifting. The one link back to the implementation is a source assertion
@@ -30,6 +38,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { inflateRawSync } from 'node:zlib'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = dirname(here)
@@ -235,7 +244,91 @@ function checkPackCarryingShell(shell) {
   if (caught !== 2) fail('negative control passed — the pack-block checks have no teeth')
 }
 
-// --- invariant 4: the product still applies the escape ----------------------
+// --- invariant 4: the runtime stays compressed, and stays out of the save ---
+
+const TRANSIENT_ATTR = 'data-bento-transient'
+const PAYLOAD_TYPE = 'bento/deflate-b64'
+
+/** Every `<style>` in the file, with its raw text. */
+function scanStyles(html) {
+  return Array.from(html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)).map((m) => m[1])
+}
+
+/** The inflated text of each `bento/deflate-b64` payload, by id. */
+function inflatePayloads(html) {
+  const out = new Map()
+  for (const s of scanScripts(html).filter((x) => x.type === PAYLOAD_TYPE)) {
+    try {
+      out.set(s.id, inflateRawSync(Buffer.from(s.text.trim(), 'base64')).toString('utf8'))
+    } catch (e) {
+      fail(`payload #${s.id} does not inflate: ${e.message}`)
+    }
+  }
+  return out
+}
+
+/**
+ * No payload's content may ALSO appear as plaintext in the file.
+ *
+ * This is the shape the bug takes on disk: the file carries the stylesheet
+ * twice, once deflated (27KB, the copy the loader uses) and once as a `<style>`
+ * the previous save cloned out of the live DOM (100KB, dead weight that grows
+ * by another copy every save).
+ */
+function checkRuntimeStaysCompressed(html, label) {
+  const payloads = inflatePayloads(html)
+  if (!payloads.size) return false // an uncompressed build — nothing to check
+  const plaintext = [
+    ...scanStyles(html),
+    ...scanScripts(html).filter((s) => s.type !== PAYLOAD_TYPE).map((s) => s.text),
+  ]
+  for (const [id, text] of payloads) {
+    if (plaintext.some((body) => body.includes(text)))
+      fail(`#${id} also appears as plaintext in the file — the runtime must ship deflated only (${label})`)
+  }
+  return true
+}
+
+/**
+ * …and the two halves of the mechanism that keeps it that way, checked in the
+ * ARTIFACT rather than in source: the loader marks the style it injects, and
+ * the runtime it boots still strips marked nodes when it serializes. Both are
+ * string literals that survive minification.
+ */
+function checkTransientMarking(shell) {
+  const scripts = scanScripts(shell)
+  const loader = scripts.find((s) => !s.type && s.text.includes('bento-rt-css'))
+  if (!loader) fail('boot loader not found in the shell')
+  // Specifically: it SETS the attribute. Merely mentioning the name is what
+  // the loader's stale-copy sweep does, and that must not satisfy this check.
+  if (!new RegExp(String.raw`setAttribute\(\s*['"]${TRANSIENT_ATTR}['"]`).test(loader.text))
+    fail(
+      `the boot loader injects the stylesheet without marking it ${TRANSIENT_ATTR} — ` +
+        'every save would write it back as plaintext (scripts/postbuild-compress.mjs)',
+    )
+  const runtime = inflatePayloads(shell).get('bento-rt') ?? ''
+  if (!runtime.includes(`[${TRANSIENT_ATTR}]`))
+    fail(
+      `the runtime no longer strips [${TRANSIENT_ATTR}] when serializing — ` +
+        'saved files would grow by the stylesheet on every save (kernel/src/save.ts)',
+    )
+
+  // NEGATIVE CONTROL — a shell carrying the inflated stylesheet as plaintext
+  // (exactly what a save produced before the marker existed) must be caught.
+  const css = inflatePayloads(shell).get('bento-rt-css')
+  if (css) {
+    const bloated = shell.replace('</head>', () => `<style>${css}</style>\n</head>`)
+    let caught = false
+    try {
+      checkRuntimeStaysCompressed(bloated, 'plaintext-runtime control')
+    } catch {
+      caught = true
+    }
+    if (!caught) fail('negative control passed — the plaintext-runtime check has no teeth')
+  }
+}
+
+// --- invariant 5: the product still applies the escape ----------------------
 
 /**
  * The only assertion that reaches into the implementation. The gate works on
@@ -262,8 +355,13 @@ export function gateShell(shellPath) {
   checkSpliceContract(shell, 'shell')
   checkDataBlocks(shell, 'shell')
   checkPackCarryingShell(shell)
+  const compressed = checkRuntimeStaysCompressed(shell, 'shell')
+  if (compressed) checkTransientMarking(shell)
   checkEscapeIsImplemented()
-  console.log('conformance gate: old-updater splice contract OK (incl. pack-carrying shell)')
+  console.log(
+    'conformance gate: old-updater splice contract OK (incl. pack-carrying shell)' +
+      (compressed ? '; runtime ships deflated only' : ''),
+  )
 }
 
 // CLI: node scripts/shell-gate.mjs <path-to-shell.html>

@@ -62,6 +62,16 @@ checks) before any release.
 
 - Self-save: capture the pristine shell at boot, swap the `#bento-doc` block,
   re-serialize. File System Access API first, download fallback.
+- **Runtime-injected DOM must be marked `data-bento-transient`.** The pristine
+  capture clones the LIVE document, so anything the runtime adds before it —
+  the compressed shell's inflated stylesheet, first of all — would otherwise be
+  written into the saved file, then re-injected on the next boot and saved
+  again: unbounded growth, one copy per save (~100KB each for the CSS, which
+  ships deflated for a reason). `serializeBody` strips the marked nodes from
+  every serialized shell. Inject before the capture only if you mark it —
+  `scripts/shell-gate.mjs` proves both halves on every CI build (the loader
+  marks what it injects; the runtime still strips it) and rejects a shell that
+  carries any payload's content as plaintext.
 - Autosave (IndexedDB) keeps a latest-recovery snapshot + a capped version
   timeline, keyed by `docId`. Read-only players skip autosave.
 - Password-protected docs use the `bento/enc` envelope (PBKDF2-SHA-256 300k →

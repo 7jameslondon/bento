@@ -147,6 +147,20 @@ const GENERIC_TOOLING = `<!--
 const TOOLING_COMMENT = generator === 'bento-slides' ? SLIDES_TOOLING : GENERIC_TOOLING
 
 // --- loader (plain script, runs at end of body; no "</script>" literal) -----
+// Keep the loader small: unlike the payloads it ships as PLAINTEXT in every
+// file, so its comments are shipped bytes. Anything long goes here instead.
+//
+// TRANSIENT DOM — the style element it injects belongs to the RUNNING document
+// only. A save clones the live DOM (kernel/src/save.ts capturePristine), so
+// without the two guards below every save wrote this ~100KB of CSS back as
+// plaintext, the next boot inflated the payload and appended another copy, and
+// the file grew by 100KB per save without bound:
+//   1. `data-bento-transient` — serializeBody() strips marked nodes from the
+//      clone, so the CSS lives in the deflated #bento-rt-css payload (27KB)
+//      and nowhere else in the file.
+//   2. the sweep — a file written before guard 1 existed already carries N
+//      plaintext copies of exactly this CSS; dropping them before injecting
+//      means such a file is CLEANED by its next save rather than doubled.
 const loader = `
 (async () => {
   var fail = function (msg) {
@@ -169,7 +183,14 @@ const loader = `
   }
   try {
     var css = await inflate('bento-rt-css')
+    // drop stale plaintext copies (see TRANSIENT DOM above), then inject ours
+    var old = document.querySelectorAll('style')
+    for (var i = 0; i < old.length; i++) {
+      if (old[i].hasAttribute('data-bento-transient') || old[i].textContent === css) old[i].remove()
+    }
     var st = document.createElement('style')
+    st.id = 'bento-rt-style'
+    st.setAttribute('data-bento-transient', '')
     st.textContent = css
     document.head.appendChild(st)
     var js = await inflate('bento-rt')
