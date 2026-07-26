@@ -4,6 +4,10 @@
 import type { Catalog } from '../i18n'
 
 export const zhHant: Catalog = {
+  "More": "更多",
+  "Insert": "插入",
+  "Slides": "投影片",
+  "Format": "格式",
   "Backed up in this browser": "已備份到此瀏覽器",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "未儲存的變更 — 已於 {when} 保存在此瀏覽器中，重新開啟時可以還原。⌘S 會下載更新後的副本。",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "未儲存的變更 — ⌘S 會下載更新後的副本（此瀏覽器無法改寫檔案）",

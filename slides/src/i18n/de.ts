@@ -4,6 +4,10 @@
 import type { Catalog } from '../i18n'
 
 export const de: Catalog = {
+  "More": "Mehr",
+  "Insert": "Einfügen",
+  "Slides": "Folien",
+  "Format": "Format",
   "Backed up in this browser": "In diesem Browser gesichert",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Nicht gespeicherte Änderungen — um {when} in diesem Browser gesichert und beim erneuten Öffnen angeboten. ⌘S lädt eine aktualisierte Kopie herunter.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Nicht gespeicherte Änderungen — ⌘S lädt eine aktualisierte Kopie herunter (dieser Browser kann die Datei nicht überschreiben)",

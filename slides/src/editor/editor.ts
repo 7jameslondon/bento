@@ -291,8 +291,36 @@ export class Editor {
     history.append(undoB, redoB)
     const saveGroup = div('ed-split')
     saveGroup.append(saveB, this.saveDropdown())
-    actions.append(pdfB, this.avatarsBox, this.shareDropdown(), saveGroup, this.languageDropdown(), helpB)
-    bar.append(logo, this.updatesB, title, history, insert, actions)
+    const shareD = this.shareDropdown()
+    const langD = this.languageDropdown()
+    actions.append(pdfB, this.avatarsBox, shareD, saveGroup, langD, helpB)
+
+    // Phone chrome: two menus that stay EMPTY on a wide screen. Nothing is
+    // duplicated — applyPhoneChrome moves the real buttons in and out, so every
+    // listener, tooltip and live reference (dirtyDot, updatesB, the comment
+    // button's armed state) keeps working wherever the button currently sits.
+    const insertMenu = div('ed-menu')
+    const insertD = div('ed-dropdown ed-phone-only')
+    insertD.append(
+      btn(ICONS.plus, t('Insert'), () => insertD.classList.toggle('open'), t('Insert — text, shapes, images, media, tables, charts')),
+      insertMenu)
+    const moreMenu = div('ed-menu')
+    const moreD = div('ed-dropdown ed-phone-only')
+    moreD.append(
+      btn('<b>⋯</b>', t('More'), () => moreD.classList.toggle('open'), t('More actions')),
+      moreMenu)
+    const slidesB = btn(ICONS.panelLeft, t('Slides'), () => this.togglePanel('left'), t('Slides — show or hide the slide list'))
+    slidesB.classList.add('ed-phone-only')
+    const formatB = btn(ICONS.panelRight, t('Format'), () => this.togglePanel('right'), t('Format — show or hide the properties panel'))
+    formatB.classList.add('ed-phone-only')
+
+    this.phoneChrome = {
+      insertD, insertMenu, moreD, moreMenu, slidesB, formatB, insert, actions, history,
+      // order matters: this is the order they appear in the ⋯ menu
+      demote: [redoB, commentB, pdfB, shareD, langD, helpB],
+    }
+
+    bar.append(logo, this.updatesB, title, slidesB, insertD, history, insert, actions, moreD)
 
     // main area
     const main = div('ed-main')
@@ -349,6 +377,22 @@ export class Editor {
       this.sidebar.classList.add('ed-collapsed')
       this.props.classList.add('ed-collapsed')
     }
+
+    actions.insertBefore(formatB, saveGroup)
+
+    // drive it now and whenever the query flips
+    // Held on `this` deliberately: a MediaQueryList that nothing references can
+    // be collected along with its listener, and the bar then never unfolds when
+    // the window grows — the CSS flips but the JS half silently stops.
+    this.phoneQuery = window.matchMedia('(max-width: 700px)')
+    this.applyPhoneChrome(this.phoneQuery.matches)
+    this.phoneQuery.addEventListener('change', (e) => this.applyPhoneChrome(e.matches))
+    // ...and on plain resize as well. matchMedia's change event is the correct
+    // signal but not a universally reliable one — it does not fire at all under
+    // CDP-driven viewport changes, and a phone ROTATING is exactly this path.
+    // applyPhoneChrome early-returns when the state is unchanged, so calling it
+    // on every resize costs a comparison.
+    window.addEventListener('resize', () => this.applyPhoneChrome(window.innerWidth <= 700))
 
     this.restorePanelWidths()
     this.canvas = new SlideCanvas(canvasWrap, this.store)
@@ -467,6 +511,58 @@ export class Editor {
   }
 
   /** Collapse/expand the slide list or the properties panel. */
+  private phoneChrome: {
+    insertD: HTMLElement; insertMenu: HTMLElement
+    moreD: HTMLElement; moreMenu: HTMLElement
+    slidesB: HTMLElement; formatB: HTMLElement
+    insert: HTMLElement; actions: HTMLElement; history: HTMLElement
+    demote: HTMLElement[]
+  } | null = null
+
+  /**
+   * Fold the topbar into menus on a phone, and unfold it again on a wide
+   * window. REPARENTS the existing buttons rather than building phone copies:
+   * a duplicate would need its own listeners and would desync from live state
+   * (the dirty dot lives ON the save button; the comment button carries an
+   * armed class). Moving a node keeps all of that by construction.
+   */
+  private applyPhoneChrome(on: boolean) {
+    const p = this.phoneChrome
+    if (!p || this.phoneChromeOn === on) return
+    this.phoneChromeOn = on
+    if (on) {
+      // the six insert tools + comment go under ＋
+      while (p.insert.firstChild) p.insertMenu.appendChild(p.insert.firstChild)
+      for (const b of p.demote) {
+        if (!b.parentElement) continue
+        // Undo/redo/PDF are icon-only BY DESIGN in the bar (no <span> at all),
+        // so the menu's label rule has nothing to reveal and they would sit in
+        // ⋯ as mystery glyphs. Borrow the tooltip, minus its shortcut: "Redo
+        // (⇧⌘Z)" -> "Redo". No new strings, and desktop is untouched.
+        if (!b.querySelector('span') && b.title) {
+          const lab = document.createElement('span')
+          lab.dataset.phoneLabel = '1'
+          lab.textContent = b.title.split('(')[0].trim()
+          b.appendChild(lab)
+        }
+        p.moreMenu.appendChild(b)
+      }
+    } else {
+      while (p.insertMenu.firstChild) p.insert.appendChild(p.insertMenu.firstChild)
+      for (const lab of p.moreMenu.querySelectorAll('[data-phone-label]')) lab.remove()
+      // back to their original homes, in their original order
+      for (const b of p.demote) {
+        if (b === p.demote[0]) p.history.appendChild(b)
+        else p.actions.insertBefore(b, p.formatB)
+      }
+      p.moreD.classList.remove('open')
+      p.insertD.classList.remove('open')
+    }
+  }
+
+  private phoneChromeOn: boolean | null = null
+  private phoneQuery: MediaQueryList | null = null
+
   togglePanel(side: 'left' | 'right') {
     const el = side === 'left' ? this.sidebar : this.props
     el.classList.toggle('ed-collapsed')

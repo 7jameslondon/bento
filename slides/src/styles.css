@@ -31,6 +31,10 @@ html, body {
   display: flex;
   flex-direction: column;
   user-select: none;
+  /* Nothing in this column may leak sideways. Without this, a topbar wider than
+     the viewport turned into DOCUMENT scroll — on a phone the bar needed 681px
+     of a 402px screen, so swiping the toolbar dragged the whole canvas off. */
+  overflow: hidden;
 }
 /* iOS Safari (WebKit) renders a <select>'s chosen value as BLANK text when any
    ancestor sets user-select:none — restore it on form fields app-wide. Inputs
@@ -91,7 +95,21 @@ option { background: #fff; color: #1e2a3a; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  /* viewport-fit=cover puts the page under the rounded corners, the Dynamic
+     Island and the home indicator, so fixed chrome has to inset ITSELF or its
+     end buttons sit under the curve. env(safe-area-inset-*) is the only handle
+     the platform gives — there is no corner-radius API — and it already encodes
+     corners, island and indicator together.
+     Each max() also lists var(--tray-safe-*). Inside a WKWebView host,
+     env(safe-area-inset-*) reads 0px even when the device genuinely has insets
+     (measured: native 62/0/34/0, CSS 0px), so bento/tray publishes the real
+     numbers under those names. In a browser the variables are undefined, resolve
+     to 0px, and env() does the work as normal.
+     max() keeps the normal padding on every device that reports 0. The
+     BACKGROUND still bleeds to the edge; only the content is inset, which is
+     the point: colour to the edge, controls out of the curve. */
+  padding: max(8px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+           8px max(14px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
   background: #fff;
   border-bottom: 1px solid var(--line);
   z-index: 20;
@@ -1587,8 +1605,11 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
 /* bottom-end cluster: [Slideshow pill] [zoom pill] */
 .ed-corner-br {
   position: absolute;
-  inset-inline-end: 14px;
-  bottom: 14px;
+  /* the present/zoom cluster sits in the corner most likely to be clipped.
+     Kept LOGICAL (inset-inline-end, not right) so the cluster still lands in
+     the correct corner under RTL — ar/fa/he/ur ship as language packs. */
+  inset-inline-end: max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom), var(--tray-safe-bottom, 0px));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1810,11 +1831,60 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
      their labels left icon-only mystery menus on phones. */
   .ed-topbar .ed-menu .ed-btn > span,
   .ed-topbar .ed-menu button > span { display: inline; }
-  .ed-topbar { gap: 6px; padding: 8px 8px; }
+  /* keep the safe-area insets — a bare padding here would undo them */
+  .ed-topbar {
+    gap: 6px;
+    padding: max(8px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(8px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+             8px max(8px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
+  }
 }
 @media (max-width: 760px) {
-  .ed-topbar { gap: 4px; padding: 6px 6px; }
+  .ed-topbar {
+    gap: 4px;
+    padding: max(6px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(6px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+             6px max(6px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
+  }
   .ed-logo > b { display: none; } /* mark only — the icon is the brand */
+}
+
+/* --- phones: the bar cannot fit, so most of it moves into menus -----------
+   Hiding labels is not enough — 17 icon buttons at 36px plus gaps is an
+   irreducible ~684px floor. Under 700px (the same threshold the JS uses to
+   collapse both panels) applyPhoneChrome() REPARENTS the low-priority controls
+   into "＋" and "⋯" dropdowns, leaving: logo · title · ☰ · ＋ · undo · format ·
+   save · ⋯ . Labels come back inside menus via the 1200px rule above. */
+/* the phone-only controls exist in the DOM at every width; only the query shows
+   them, so applyPhoneChrome never has to create or destroy anything */
+.ed-phone-only { display: none; }
+@media (max-width: 700px) {
+  .ed-phone-only { display: inline-flex; }
+  /* HIG touch targets — a 36px icon is a mis-tap on glass */
+  .ed-topbar .ed-btn { min-width: 44px; min-height: 44px; justify-content: center; }
+  .ed-topbar .ed-menu .ed-btn { min-width: 0; } /* menu rows are text, not targets */
+  .ed-title { flex: 0 1 90px; }
+
+  /* Panels become OVERLAY DRAWERS. As flex siblings the 188px sidebar left a
+     214px canvas on a 402px screen — the thing you are editing became the
+     smallest thing on screen. */
+  .ed-sidebar, .ed-props {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 40;
+    box-shadow: 0 0 40px rgb(15 23 36 / 0.18);
+    background: var(--chrome, #fff);
+  }
+  .ed-sidebar { left: 0; }
+  .ed-props { right: 0; }
+  .ed-sidebar.ed-collapsed, .ed-props.ed-collapsed { box-shadow: none; }
+  .ed-main { position: relative; }
+  /* the 16px resizer chevrons are replaced by real buttons in the bar */
+  .ed-panel-toggle { display: none; }
+  /* Save stays one tap; its save-AS caret does not fit and is the least-used
+     half. KNOWN GAP: copy / new deck / template / password are unreachable on
+     a phone until they move into ⋯. */
+  .ed-topbar .ed-split-caret { display: none; }
+  .ed-title { min-width: 0; }
 }
 
 /* panel collapse chevrons live ON the resizer strips, not in the topbar */

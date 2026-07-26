@@ -11,6 +11,18 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **The editor fits on a phone.** The toolbar used to need about 680px of a
+  402px screen: it ran off the edge, took the Save button with it, and because
+  nothing clipped it, swiping the toolbar dragged the whole canvas sideways.
+  On a phone it now folds into two menus — ＋ for inserting and ⋯ for
+  everything occasional — leaving slides, insert, undo, format, save and more,
+  at proper touch size. The side panels slide over the canvas instead of
+  squeezing it, so the slide you're editing is no longer the smallest thing on
+  screen. Nothing changes on a laptop.
+
+  Known gap: the save-as menu (copy, new deck, template, password) doesn't fit
+  on a phone yet and is unreachable there for now.
+
 - **Maths, written the way you'd write it.** Type `$E=mc^2$` in a text box and
   it renders as a formula — `$$…$$` for a display equation on its own line.
   The document stores exactly what you typed, so a deck with maths still opens
