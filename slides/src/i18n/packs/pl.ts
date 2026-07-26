@@ -598,7 +598,7 @@ export const strings: Catalog = {
   "View-only copy — it holds no signing key.": "Kopia tylko do oglądania — nie zawiera klucza podpisującego.",
   "View-only copy…": "Kopia tylko do oglądania…",
   "Viewer": "Widz",
-  "While editing: <b>⌘B</b>/<b>⌘I</b>/<b>⌘U</b> · markdown auto-converts — **bold*&#8203;* *italic*&#8203; `code` ~~strike~~ and \"- \" bullets; pasting markdown converts too. Escape with \\\\ or press ⌘Z right after to keep the literal characters.": "Podczas edycji: <b>⌘B</b>/<b>⌘I</b>/<b>⌘U</b> · markdown zamienia się automatycznie — **pogrubienie*&#8203;* *kursywa*&#8203; `kod` ~~przekreślenie~~ oraz wypunktowanie \"- \"; wklejony markdown też się zamienia. Poprzedź znakiem \\\\ , aby zachować zapis dosłowny, albo naciśnij ⌘Z zaraz po zamianie.",
+  "While editing: <b>⌘B</b>/<b>⌘I</b>/<b>⌘U</b> · markdown auto-converts — **bold*&#8203;* *italic*&#8203; `code` ~~strike~~ and \"- \" bullets; pasting markdown converts too. Escape with \\\\ or press ⌘Z right after to keep the literal characters.": "Podczas edycji: <b>⌘B</b>/<b>⌘I</b>/<b>⌘U</b> · markdown zamienia się automatycznie — **pogrubienie*&#8203;* *kursywa*&#8203; `kod` ~~przekreślenie~~ oraz wypunktowanie \"- \"; wklejony markdown też się zamienia. Poprzedź znakiem \\\\, aby zachować zapis dosłowny, albo naciśnij ⌘Z zaraz po zamianie.",
   "Your key on THIS device: {fp}. Another device counts as a new person until the owner removes it.": "Twój klucz na TYM urządzeniu: {fp}. Inne urządzenie liczy się jako nowa osoba, dopóki właściciel go nie usunie.",
   "you": "Ty",
   "{name} was removed": "Usunięto: {name}",
