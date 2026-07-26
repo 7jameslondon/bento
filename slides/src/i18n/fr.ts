@@ -4,6 +4,7 @@
 import type { Catalog } from '../i18n'
 
 export const fr: Catalog = {
+  "Updated to v{v}.": "Mis à jour vers la v{v}.",
   "More": "Plus",
   "Insert": "Insérer",
   "Slides": "Diapositives",
