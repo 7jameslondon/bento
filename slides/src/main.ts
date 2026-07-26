@@ -9,7 +9,9 @@ import { configureApp, appConfig } from '../../kernel/src/app.ts'
 import {
   capturePristine, readEmbeddedDoc, serializeFile, serializeAuto, downloadFile,
   suggestedFileName, parseEnvelope, decryptEnvelope, setEncryptionPassword,
+  registerPreview,
 } from './save'
+import { buildSlidePreview } from './preview'
 import { APP_VERSION, checkForUpdates, buildUpdatedFile, applyUpdate } from './update'
 import { i18nApi, t, applyDirection } from './i18n'
 import { parseDoc, type BentoDoc } from './model'
@@ -28,6 +30,12 @@ configureApp({
   appName: 'bento/slides',
   manifestUrl: 'https://bento.page/releases/slides/manifest.json',
 })
+
+// Every save writes a static rendering of page one into the shell, so file
+// managers thumbnail the deck instead of the boot splash (src/preview.ts).
+// Registered before capturePristine only for tidiness — nothing serializes
+// this early — but it must be registered before the first save.
+registerPreview((doc) => buildSlidePreview(doc as BentoDoc))
 
 capturePristine()
 

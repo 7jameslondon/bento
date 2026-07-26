@@ -756,6 +756,24 @@ export function internAsset(doc: BentoDoc, src: string): string {
  *  editor warns — a big embed makes the .bento.html slow to open and save. */
 export const MEDIA_EMBED_BUDGET = 8 * 1024 * 1024 // 8 MB
 
+/**
+ * Hard ceiling for the static first-page preview every save writes into the
+ * shell (src/preview.ts), in bytes of serialized markup.
+ *
+ * Unlike MEDIA_EMBED_BUDGET this is not a warning the author can wave through
+ * — there is no author in the loop, it is spent silently on every ⌘S, and it
+ * is spent on a THUMBNAIL. A text page costs 2–5 KB. The thing that can blow
+ * up is a full-bleed photo, whose data URI would be duplicated: once in the
+ * document, once in the preview.
+ *
+ * 64 KB is ~10% of the shipped shell (~640 KB compressed): invisible against a
+ * file that size, and enough for a real page plus a logo or an icon-sized
+ * image. Measured: the starter deck's page one costs 25 KB (2.6% of it). Over
+ * it, preview.ts degrades — first dropping raster payloads, then falling back
+ * to a title card — rather than growing the file.
+ */
+export const PREVIEW_BUDGET = 64 * 1024 // 64 KB
+
 export function defaultMedia(
   kind: 'video' | 'audio',
   src: string,

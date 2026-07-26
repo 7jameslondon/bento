@@ -349,17 +349,101 @@ function checkEscapeIsImplemented() {
     )
 }
 
+// --- invariant 5: a preview-carrying shell ---------------------------------
+//
+// The THIRD class of plaintext content a saved file carries: the static
+// first-page preview `kernel/src/save.ts` writes into a
+// `<noscript data-bento-preview>` so file managers can thumbnail the deck
+// (docs/DECISIONS.md). Like a language pack it is not shaped by us — it is
+// rendered from whatever the author typed on page one — but unlike a pack it
+// is HTML, not JSON in a script block, so the `<` escape does not and
+// cannot apply to it. Its safety rests on the kernel REFUSING to emit markup
+// containing a script tag or a `</noscript>`, which is what this checks.
+
+const NOSCRIPT_CLOSE = '</nosc' + 'ript>'
+
+/** A preview whose content came from a hostile deck: entity-escaped exactly as
+ *  a DOM serializer escapes text, plus quotes, RTL, emoji and separators. */
+const ADVERSARIAL_PREVIEW =
+  `<noscript data-bento-preview="1"><div style="position:fixed;left:0;top:0;background:#0D1B2E">` +
+  `<div>&lt;/script&gt; &lt;script&gt;alert(1)&lt;/script&gt; ` +
+  `&lt;script type="application/bento+json" id="bento-doc"&gt;{"hijacked":true}&lt;/script&gt;` +
+  `&lt;/noscript&gt; &lt;!-- --&gt; &lt;![CDATA[ &amp; &quot; ' \` \\ ` +
+  `مرحبا שלום 🎌 a b c</div>` +
+  `</div>${NOSCRIPT_CLOSE}`
+
+/** …and the same content with the escapes NOT applied — what the kernel's
+ *  `previewIsSafe` refusal exists to keep out of a file. */
+const UNSAFE_PREVIEW =
+  `<noscript data-bento-preview="1"><div>${SCRIPT_CLOSE} ` +
+  `${DOC_BLOCK_OPEN}{"hijacked":true}${SCRIPT_CLOSE}</div>${NOSCRIPT_CLOSE}`
+
+/** Insert a preview where `writePreview` does — straight after the splash. */
+const withPreview = (html, preview) =>
+  html.includes('<div id="bento-splash"')
+    ? html.replace('<div id="app">', () => `${preview}\n    <div id="app">`)
+    : html.replace('</body>', () => `${preview}\n</body>`)
+
+function checkPreviewCarryingShell(shell) {
+  const realDoc = shell.match(DOC_BLOCK_RE)[0]
+  const html = withPreview(shell, ADVERSARIAL_PREVIEW)
+
+  checkSpliceContract(html, 'preview-carrying shell')
+  checkDataBlocks(html, 'preview-carrying shell')
+  if (html.match(DOC_BLOCK_RE)[0] !== realDoc) fail('#bento-doc extraction hijacked by a preview')
+
+  // …and the preview survives the frozen text splice untouched: an updater
+  // rewriting the document must not disturb the thumbnail riding beside it.
+  const spliced = checkSpliceContract(html, 'preview-carrying shell + splice')
+  if (!spliced.includes(ADVERSARIAL_PREVIEW)) fail('preview did not survive the doc splice')
+  checkDataBlocks(spliced, 'preview-carrying shell + splice')
+
+  // NEGATIVE CONTROL — the unescaped form must be caught. If it is not, the
+  // check above proves nothing about why the escaped form is safe.
+  let caught = false
+  try {
+    checkSpliceContract(withPreview(shell, UNSAFE_PREVIEW), 'unsafe preview control')
+  } catch {
+    caught = true
+  }
+  if (!caught) fail('negative control passed — the preview checks have no teeth')
+}
+
+/**
+ * Source assertions for the preview, for the same reason as the escape one
+ * above: a fresh shell carries no preview, so nothing in the built artifact
+ * could notice these rules being dropped at save time.
+ *
+ * Two rules, both silent failures if they go: the ENCRYPTION VETO (a
+ * `bento/enc` deck must never ship a plaintext rendering of page one beside
+ * its ciphertext) and the OUTPUT REFUSAL (`previewIsSafe`, which is the only
+ * thing standing between author content and an unbalanced script tag).
+ */
+function checkPreviewRulesAreImplemented() {
+  const src = join(repoRoot, 'kernel/src/save.ts')
+  if (!existsSync(src)) return // an app repo vendored without the kernel
+  const text = readFileSync(src, 'utf8')
+  if (!/previewAllowed\s*\(\s*body\s*\)/.test(text))
+    fail('kernel/src/save.ts no longer gates the first-page preview on previewAllowed(body) — an encrypted deck could ship a plaintext page one')
+  if (!/parseEnvelope\(body\) === null/.test(text) || !/!encrypted/.test(text))
+    fail('kernel/src/save.ts previewAllowed no longer checks BOTH the password flag and the body envelope')
+  if (!/previewIsSafe\(host\.innerHTML\)/.test(text))
+    fail('kernel/src/save.ts no longer refuses unsafe first-page preview markup')
+}
+
 /** Throws with a GATE: message on the first violated invariant. */
 export function gateShell(shellPath) {
   const shell = readFileSync(shellPath, 'utf8')
   checkSpliceContract(shell, 'shell')
   checkDataBlocks(shell, 'shell')
   checkPackCarryingShell(shell)
+  checkPreviewCarryingShell(shell)
   const compressed = checkRuntimeStaysCompressed(shell, 'shell')
   if (compressed) checkTransientMarking(shell)
   checkEscapeIsImplemented()
+  checkPreviewRulesAreImplemented()
   console.log(
-    'conformance gate: old-updater splice contract OK (incl. pack-carrying shell)' +
+    'conformance gate: old-updater splice contract OK (incl. pack- and preview-carrying shells)' +
       (compressed ? '; runtime ships deflated only' : ''),
   )
 }
