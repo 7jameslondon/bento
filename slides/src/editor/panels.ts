@@ -18,6 +18,13 @@ import { t } from '../i18n'
 // i18n NOTE: both the keys (row labels) and the values here reach t() as
 // VARIABLES — literal-extraction sweeps must treat this table as in-use
 // catalog keys, never prune them.
+/**
+ * Sentinel <option> value for "clear the morph override". Safe against
+ * collision with a real morph key by construction: setMorphId strips anything
+ * outside [A-Za-z0-9._-], so no stored morphId can ever contain '#'.
+ */
+const UNPAIR = '#unpair'
+
 const ROW_TIPS: Record<string, string> = {
   'Page size': 'Deck-wide slide size. Elements keep their positions — changing size reframes the canvas, never rescales your art.',
   'Width': 'Custom slide width in pixels',
@@ -477,12 +484,23 @@ export class PropsPanel {
     this.row('Morph id', input)
 
     const targets = this.morphTargets(el)
-    if (targets.length) {
+    // `|| el.morphId`: a paired element with no OTHER slide to pair with still
+    // needs the picker — otherwise there is nowhere to unpair from.
+    if (targets.length || el.morphId) {
       const sel = document.createElement('select')
       const none = document.createElement('option')
       none.value = ''
       none.textContent = t('(pick an element)')
       sel.appendChild(none)
+      // Clearing an override had no affordance: the documented way is to retype
+      // the element's own id into the field above, which means knowing what it
+      // was (issue #54). Offer it as a choice instead.
+      if (el.morphId) {
+        const un = document.createElement('option')
+        un.value = UNPAIR
+        un.textContent = t('Don’t pair — use its own id')
+        sel.appendChild(un)
+      }
       for (const tgt of targets) {
         const o = document.createElement('option')
         o.value = tgt.key
@@ -492,7 +510,8 @@ export class PropsPanel {
       }
       sel.addEventListener('change', () => {
         if (!sel.value) return
-        const err = this.setMorphId(el, sel.value)
+        // writing the element's OWN id is what clears the override
+        const err = this.setMorphId(el, sel.value === UNPAIR ? el.id : sel.value)
         if (err) { warn.textContent = err; warn.style.display = '' }
       })
       this.row('Pair with', sel)
