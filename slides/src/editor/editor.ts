@@ -24,7 +24,7 @@ import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
 import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
-import { availablePacks, fetchPack, packsInFile, stageForFile, unstageFromFile } from '../packs'
+import { availablePacks, fetchPack, markFileSaved, packsInFile, stageForFile, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -1807,6 +1807,7 @@ export class Editor {
         this.session?.stampInto(doc)
         await writeUpdatedFile(await serializeAuto(doc))
         this.store.setDirty(false)
+        markFileSaved() // the packs went out with those bytes too
         this.flashSaved()
         return
       } catch { /* keep dirty; the IndexedDB snapshot is the backstop */ }
@@ -2047,6 +2048,8 @@ export class Editor {
       const result = await saveFile(this.store.doc, forcePicker)
       if (result === 'cancelled') return
       this.store.setDirty(false)
+      // staged language packs are in the bytes now — stop calling them pending
+      markFileSaved()
       // record a recovery baseline + a version checkpoint at each manual save
       if (!isEncryptionActive()) { void putRecovery(this.store.doc); void addVersion(this.store.doc); this.lastVersionAt = Date.now() }
       // Saving is the opt-in: a named, saved deck is "live by default" from
