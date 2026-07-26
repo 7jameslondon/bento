@@ -182,6 +182,165 @@ function titleCard(doc: BentoDoc): HTMLElement {
   return page
 }
 
+// --- slimming ---------------------------------------------------------------
+//
+// A preview is paid for in every saved file, and it cannot be compressed: the
+// shell's deflate trick is unavailable to an audience that never runs the
+// loader. What it CAN be is non-repetitive. Measured on the starter deck, 25.6KB
+// of preview was 6.2KB of data: URIs inlined 3-8 times over and 6.1KB of
+// declarations repeated across elements (`position:absolute` x40, `width:100%`
+// x39, a 65-byte font stack x8). Both collapse losslessly.
+//
+// The floor is the content's entropy — that same preview deflates to 2.7KB — so
+// there is no point contorting this further.
+
+/** Split a style attribute into declarations. Not `split(';')`: a data: URI
+ *  carries its own semicolons (`;charset=utf-8,`) inside url(). */
+function splitDecls(css: string): string[] {
+  const out: string[] = []
+  let depth = 0, quote = '', start = 0
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i]
+    if (quote) { if (c === quote && css[i - 1] !== '\\') quote = '' ; continue }
+    if (c === '"' || c === "'") quote = c
+    else if (c === '(') depth++
+    else if (c === ')') depth--
+    else if (c === ';' && depth === 0) { out.push(css.slice(start, i)); start = i + 1 }
+  }
+  out.push(css.slice(start))
+  return out.map((d) => d.trim()).filter(Boolean)
+}
+
+const propOf = (decl: string) => decl.slice(0, decl.indexOf(':')).trim().toLowerCase()
+
+/** Shorthands that can swallow a longhand we might hoist out from under them. */
+const SHORTHANDS = new Set([
+  'background', 'font', 'border', 'margin', 'padding', 'flex', 'grid',
+  'transition', 'animation', 'inset', 'outline', 'overflow', 'list-style',
+  'text-decoration', 'place-items', 'place-content', 'gap',
+])
+
+const FIT_TO_SIZE: Record<string, string> = {
+  contain: 'contain', cover: 'cover', fill: '100% 100%',
+  none: 'auto', 'scale-down': 'contain',
+}
+
+/**
+ * `<img src=data:…>` becomes a div painting the same bytes as a background.
+ *
+ * Only so the URI becomes a DECLARATION, which hoistRepeats can then share
+ * between every element using it. The starter deck's two bokeh sprites are
+ * inlined eight times each; as a background they are written once. object-fit
+ * maps onto background-size exactly, and `center`/`no-repeat` reproduce an
+ * img's default placement.
+ */
+function imagesToBackgrounds(root: HTMLElement) {
+  for (const img of Array.from(root.querySelectorAll('img'))) {
+    const src = img.getAttribute('src')
+    // A quote in the URI would need escaping inside url("…"); percent-encoded
+    // payloads never contain one, so skipping is free insurance.
+    if (!src || src.includes('"')) continue
+
+    const kept: string[] = []
+    let size = 'contain'
+    for (const d of splitDecls(img.getAttribute('style') ?? '')) {
+      const p = propOf(d)
+      if (p === 'object-fit') { size = FIT_TO_SIZE[d.slice(d.indexOf(':') + 1).trim()] ?? 'contain'; continue }
+      if (p === 'object-position') continue
+      kept.push(d)
+    }
+    kept.push(`background-image:url("${src}")`, 'background-repeat:no-repeat',
+              'background-position:center', `background-size:${size}`)
+
+    const div = document.createElement('div')
+    div.setAttribute('style', kept.join(';'))
+    for (const c of Array.from(img.classList)) div.classList.add(c)
+    img.replaceWith(div)
+  }
+}
+
+/**
+ * Move declarations that repeat across elements into one stylesheet.
+ *
+ * An inline style always beats a class rule, so a declaration is only movable
+ * when its property appears EXACTLY ONCE on that element — otherwise hoisting
+ * one of a pair silently flips which of the two wins. Same reason a longhand is
+ * left alone whenever its shorthand is present on the same element.
+ *
+ * Moving these is not just cheaper but more faithful: the rules being inlined
+ * are what `.bento-*` classes get from styles.css, and they are supposed to sit
+ * BELOW the element's own inline style in the cascade, which is exactly where a
+ * class rule sits.
+ */
+function hoistRepeats(root: HTMLElement) {
+  const parsed = Array.from(root.querySelectorAll<HTMLElement>('[style]'))
+    .map((el) => ({ el, decls: splitDecls(el.getAttribute('style') ?? '') }))
+
+  const movable = ({ decls }: { decls: string[] }, i: number) => {
+    const props = decls.map(propOf)
+    const p = props[i]
+    if (props.indexOf(p) !== props.lastIndexOf(p)) return false
+    const root_ = p.slice(0, p.indexOf('-') < 0 ? p.length : p.indexOf('-'))
+    if (p !== root_ && SHORTHANDS.has(root_) && props.includes(root_)) return false
+    return true
+  }
+
+  const freq = new Map<string, number>()
+  for (const rec of parsed) {
+    rec.decls.forEach((d, i) => { if (movable(rec, i)) freq.set(d, (freq.get(d) ?? 0) + 1) })
+  }
+
+  // Worth a class only if the rule costs less than the copies it replaces.
+  const name = (n: number) => '_' + n.toString(36)
+  const names = new Map<string, string>()
+  const rules: string[] = []
+  const ranked = [...freq].sort((a, b) => b[1] * b[0].length - a[1] * a[0].length)
+  for (const [decl, count] of ranked) {
+    const cls = name(names.size)
+    const inline = count * (decl.length + 1)
+    const hoisted = count * (cls.length + 1) + `.${cls}{${decl}}`.length
+    if (hoisted >= inline) continue
+    names.set(decl, cls)
+    rules.push(`.${cls}{${decl}}`)
+  }
+  if (!rules.length) return
+
+  for (const rec of parsed) {
+    const keep: string[] = []
+    const add: string[] = []
+    rec.decls.forEach((d, i) => {
+      const cls = movable(rec, i) ? names.get(d) : undefined
+      if (cls) add.push(cls)
+      else keep.push(d)
+    })
+    if (!add.length) continue
+    for (const c of add) rec.el.classList.add(c)
+    if (keep.length) rec.el.setAttribute('style', keep.join(';'))
+    else rec.el.removeAttribute('style')
+  }
+
+  const style = document.createElement('style')
+  style.textContent = rules.join('')
+  root.insertBefore(style, root.firstChild)
+}
+
+/** Sub-pixel precision no thumbnailer can resolve, at ~10 bytes a number. */
+function roundNumbers(root: HTMLElement) {
+  for (const el of Array.from(root.querySelectorAll<HTMLElement>('[style]'))) {
+    const css = el.getAttribute('style') ?? ''
+    // Not inside url(): a percent-encoded payload is not ours to rewrite.
+    if (css.includes('url(')) continue
+    const lean = css.replace(/(\d+\.\d{3,})/g, (m) => String(Math.round(Number(m) * 100) / 100))
+    if (lean !== css) el.setAttribute('style', lean)
+  }
+}
+
+function slim(built: HTMLElement) {
+  imagesToBackgrounds(built)
+  roundNumbers(built)
+  hoistRepeats(built)
+}
+
 const byteLength = (el: HTMLElement) => new TextEncoder().encode(el.outerHTML).length
 
 /**
@@ -206,7 +365,12 @@ export function buildSlidePreview(doc: BentoDoc): HTMLElement | null {
     staticize(page, doc, keepImages)
     if (!keepImages) page.style.background = flatBackground(slide.background) ?? doc.theme.background
     const built = overlay(page, doc, slide)
+    // Slim BEFORE measuring, so the budget is spent on content rather than on
+    // repetition — which also lets richer pages stay in tier 1.
+    slim(built)
     if (byteLength(built) <= PREVIEW_BUDGET) return built
   }
-  return overlay(titleCard(doc), doc, slide)
+  const card = overlay(titleCard(doc), doc, slide)
+  slim(card)
+  return card
 }
