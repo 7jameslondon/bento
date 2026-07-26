@@ -96,6 +96,22 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         return b
     }()
 
+    /// Fade the exit out when nothing is happening, and bring it back on touch.
+    ///
+    /// Necessary because on iPhone there is no longer a fullscreen signal to key
+    /// off: a page presenting itself by filling the web view looks, to the host,
+    /// exactly like a page sitting idle. Rather than guess what the document is
+    /// doing — which is the one thing this host refuses to do — the control
+    /// simply gets out of the way when unused, which is right for presenting and
+    /// harmless while editing.
+    private func armIdleFade() {
+        idleTimer?.invalidate()
+        floatingExit.alpha = 1
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 3.5, repeats: false) { [weak self] _ in
+            UIView.animate(withDuration: 0.4) { self?.floatingExit.alpha = 0.12 }
+        }
+    }
+
     /// The host shows ONE small control and nothing else.
     ///
     /// The nav bar is hidden in BOTH orientations now. The document already has
@@ -111,6 +127,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     private func syncChrome() {
         navigationController?.setNavigationBarHidden(true, animated: false)
         floatingExit.isHidden = isPresentingFullscreen
+        if !floatingExit.isHidden { armIdleFade() }
         view.bringSubviewToFront(floatingExit)
     }
 
@@ -195,11 +212,26 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     override func viewDidLoad() {
         super.viewDidLoad()
         let cfg = WKWebViewConfiguration()
-        // Element fullscreen. iPhone SAFARI has never offered this to web pages,
-        // which is why Bento's present mode falls back to filling its view — but
-        // WKWebView exposes it as an opt-in, so a hosted document can present
-        // properly where the same file in the browser cannot. (Spotted in #87.)
-        cfg.preferences.isElementFullscreenEnabled = true
+        // Element fullscreen: iPad only.
+        //
+        // WKWebView will grant it on iPhone too, and it looked like a win — the
+        // same file in Safari cannot do it. But WebKit's fullscreen view brings
+        // its own close button, which no public API can hide or restyle, and
+        // insets the content so a 16:9 deck letterboxed asymmetrically instead
+        // of filling the screen.
+        //
+        // On a phone that buys nothing: the status bar is ALREADY hidden in
+        // landscape, so declining fullscreen costs no screen space at all, and
+        // the page then fills the web view edge to edge with its own chrome and
+        // no foreign ✕. Declining is simply better here.
+        //
+        // iPad is the opposite case — the status bar IS visible there and there
+        // is no notch gutter to fight — so it keeps real fullscreen.
+        //
+        // A page that asks for fullscreen and is refused is not broken: that is
+        // the same path it takes in mobile Safari, which is well-trodden.
+        cfg.preferences.isElementFullscreenEnabled =
+            UIDevice.current.userInterfaceIdiom == .pad
         cfg.setURLSchemeHandler(self, forURLScheme: "bento-tray")
         cfg.userContentController.add(self, name: "bentoFile")
 
@@ -226,6 +258,8 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         view.addSubview(webView)
         observeFullscreen()
         webView.load(URLRequest(url: URL(string: "bento-tray://\(originHost)/index.html")!))
+
+        view.addGestureRecognizer(TouchWatcher { [weak self] in self?.armIdleFade() })
 
         view.addSubview(floatingExit)
         floatingExit.translatesAutoresizingMaskIntoConstraints = false
@@ -315,6 +349,7 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     }
 
     private var lastDownloadName: String?
+    private var idleTimer: Timer?
 
     private func notify(_ message: String) {
         let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
@@ -388,5 +423,29 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         do { try Data(text.utf8).write(to: tmp) } catch { done(false, "\(error)"); return }
         let picker = UIDocumentPickerViewController(forExporting: [tmp], asCopy: true)
         present(picker, animated: true) { done(true, nil) }
+    }
+}
+
+/// Reports that a touch began and then immediately FAILS, so it can never
+/// recognize, consume, delay or cancel anything the page is doing.
+///
+/// A UITapGestureRecognizer was the obvious choice and the wrong one: it fires
+/// only on a discrete tap, so a presenter swiping through a deck would never
+/// wake the exit control — the gesture that most needs to keep it alive is the
+/// one a tap recognizer cannot see. Observing touchesBegan catches every kind.
+final class TouchWatcher: UIGestureRecognizer {
+    private let onTouch: () -> Void
+
+    init(onTouch: @escaping () -> Void) {
+        self.onTouch = onTouch
+        super.init(target: nil, action: nil)
+        cancelsTouchesInView = false
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        onTouch()
+        state = .failed
     }
 }
