@@ -55,10 +55,17 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         return digest.compactMap { String(format: "%02x", $0) }.joined().prefix(24).description
     }()
 
+    /// Called when the user leaves the document. The browser owns teardown —
+    /// closing the UIDocument and releasing the security scope — because it
+    /// owns both of those.
+    var onDone: (() -> Void)?
+
     init(document: BentoDocument) {
         self.document = document
         super.init(nibName: nil, bundle: nil)
     }
+
+    @objc private func doneTapped() { onDone?() }
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func viewDidLoad() {
@@ -81,6 +88,15 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView.allowsBackForwardNavigationGestures = false
         view.addSubview(webView)
         webView.load(URLRequest(url: URL(string: "bento-tray://\(originHost)/index.html")!))
+
+        // A way BACK. Presented full screen with no chrome, a document was a
+        // one-way trip: full-screen modals have no interactive dismiss, so the
+        // only exit was force-quitting the app. The host has to supply this
+        // itself — it cannot ask the page for a close button without assuming
+        // what the page is.
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            title: NSLocalizedString("Documents", comment: "back to the file browser"),
+            style: .plain, target: self, action: #selector(doneTapped))
     }
 
     // MARK: - serving the deck

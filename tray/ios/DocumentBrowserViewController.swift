@@ -94,8 +94,22 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
                 return
             }
             let editor = EditorViewController(document: doc)
-            editor.modalPresentationStyle = .fullScreen
-            self.present(editor, animated: true)
+            // Two extensions: "Q3-board.bento.html" -> "Q3-board".
+            editor.title = url.deletingPathExtension().deletingPathExtension().lastPathComponent
+            let nav = UINavigationController(rootViewController: editor)
+            nav.modalPresentationStyle = .fullScreen
+            editor.onDone = { [weak self, weak nav] in
+                // close() flushes and relinquishes file coordination; without it
+                // the document stayed open for the life of the app. The scope is
+                // released only after the close completes — dropping it earlier
+                // can fail the final write for a file outside our container.
+                doc.close { _ in
+                    if scoped { url.stopAccessingSecurityScopedResource() }
+                }
+                nav?.dismiss(animated: true)
+                _ = self
+            }
+            self.present(nav, animated: true)
         }
     }
 }

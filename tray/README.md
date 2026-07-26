@@ -147,6 +147,27 @@ actual device or simulator. Runtime behaviour — the scheme handler serving
 bytes, security-scoped access, the save round trip reaching disk — is still
 unproven.
 
+### Getting back out
+
+The editor is presented inside a `UINavigationController` with a **Documents**
+button and the file's name. That bar is not decoration: presented full screen
+with no chrome, a document was a ONE-WAY TRIP — full-screen modals have no
+interactive dismiss, so force-quitting the app was the only exit.
+
+The host has to supply this itself. It cannot ask the page for a close button
+without assuming what the page is, which is the one thing this app does not do.
+
+Leaving also does the teardown that had no home before: `UIDocument.close()`
+(flushes and relinquishes file coordination — the document previously stayed
+open for the life of the app) and the security-scoped release, which ran only
+on the failure path and leaked once per document opened. The scope is dropped
+only after close completes; dropping it earlier can fail the final write for a
+file outside the container.
+
+Known limitation: the nav bar stays visible during a slideshow. The host cannot
+tell when an arbitrary page has gone presentation-mode, and iPhone Safari has no
+real fullscreen, so Bento falls back to filling its view.
+
 ### Platform notes worth keeping
 
 `didImportDocumentAt` is **never called for the creation flow** on iOS 26. The
