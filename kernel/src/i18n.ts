@@ -34,10 +34,29 @@ export interface PackedCatalogs {
   alias?: Record<string, string>
 }
 
+/** A language pack: one language, loaded at runtime rather than bundled. */
+export interface LanguagePack {
+  /** app this pack was built for — rejected if it isn't ours */
+  app?: string
+  /** app version it was built against; older is fine, it degrades per string */
+  version?: string
+  lang: string
+  /** picker label in its own language ("한국어") */
+  label?: string
+  strings: Catalog
+}
+
 let CATALOGS: Record<string, Catalog> = {}
 let PACKED: PackedCatalogs | null = null
 /** locale code -> column index in PACKED.table rows */
 let COLUMN: Record<string, number> = {}
+/**
+ * Runtime-loaded packs, keyed by language. Consulted BEFORE the bundled core
+ * so a pack can also correct a bundled language without an app release —
+ * see docs/i18n-packs.md. Packs are additive: an app that never loads one
+ * behaves exactly as if this didn't exist.
+ */
+let PACKS: Record<string, Catalog> = {}
 let CHOICES: LocaleChoice[] = [{ code: 'en', label: 'English' }]
 
 /**
@@ -60,16 +79,53 @@ export function registerI18n(opts: {
     }
   }
   CHOICES = opts.choices
+  // A pack loaded BEFORE registration (block order in the shell is not
+  // guaranteed) would otherwise lose its picker entry when CHOICES is
+  // replaced. Re-append any pack language the new choices don't mention.
+  for (const lang of Object.keys(PACKS)) {
+    if (!CHOICES.some((c) => c.code === lang)) CHOICES = [...CHOICES, { code: lang, label: lang }]
+  }
   current = null // re-resolve: the registry the resolution depends on just changed
 }
 
+/**
+ * Load a language pack (docs/i18n-packs.md). Additive and idempotent-ish:
+ * later loads of the same language merge over earlier ones.
+ *
+ * Deliberately tolerant. A pack built against an older app version simply
+ * lacks the newer keys, and every miss falls through to the bundled core and
+ * then to the English key — so a stale pack degrades string by string instead
+ * of failing to load. That tolerance is what lets packs be released on their
+ * own cadence.
+ *
+ * Returns false if the pack is for a different app, which is the one case
+ * worth rejecting outright: its keys would be wrong, not merely missing.
+ */
+export function addPack(pack: LanguagePack, appName?: string): boolean {
+  if (!pack?.lang || !pack.strings) return false
+  if (appName && pack.app && pack.app !== appName) return false
+  PACKS[pack.lang] = { ...(PACKS[pack.lang] ?? {}), ...pack.strings }
+  if (pack.label && !CHOICES.some((c) => c.code === pack.lang)) {
+    CHOICES = [...CHOICES, { code: pack.lang, label: pack.label }]
+  }
+  current = null // a newly available locale can change what resolve() picks
+  return true
+}
+
+/** Languages available only because a pack was loaded. */
+export const loadedPacks = (): string[] => Object.keys(PACKS)
+
 /** Do we actually carry strings for this locale code? Drives resolve(). */
 function hasLocale(code: string): boolean {
+  if (PACKS[code]) return true
   return PACKED ? COLUMN[code] !== undefined : !!CATALOGS[code]
 }
 
 /** The translation for `en` in the active locale, or undefined to fall back. */
 function lookup(en: string, loc: string): string | undefined {
+  // packs first: a pack may add a language OR correct a bundled one
+  const fromPack = PACKS[loc]?.[en]
+  if (fromPack !== undefined) return fromPack
   if (PACKED) {
     const col = COLUMN[loc]
     if (col === undefined) return undefined
@@ -133,4 +189,4 @@ export function t(en: string, vars?: Record<string, string | number>): string {
 
 // dev convenience: window.bento.i18n exposes locale switching for testing;
 // the pseudo locale is reachable by setLocale('x-pseudo') in any build.
-export const i18nApi = { t, locale, setLocale, choices: localeChoices }
+export const i18nApi = { t, locale, setLocale, choices: localeChoices, addPack, loadedPacks }

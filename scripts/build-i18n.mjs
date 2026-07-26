@@ -24,13 +24,16 @@
 // should have to edit a positional array. This script is the bridge, and
 // --check keeps the generated file honest in CI.
 
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const dir = join(root, 'slides/src/i18n')
 const outPath = join(dir, 'packed.ts')
+/** Pack languages: authored exactly like a core catalog, but never bundled —
+ *  nothing imports this directory, so it stays out of the module graph. */
+const packDir = join(dir, 'packs')
 
 // Column order. Adding a locale = add its file and append it HERE (appending
 // keeps existing columns stable, so a stale packed.ts can never silently
@@ -102,6 +105,45 @@ export const PACKED: Record<string, ReadonlyArray<string | 0>> = {
 ${rows.join('\n')}
 }
 `
+
+// --- pack emission ----------------------------------------------------------
+// A pack is one language for one app at one app version. Per-language maps,
+// not the bundled positional shape: a pack is authored and reviewed as a
+// single language, and positional arrays would couple every pack to a column
+// order it can't see. See docs/i18n-packs.md.
+const packsIdx = process.argv.indexOf('--packs')
+if (packsIdx >= 0) {
+  const outDir = process.argv[packsIdx + 1] || join(root, 'slides/dist-packs')
+  if (!existsSync(packDir)) {
+    console.log(`no pack catalogs in ${packDir} — nothing to emit`)
+    process.exit(0)
+  }
+  const version = JSON.parse(readFileSync(join(root, 'slides/package.json'), 'utf8')).version
+  mkdirSync(outDir, { recursive: true })
+  const packFiles = readdirSync(packDir).filter((f) => f.endsWith('.ts'))
+  let n = 0
+  for (const f of packFiles) {
+    const lang = f.replace(/\.ts$/, '')
+    if (LOCALES.includes(lang)) {
+      console.error(`${lang} is a BUNDLED language — remove it from packs/ or from LOCALES, not both`)
+      process.exit(1)
+    }
+    const mod = await import(pathToFileURL(join(packDir, f)).href)
+    const strings = mod.strings ?? Object.values(mod).find((v) => v && typeof v === 'object')
+    const label = mod.label
+    if (!strings || !label) {
+      console.error(`${f} must export both \`strings\` and \`label\``)
+      process.exit(1)
+    }
+    const pack = { app: 'slides', version, lang, label, strings }
+    const name = `bento-slides-${version}-${lang}.pack.json`
+    writeFileSync(join(outDir, name), JSON.stringify(pack))
+    console.log(`  ${name}  ${Object.keys(strings).length} strings`)
+    n++
+  }
+  console.log(`emitted ${n} pack(s) -> ${outDir}`)
+  process.exit(0)
+}
 
 if (process.argv.includes('--check')) {
   let current = ''
