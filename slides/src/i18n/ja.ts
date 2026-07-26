@@ -4,6 +4,7 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "Updated to v{v}.": "v{v} に更新しました。",
   "More": "その他",
   "Insert": "挿入",
   "Slides": "スライド",

@@ -15,6 +15,7 @@ export const PACKED_LOCALES = ["ja","zh-Hans","zh-Hant","es","fr","de","it","pt"
 
 /** English source string -> translations, positional by PACKED_LOCALES. */
 export const PACKED: Record<string, ReadonlyArray<string | 0>> = {
+  "Updated to v{v}.": ["v{v} に更新しました。","已更新到 v{v}。","已更新到 v{v}。","Actualizado a la v{v}.","Mis à jour vers la v{v}.","Auf v{v} aktualisiert.","Aggiornato alla v{v}."],
   "More": ["その他","更多","更多","Más","Plus","Mehr","Altro"],
   "Insert": ["挿入","插入","插入","Insertar","Insérer","Einfügen","Inserisci"],
   "Slides": ["スライド","幻灯片","投影片","Diapositivas","Diapositives","Folien","Diapositive"],

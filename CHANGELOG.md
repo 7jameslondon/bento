@@ -11,6 +11,13 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **You can see what changed, on both sides of an update.** When an update is
+  available the About dialog now lists the headlines from that release inline,
+  instead of only a version number and a link off to GitHub — and because they
+  travel in the signed manifest, they can't be tampered with. After the update
+  lands and you reload, Bento says once which version you're now on, with a
+  link to the full notes. It only says it if you actually upgraded: someone
+  opening a deck you sent them never sees it.
 - **The editor fits on a phone.** The toolbar used to need about 680px of a
   402px screen: it ran off the edge, took the Save button with it, and because
   nothing clipped it, swiping the toolbar dragged the whole canvas sideways.

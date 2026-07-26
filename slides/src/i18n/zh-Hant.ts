@@ -4,6 +4,7 @@
 import type { Catalog } from '../i18n'
 
 export const zhHant: Catalog = {
+  "Updated to v{v}.": "已更新到 v{v}。",
   "More": "更多",
   "Insert": "插入",
   "Slides": "投影片",

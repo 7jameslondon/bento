@@ -34,6 +34,11 @@ const i18nT = t
  *  notice has been acknowledged. It is a property of the browser. */
 const SAVE_NOTICE_KEY = 'bento-save-notice'
 
+/** sessionStorage: set just before the post-update reload, read once by the
+ *  version that boots next. Deliberately NOT localStorage — see
+ *  noticeIfJustUpdated. */
+const JUST_UPDATED_KEY = 'bento-just-updated'
+
 /** Show the language search once the available list outgrows a glance. */
 const SEARCH_FROM = 8
 
@@ -1900,6 +1905,7 @@ export class Editor {
     void pruneOld()
     void this.checkRecovery()
     this.noticeIfCannotWriteInPlace()
+    this.noticeIfJustUpdated()
     this.store.on('doc', () => this.scheduleAutosave())
   }
 
@@ -1980,6 +1986,54 @@ export class Editor {
    * Once per browser, not per deck: it is a property of the browser, and
    * repeating it every time a file opens would be nagging.
    */
+  /**
+   * Say what changed, once, right after an upgrade lands.
+   *
+   * The moment matters: before the upgrade the notes are decision support (and
+   * now ride inline in the signed manifest); AFTER it the user is inside the
+   * editor, where the features actually are. "You can write $x^2$ in any text
+   * box" means something different with a text box in front of you.
+   *
+   * Keyed on sessionStorage, NOT a stored last-seen version, because those
+   * answer different questions. We want "did this reload just follow an
+   * upgrade?", not "has this browser seen 1.0.11?". The difference is
+   * recipients: most people who open a .bento.html never upgraded anything, and
+   * a version comparison would greet them with release notes for a version they
+   * never had. They cannot reach this path — they never clicked Reload.
+   *
+   * localStorage would also be wrong mechanically: it is per ORIGIN, and in
+   * bento/tray every document gets its own origin, so a "seen" flag would be
+   * per document — five decks, five notices.
+   *
+   * Only fires when the reload actually landed on the version it promised, so a
+   * failed update never claims success. One shot: read and clear.
+   */
+  private noticeIfJustUpdated() {
+    let just: string | null = null
+    try {
+      just = sessionStorage.getItem(JUST_UPDATED_KEY)
+      sessionStorage.removeItem(JUST_UPDATED_KEY)
+    } catch { return /* private mode — no note, no harm */ }
+    if (!just || just !== APP_VERSION) return
+    if (this.store.doc.readonly) return // player file: not this person's upgrade
+
+    const bar = div('ed-recover')
+    const msg = document.createElement('span')
+    msg.textContent = t('Updated to v{v}.', { v: APP_VERSION })
+    const what = document.createElement('a')
+    what.className = 'ed-btn'
+    what.href = `https://github.com/nyblnet/bento/releases/tag/v${APP_VERSION}`
+    what.target = '_blank'
+    what.rel = 'noopener'
+    what.textContent = t('What’s new →')
+    const ok = document.createElement('button')
+    ok.className = 'ed-btn ed-btn-primary'
+    ok.textContent = t('Got it')
+    ok.addEventListener('click', () => bar.remove())
+    bar.append(msg, what, ok)
+    document.body.appendChild(bar)
+  }
+
   private noticeIfCannotWriteInPlace() {
     if (canWriteInPlace()) return
     if (localStorage.getItem(SAVE_NOTICE_KEY) === 'seen') return
@@ -2418,6 +2472,10 @@ export class Editor {
           reloadB.textContent = t('Reload into new version')
           reloadB.addEventListener('click', () => {
             this.store.setDirty(false) // disk already holds this exact document
+            // Hand a note to the version we are about to become. sessionStorage
+            // because the lifetime is exactly right: it survives this reload and
+            // dies with the tab. See noticeIfJustUpdated.
+            try { sessionStorage.setItem(JUST_UPDATED_KEY, release.version) } catch { /* private mode */ }
             location.reload()
           })
           status.appendChild(reloadB)
