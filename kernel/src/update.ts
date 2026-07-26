@@ -160,6 +160,21 @@ export async function checkForUpdates(manifestUrl?: string): Promise<UpdateCheck
  * Fetch the release shell, verify its hash against the signed manifest, and
  * return the full updated .bento.html: this document inside the new app.
  */
+/**
+ * Run by buildUpdatedFile once the new version is known and verified, BEFORE
+ * the document is serialized into it. Lets an app bring version-bound extras
+ * up to date — language packs are the case this exists for.
+ *
+ * Kept as a hook rather than baked in because the kernel must not learn what
+ * a language pack is; it only knows the app may want a moment before the new
+ * shell is written.
+ */
+let prepareUpdate: ((version: string) => Promise<void>) | null = null
+
+export function registerUpdatePrepare(fn: (version: string) => Promise<void>): void {
+  prepareUpdate = fn
+}
+
 export async function buildUpdatedFile(release: ReleaseInfo, doc: KernelDoc): Promise<string> {
   const res = await fetch(release.url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`downloading the update failed (${res.status})`)
@@ -171,6 +186,20 @@ export async function buildUpdatedFile(release: ReleaseInfo, doc: KernelDoc): Pr
   const shell = new DOMParser().parseFromString(new TextDecoder().decode(bytes), 'text/html')
   if (!shell.getElementById('bento-doc'))
     throw new Error('the downloaded update is not a Bento shell')
+
+  // BEST EFFORT, never fatal. If refreshing throws — offline, the new
+  // version's packs not published yet, anything — the update must still
+  // proceed and carry the EXISTING packs forward. Losing a language the
+  // author baked in is far worse than one that is a release out of date,
+  // because a stale pack still degrades per string while a missing one
+  // takes the whole language with it.
+  if (prepareUpdate) {
+    try {
+      await prepareUpdate(release.version)
+    } catch {
+      /* keep whatever the file already carries */
+    }
+  }
   return serializeDocInto(shell, doc)
 }
 
