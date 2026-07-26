@@ -131,8 +131,25 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         view.bringSubviewToFront(floatingExit)
     }
 
-    /// Start the page BELOW the status bar wherever iOS is drawing one, so a
-    /// document's own toolbar is reachable; go full bleed where it is not.
+    /// Hide the status bar wherever nothing forces it to exist.
+    ///
+    /// On iPad it is pure cost. There is no sensor housing to reserve a band
+    /// for, so the status bar is the ONLY thing keeping the page off the whole
+    /// screen — and it stayed lit over a presenting deck, which is the opposite
+    /// of what presenting is for. Hiding it takes safeAreaInsets.top to 0, and
+    /// the deck then goes edge to edge with even letterboxing.
+    ///
+    /// On iPhone it would buy nothing: landscape hides it already, and portrait
+    /// draws it INSIDE the band the sensor housing reserves regardless, so
+    /// hiding there would blank that band rather than reclaim it — losing the
+    /// clock to gain no pixels.
+    override var prefersStatusBarHidden: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    /// Reserve exactly what the system says is unsafe at the top, and nothing
+    /// else — so a document's own toolbar is reachable but never gives up a
+    /// pixel it did not have to.
     ///
     /// Done NATIVELY rather than by asking the page to pad itself. env() is dead
     /// in this WKWebView, and --tray-safe-* only helps a page that has heard of
@@ -140,19 +157,18 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// controls ended up under the pill and could not be tapped. Insetting the
     /// web view works for every document without any cooperation.
     ///
-    /// A regular vertical size class is the test because it tracks exactly the
-    /// thing that matters: iOS hides the status bar in a compact height and
-    /// shows it otherwise. On iPhone that reads as portrait-inset /
-    /// landscape-full-bleed, which is what a presenter wants. On iPad it is
-    /// regular in BOTH orientations — and correctly so, because an iPad keeps
-    /// its status bar in both, and a deck presenting there letterboxes anyway.
+    /// `safeAreaInsets.top` is the whole rule now, and it already says the right
+    /// thing everywhere: iPhone portrait reports the sensor housing, so the page
+    /// starts below the pill; iPhone landscape and iPad both report 0 once the
+    /// status bar is gone, so the page gets the entire screen. No orientation or
+    /// device test — the earlier one claimed landscape was always full bleed,
+    /// which iPad quietly disproved.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        let statusBarShowing = traitCollection.verticalSizeClass == .regular
-        let top = statusBarShowing ? view.safeAreaInsets.top : 0
+        let top = view.safeAreaInsets.top
         webView.frame = CGRect(x: 0, y: top, width: view.bounds.width,
                                height: max(0, view.bounds.height - top))
-        publishSafeArea(topHandledNatively: statusBarShowing)
+        publishSafeArea(topHandledNatively: top > 0)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -215,26 +231,24 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     override func viewDidLoad() {
         super.viewDidLoad()
         let cfg = WKWebViewConfiguration()
-        // Element fullscreen: iPad only.
+        // Element fullscreen is DECLINED on every device.
         //
-        // WKWebView will grant it on iPhone too, and it looked like a win — the
-        // same file in Safari cannot do it. But WebKit's fullscreen view brings
-        // its own close button, which no public API can hide or restyle, and
-        // insets the content so a 16:9 deck letterboxed asymmetrically instead
-        // of filling the screen.
+        // WKWebView offers it as an opt-in that mobile Safari never gives a
+        // page, so it looked like free capability. It is not. WebKit's
+        // fullscreen view brings its own close button that no public API can
+        // hide, restyle or move, and it insets the content — so a 16:9 deck
+        // letterboxed asymmetrically, and the foreign ✕ spilled off the
+        // letterbox onto the slide. It does not even hide the status bar on
+        // iPad, so it fails at the one thing fullscreen is for.
         //
-        // On a phone that buys nothing: the status bar is ALREADY hidden in
-        // landscape, so declining fullscreen costs no screen space at all, and
-        // the page then fills the web view edge to edge with its own chrome and
-        // no foreign ✕. Declining is simply better here.
+        // Declining costs nothing, because the host hands the page the whole
+        // screen anyway (see prefersStatusBarHidden and viewDidLayoutSubviews):
+        // the deck then fills the web view edge to edge, letterboxes evenly,
+        // and wears its OWN chrome instead of WebKit's.
         //
-        // iPad is the opposite case — the status bar IS visible there and there
-        // is no notch gutter to fight — so it keeps real fullscreen.
-        //
-        // A page that asks for fullscreen and is refused is not broken: that is
-        // the same path it takes in mobile Safari, which is well-trodden.
-        cfg.preferences.isElementFullscreenEnabled =
-            UIDevice.current.userInterfaceIdiom == .pad
+        // A page refused fullscreen is not broken — that is exactly the path it
+        // takes in mobile Safari, which is the well-trodden one.
+        cfg.preferences.isElementFullscreenEnabled = false
         cfg.setURLSchemeHandler(self, forURLScheme: "bento-tray")
         cfg.userContentController.add(self, name: "bentoFile")
 

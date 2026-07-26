@@ -96,7 +96,7 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
             let editor = EditorViewController(document: doc)
             // Two extensions: "Q3-board.bento.html" -> "Q3-board".
             editor.title = url.deletingPathExtension().deletingPathExtension().lastPathComponent
-            let nav = UINavigationController(rootViewController: editor)
+            let nav = DocumentNavigationController(rootViewController: editor)
             nav.modalPresentationStyle = .fullScreen
             editor.onDone = { [weak self, weak nav] in
                 // close() flushes and relinquishes file coordination; without it
@@ -112,4 +112,15 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
             self.present(nav, animated: true)
         }
     }
+}
+
+/// Lets the editor decide whether the status bar is shown.
+///
+/// A UINavigationController answers UIKit's status-bar questions itself unless
+/// it is told to defer, so `prefersStatusBarHidden` on the view controller
+/// inside it is simply never consulted — the editor's request to hide the bar
+/// on iPad would be silently dropped.
+final class DocumentNavigationController: UINavigationController {
+    override var childForStatusBarHidden: UIViewController? { topViewController }
+    override var childForStatusBarStyle: UIViewController? { topViewController }
 }
