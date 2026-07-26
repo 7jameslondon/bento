@@ -15,6 +15,9 @@ pre-1.0.
   don't set their own margins now leave room for the legend at whatever size
   it's set to, instead of assuming the default one.
 
+- **Fix: readable axis numbers on the showcase deck's linked chart.** They were
+  being drawn half-transparent against a dark panel.
+
 - **Chart labels and legends now honor their visual options.** The lightweight
   chart renderer applies configured font sizes and weights to axis labels and
   legends, respects legend spacing and placement, and measures CJK legend text
