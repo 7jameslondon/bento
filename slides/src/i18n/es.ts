@@ -675,6 +675,7 @@ export const es: Catalog = {
   "Available to add": "Disponibles para añadir",
   "Adding…": "Añadiendo…",
   "That language pack couldn’t be read.": "No se pudo leer ese paquete de idioma.",
+  "That language pack failed its security check, so it wasn’t added.": "Ese paquete de idioma no superó la comprobación de seguridad, así que no se añadió.",
   "That language pack was built for a different Bento app.": "Ese paquete de idioma se creó para otra aplicación de Bento.",
   "Manage languages…": "Gestionar idiomas…",
   "In this file": "En este archivo",

@@ -168,6 +168,50 @@ merge step: a pack's strings layer over the bundled core for its language.
 Lookup misses fall back per string to the English key, which is what makes a
 partial or stale pack degrade gracefully rather than break.
 
+### What the client checks (implemented)
+
+```
+embedded release key  ->  signs the index
+index                 ->  pins each pack's sha256
+pinned sha256         ->  the bytes we accept
+```
+
+You cannot substitute a pack without breaking its hash, and you cannot fix the
+hash without breaking the signature. Two kernel helpers do it, and nothing
+else in the codebase does release-channel crypto:
+
+- `verifySigned(raw, what?)` — envelope + signature, returns the payload.
+- `fetchPinned(url, sha256)` — fetch, hash, compare; `null` on any mismatch.
+
+They verify BYTES. They do not decide what is safe to use — that policy is the
+caller's, and packs are DATA (see the decision log entry, 2026-07-26). Anything
+side-loaded that ever carries CODE needs stricter policy — pinned at install,
+never auto-refreshed — and must not inherit the pack rules by reusing this
+fetch.
+
+`slides/src/packs.ts` composes them and **fails closed**. It expects the index
+payload specified above: an object whose `app` is this app's id (the signing
+key is platform-wide, so the id is what stops a validly signed index for
+another app) carrying a `packs` array. An unsigned index, an index for another
+app, a listing with no pin, or bytes that don't match all yield nothing to add
+and a `'unverified'` error in the UI. There is no permissive fallback for an
+unsigned index — nothing is published yet, so there is nothing to be
+compatible with, and a fallback shipped now would be permanent.
+
+Two things deliberately NOT checked:
+
+- **Packs already inside a file** (`readPacksFromShell`). Verified at the
+  door; once spliced, a pack carries the trust the document does, and
+  re-verifying would require the network at boot — the opposite of the
+  product's promise.
+- **A refresh that fails.** `refreshPacksForVersion` keeps the pack the file
+  already holds rather than dropping it. The unverified bytes are refused; the
+  previously verified ones stay. Degraded beats absent.
+
+Rig: `node scripts/test-packs.ts` (in CI) — tampered pack, tampered index,
+unsigned index, index signed for another app, missing pin, and the good path,
+against real WebCrypto with a throwaway key standing in for the release key.
+
 ### Incorporation into the file
 
 A pack is fetched **only on explicit user action** ("Add language…"), verified,

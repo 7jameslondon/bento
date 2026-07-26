@@ -675,6 +675,7 @@ export const zhHans: Catalog = {
   "Available to add": "可添加",
   "Adding…": "正在添加…",
   "That language pack couldn’t be read.": "无法读取该语言包。",
+  "That language pack failed its security check, so it wasn’t added.": "该语言包未通过安全校验，因此未被添加。",
   "That language pack was built for a different Bento app.": "该语言包是为另一个 Bento 应用构建的。",
   "Manage languages…": "管理语言…",
   "In this file": "此文件内",
