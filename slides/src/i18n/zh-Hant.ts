@@ -694,4 +694,13 @@ export const zhHant: Catalog = {
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "現在可以使用，但這裡沒有空間保存 — 重新載入後將會消失。",
   "Search languages": "搜尋語言",
   "No language matches “{q}”.": "沒有與「{q}」相符的語言。",
+  "This computer": "此電腦",
+  "This file": "此檔案",
+  "Download and use here. The deck itself is not changed.": "下載並在此使用。不會變更簡報本身。",
+  "Put it in the deck so it travels — written when you next save.": "放入簡報一起傳遞 — 下次儲存時寫入。",
+  "{lang} will be saved with this deck": "{lang} 將隨此簡報一起儲存",
+  "Added when you next save": "下次儲存時新增",
+  "Saved in this file": "已儲存在此檔案中",
+  "Take out of the file — applies when you next save": "從檔案中移除 — 下次儲存時生效",
+  "Choose where it goes: just for you, or into the deck so it travels.": "選擇位置：僅供你使用，或放入簡報一起傳遞。",
 }

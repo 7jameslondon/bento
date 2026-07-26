@@ -17,6 +17,7 @@
 // fine; a quota failure is caught and surfaced rather than left to throw.
 
 import { addPack, removePack, type LanguagePack } from '../../kernel/src/i18n.ts'
+import { readShellBlocks, type ShellBlock } from '../../kernel/src/save.ts'
 
 /** Installed packs, keyed by language. */
 const KEY = 'bento-packs'
@@ -82,7 +83,14 @@ export function installedPacks(): LanguagePack[] {
  * can turn into a sentence (t() must run at display time, so no text crosses
  * this boundary — same contract as SyncNotice).
  */
-export async function installPack(listing: PackListing): Promise<null | 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'> {
+export type PackError = 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'
+
+/**
+ * Download and validate a pack WITHOUT deciding where it goes. Both
+ * destinations — this computer, or into the file — start here, which is what
+ * lets a language be put in a file without first installing it locally.
+ */
+export async function fetchPack(listing: PackListing): Promise<LanguagePack | PackError> {
   const url = /^https?:/.test(listing.url) ? listing.url : `${channel()}/${listing.url}`
   let pack: LanguagePack
   try {
@@ -94,6 +102,13 @@ export async function installPack(listing: PackListing): Promise<null | 'offline
   }
   if (!pack?.lang || !pack.strings || typeof pack.strings !== 'object') return 'bad-pack'
   if (pack.app && pack.app !== 'slides') return 'wrong-app'
+  return pack
+}
+
+export async function installPack(listing: PackListing): Promise<null | PackError> {
+  const got = await fetchPack(listing)
+  if (typeof got === 'string') return got
+  const pack = got
   if (!addPack(pack, 'slides')) return 'wrong-app'
 
   const s = read()
@@ -105,6 +120,95 @@ export async function installPack(listing: PackListing): Promise<null | 'offline
     return 'no-space'
   }
   return null
+}
+
+// --- packs that live IN THE FILE --------------------------------------------
+//
+// The other half of the story. A pack installed above belongs to the reader;
+// a pack in the file belongs to the DECK and travels to whoever opens it.
+//
+// Staging is deliberate rather than immediate: adding one marks it for the
+// file and it is written on the next save, exactly like any other edit. The
+// alternative — writing the user's file the instant they click Add — is worse
+// on every browser without File System Access, where "write" means silently
+// downloading a second copy of their deck.
+
+/** The block type carrying a pack inside a saved shell. */
+const BLOCK_TYPE = 'application/bento+lang'
+const blockId = (lang: string) => `bento-lang-${lang}`
+
+/** Packs destined for the file: those already in it, plus any staged since. */
+const inFile = new Map<string, LanguagePack>()
+/** Which of those were NOT in the file as loaded — i.e. need a save. */
+const pending = new Set<string>()
+
+/**
+ * Read packs already embedded in this file and register them. Runs at boot
+ * from the i18n facade: a deck that arrives carrying Japanese must show
+ * Japanese immediately, offline, with nothing fetched.
+ */
+export function readPacksFromShell(): number {
+  let n = 0
+  for (const { body } of readShellBlocks(BLOCK_TYPE)) {
+    try {
+      const pack = JSON.parse(body) as LanguagePack
+      if (pack?.lang && pack.strings && addPack(pack, 'slides')) {
+        inFile.set(pack.lang, pack)
+        n++
+      }
+    } catch {
+      // a corrupt block must not stop the app booting — skip it
+    }
+  }
+  return n
+}
+
+/** Packs that will be written into the file on the next save. */
+export function packsInFile(): Array<LanguagePack & { pending: boolean }> {
+  return [...inFile.values()].map((p) => ({ ...p, pending: pending.has(p.lang) }))
+}
+
+/** Is this language waiting for a save to reach the file? */
+export const isPendingInFile = (lang: string): boolean => pending.has(lang)
+
+/**
+ * Mark a pack for inclusion in the file. Registers it immediately so the
+ * editor can use it right away; the FILE only gains it on the next save.
+ */
+export function stageForFile(pack: LanguagePack): boolean {
+  if (!pack?.lang || !pack.strings) return false
+  if (!addPack(pack, 'slides')) return false
+  inFile.set(pack.lang, pack)
+  pending.add(pack.lang)
+  return true
+}
+
+/**
+ * Drop a pack from the file. Also a staged change: the file keeps it until
+ * the next save, which is why this marks pending too.
+ */
+export function unstageFromFile(lang: string): boolean {
+  if (!inFile.has(lang)) return false
+  inFile.delete(lang)
+  pending.add(lang)
+  // only unregister if no local install is also providing it
+  if (!read()[lang]) removePack(lang)
+  return true
+}
+
+/** Everything staged has now been written — called after a successful save. */
+export function markFileSaved(): void {
+  pending.clear()
+}
+
+/** The blocks the kernel writes into every saved shell. */
+export function shellBlocksForPacks(): ShellBlock[] {
+  return [...inFile.values()].map((p) => ({
+    id: blockId(p.lang),
+    type: BLOCK_TYPE,
+    body: JSON.stringify(p),
+    attrs: { 'data-lang': p.lang },
+  }))
 }
 
 /** Remove an installed pack and forget it. */
@@ -128,7 +232,9 @@ export async function availablePacks(): Promise<PackListing[]> {
     if (!res.ok) return []
     const list = (await res.json()) as PackListing[]
     if (!Array.isArray(list)) return []
-    const have = new Set(Object.keys(read()))
+    // A language already present by EITHER route is not on offer: showing it
+    // again invites adding the same pack twice to two different places.
+    const have = new Set([...Object.keys(read()), ...inFile.keys()])
     return list.filter((p) => p?.lang && p?.url && !have.has(p.lang))
   } catch {
     return []

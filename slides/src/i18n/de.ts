@@ -694,4 +694,13 @@ export const de: Catalog = {
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "Es funktioniert jetzt, aber hier ist kein Platz zum Speichern — nach dem Neuladen ist es weg.",
   "Search languages": "Sprachen suchen",
   "No language matches “{q}”.": "Keine Sprache passt zu „{q}“.",
+  "This computer": "Dieser Computer",
+  "This file": "Diese Datei",
+  "Download and use here. The deck itself is not changed.": "Herunterladen und hier verwenden. Die Präsentation wird nicht verändert.",
+  "Put it in the deck so it travels — written when you next save.": "In die Präsentation legen, damit sie mitreist — wird beim nächsten Speichern geschrieben.",
+  "{lang} will be saved with this deck": "{lang} wird mit dieser Präsentation gespeichert",
+  "Added when you next save": "Wird beim nächsten Speichern hinzugefügt",
+  "Saved in this file": "In dieser Datei gespeichert",
+  "Take out of the file — applies when you next save": "Aus der Datei entfernen — gilt ab dem nächsten Speichern",
+  "Choose where it goes: just for you, or into the deck so it travels.": "Wähle das Ziel: nur für dich, oder in der Präsentation, damit sie mitreist.",
 }

@@ -694,4 +694,13 @@ export const ja: Catalog = {
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "今は使えますが、ここに保存する空き容量がありません — 再読み込みすると消えます。",
   "Search languages": "言語を検索",
   "No language matches “{q}”.": "「{q}」に一致する言語はありません。",
+  "This computer": "このコンピューター",
+  "This file": "このファイル",
+  "Download and use here. The deck itself is not changed.": "ダウンロードしてここで使用します。デッキ自体は変更されません。",
+  "Put it in the deck so it travels — written when you next save.": "デッキに入れて一緒に配布します — 次回の保存時に書き込まれます。",
+  "{lang} will be saved with this deck": "{lang} はこのデッキと一緒に保存されます",
+  "Added when you next save": "次回の保存時に追加",
+  "Saved in this file": "このファイルに保存済み",
+  "Take out of the file — applies when you next save": "ファイルから削除 — 次回の保存時に反映",
+  "Choose where it goes: just for you, or into the deck so it travels.": "保存先を選んでください: 自分用か、デッキに入れて一緒に配布するか。",
 }

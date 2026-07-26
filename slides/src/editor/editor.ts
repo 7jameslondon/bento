@@ -24,7 +24,7 @@ import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
 import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
-import { availablePacks, installPack, installedPacks, uninstallPack } from '../packs'
+import { availablePacks, fetchPack, installPack, installedPacks, packsInFile, stageForFile, uninstallPack, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -1023,7 +1023,7 @@ export class Editor {
         b.textContent = blurb
         listHost.appendChild(b)
       }
-      const row = (label: string, sub: string, action?: HTMLElement, host: HTMLElement = listHost) => {
+      const row = (label: string, sub: string, actions: HTMLElement[] = [], host: HTMLElement = listHost) => {
         const r = div('ed-lang-row')
         const txt = div('ed-lang-txt')
         const n = document.createElement('b')
@@ -1032,12 +1032,33 @@ export class Editor {
         s.textContent = sub
         txt.append(n, s)
         r.appendChild(txt)
-        if (action) r.appendChild(action)
+        if (actions.length) {
+          const acts = div('ed-lang-acts')
+          for (const a of actions) acts.appendChild(a)
+          r.appendChild(acts)
+        }
         host.appendChild(r)
       }
 
       section(t('In this file'), t('Travels with the deck — anyone you send it to gets these too.'))
       row('English, ' + bundled.map((c) => c.label).join(', '), t('Included in every Bento'))
+      for (const p of packsInFile()) {
+        const rm = document.createElement('button')
+        rm.className = 'ed-btn'
+        rm.textContent = t('Remove')
+        rm.title = t('Take out of the file — applies when you next save')
+        rm.addEventListener('click', () => {
+          unstageFromFile(p.lang)
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(
+          p.label || p.lang,
+          p.pending ? t('Added when you next save') : t('Saved in this file'),
+          [rm],
+        )
+      }
 
       section(
         t('On this computer'),
@@ -1060,11 +1081,11 @@ export class Editor {
           this.rebuildSidebar()
           void paint()
         })
-        row(p.label || p.lang, p.version ? t('Language pack · built for v{v}', { v: p.version }) : t('Language pack'), rm)
+        row(p.label || p.lang, p.version ? t('Language pack · built for v{v}', { v: p.version }) : t('Language pack'), [rm])
       }
 
       const all = await availablePacks()
-      section(t('Available to add'), t('Adding one puts it on this computer. New languages arrive with each release.'))
+      section(t('Available to add'), t('Choose where it goes: just for you, or into the deck so it travels.'))
       if (!all.length) {
         const none = div('ed-hint')
         none.textContent = t('Nothing new right now.')
@@ -1087,6 +1108,9 @@ export class Editor {
 
       const renderAvail = (q = '') => {
         scroller.textContent = ''
+        // Nothing on offer at all is already stated above — saying it twice,
+        // once as 'No language matches ""', is worse than saying it once.
+        if (!all.length) return
         const needle = q.trim().toLowerCase()
         const hits = needle
           ? all.filter((p) => p.label.toLowerCase().includes(needle) || p.lang.toLowerCase().includes(needle))
@@ -1100,27 +1124,55 @@ export class Editor {
         for (const p of hits) addRow(p, scroller)
       }
 
+      // Two destinations, labelled with the SAME words as the sections above,
+      // so the button says where the language will end up. Nobody should have
+      // to install a language locally just to put it in a file they are
+      // sending to someone else.
       const addRow = (p: import('../packs').PackListing, host: HTMLElement) => {
-        const add = document.createElement('button')
-        add.className = 'ed-btn'
-        add.textContent = t('Add')
-        add.title = t('Download and use on this computer — the deck itself is not changed')
-        add.addEventListener('click', async () => {
-          add.disabled = true
-          add.textContent = t('Adding…')
-          const err = await installPack(p)
-          if (err) {
-            this.toast(languageInstallError(err))
-            add.disabled = false
-            add.textContent = t('Add')
-            return
-          }
-          this.toast(t('{lang} is ready to use', { lang: p.label }))
-          this.build()
-          this.rebuildSidebar()
-          void paint()
-        })
-        row(p.label, p.lang, add, host)
+        const mk = (label: string, title: string, run: () => Promise<string | null>) => {
+          const b = document.createElement('button')
+          b.className = 'ed-btn'
+          b.textContent = label
+          b.title = title
+          b.addEventListener('click', async () => {
+            const siblings = [...(b.parentElement?.children ?? [])] as HTMLButtonElement[]
+            siblings.forEach((s) => (s.disabled = true))
+            b.textContent = t('Adding…')
+            const err = await run()
+            if (err) {
+              this.toast(languageInstallError(err as 'offline'))
+              siblings.forEach((s) => (s.disabled = false))
+              b.textContent = label
+              return
+            }
+            this.build()
+            this.rebuildSidebar()
+            void paint()
+          })
+          return b
+        }
+
+        const toComputer = mk(
+          t('This computer'),
+          t('Download and use here. The deck itself is not changed.'),
+          async () => {
+            const err = await installPack(p)
+            if (!err) this.toast(t('{lang} is ready to use', { lang: p.label }))
+            return err
+          },
+        )
+        const toFile = mk(
+          t('This file'),
+          t('Put it in the deck so it travels — written when you next save.'),
+          async () => {
+            const err = await fetchPack(p)
+            if (typeof err === 'string') return err
+            stageForFile(err)
+            this.toast(t('{lang} will be saved with this deck', { lang: p.label }))
+            return null
+          },
+        )
+        row(p.label, p.lang, [toComputer, toFile], host)
       }
 
       renderAvail()

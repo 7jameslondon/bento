@@ -18,7 +18,8 @@
 //     node scripts/build-i18n.mjs
 //
 import { PACKED, PACKED_LOCALES } from './i18n/packed'
-import { restoreInstalledPacks } from './packs'
+import { readPacksFromShell, restoreInstalledPacks, shellBlocksForPacks } from './packs'
+import { registerShellBlocks } from '../../kernel/src/save.ts'
 import { registerI18n } from '../../kernel/src/i18n.ts'
 import type { LocaleChoice } from '../../kernel/src/i18n.ts'
 
@@ -56,9 +57,18 @@ registerI18n({
   choices: CHOICES,
 })
 
-// Packs installed on THIS browser, re-registered before the first t() — same
-// module-evaluation-order guarantee that makes the facade own registration.
+// Packs, re-registered before the first t() — same module-evaluation-order
+// guarantee that makes the facade own registration.
+//
+// FILE FIRST, then browser. A pack embedded in the deck is what its author
+// chose to send; a locally installed one is the reader's own preference, and
+// the reader should win when both carry the same language.
+readPacksFromShell()
 restoreInstalledPacks()
+
+// Every save re-declares the file's packs, so staging one is enough to make
+// it travel and dropping it is enough to remove it.
+registerShellBlocks(shellBlocksForPacks)
 
 /**
  * The BUNDLED locales only. Call sites that need the live list — including any

@@ -694,4 +694,13 @@ export const zhHans: Catalog = {
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "现在可以使用，但这里没有空间保存 — 重新加载后将会消失。",
   "Search languages": "搜索语言",
   "No language matches “{q}”.": "没有与“{q}”匹配的语言。",
+  "This computer": "此计算机",
+  "This file": "此文件",
+  "Download and use here. The deck itself is not changed.": "下载并在此使用。不会改动演示文稿本身。",
+  "Put it in the deck so it travels — written when you next save.": "放入演示文稿一起传递 — 下次保存时写入。",
+  "{lang} will be saved with this deck": "{lang} 将随此演示文稿一起保存",
+  "Added when you next save": "下次保存时添加",
+  "Saved in this file": "已保存在此文件中",
+  "Take out of the file — applies when you next save": "从文件中移除 — 下次保存时生效",
+  "Choose where it goes: just for you, or into the deck so it travels.": "选择位置：仅供你使用，或放入演示文稿一起传递。",
 }
