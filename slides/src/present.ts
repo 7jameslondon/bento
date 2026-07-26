@@ -120,6 +120,14 @@ export function startPresentation(
   const laserLayer = document.createElement('div')
   laserLayer.className = 'bento-laser-layer'
   laserLayer.setAttribute('aria-hidden', 'true')
+  // Until a real pointer event supplies screen coordinates, let the browser
+  // paint the laser at the OS cursor. The DOM dot and trail take over on the
+  // first move, when `laser-over-slide` hides this native cursor.
+  const laserCursorStyle = document.createElement('style')
+  laserCursorStyle.textContent =
+    `.bento-present-overlay.laser-enabled:not(.laser-over-slide) .bento-slide,` +
+    `.bento-present-overlay.laser-enabled:not(.laser-over-slide) .bento-slide *{` +
+    `cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23000' fill-opacity='.55'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23fff'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23ef252f'/%3E%3C/svg%3E") 8 8,crosshair!important}`
   const laserTrail = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   laserTrail.classList.add('bento-laser-trail')
   laserTrail.setAttribute('width', '100%')
@@ -131,6 +139,7 @@ export function startPresentation(
   const laserDot = document.createElement('div')
   laserDot.className = 'bento-laser-dot'
   laserLayer.append(laserTrail, laserDot)
+  overlay.insertBefore(laserCursorStyle, blackout)
   overlay.insertBefore(laserLayer, blackout)
 
   const LASER_TRAIL_LIFETIME = 275
