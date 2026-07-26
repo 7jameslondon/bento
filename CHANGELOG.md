@@ -11,6 +11,29 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Maths, written the way you'd write it.** Type `$E=mc^2$` in a text box and
+  it renders as a formula — `$$…$$` for a display equation on its own line.
+  The document stores exactly what you typed, so a deck with maths still opens
+  in an older copy of Bento: you'll see the plain `$E=mc^2$` rather than a
+  broken slide.
+
+- **Formulas rearrange symbol by symbol.** On a morph transition, a term that
+  crosses the equals sign is *seen to travel there* instead of the whole
+  formula crossfading. Give the element the same id on both slides and
+  `$a + b = c$` becomes `$a = c - b$` with the `b` moving across. The starter
+  deck demonstrates it.
+
+- **Twenty-one more languages, added only if you want them.** The globe menu
+  gains **Manage languages…** — install a language from the release channel or
+  remove one you don't need. Arabic, Hebrew, Hindi, Korean, Russian, Ukrainian,
+  Vietnamese and fourteen others are available without adding a byte to files
+  that don't use them. Each pack's fingerprint is signed alongside the release,
+  so installing a language is verified exactly like an update.
+
+  Your choice lives in the browser, never in the document — a deck written in
+  Tokyo opens in French chrome for a French reader, and the deck itself is
+  unchanged either way.
+
 - **Fix: a large chart legend no longer crowds the axis labels.** Charts that
   don't set their own margins now leave room for the legend at whatever size
   it's set to, instead of assuming the default one.
