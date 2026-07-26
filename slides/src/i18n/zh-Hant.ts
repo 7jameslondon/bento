@@ -10,6 +10,8 @@ export const zhHant: Catalog = {
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "儲存 — 下載更新後的副本（⌘S）。此瀏覽器無法改寫已開啟的檔案。",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "此瀏覽器無法就地改寫檔案。⌘S 會改為下載更新後的副本 — 你的工作也會保存在此瀏覽器中，重新開啟時可以還原。",
   "Got it": "知道了",
+  "What’s new →": "更新內容 →",
+  "Read the release notes for v{v} (opens in a new tab)": "查看 v{v} 的發行說明（在新分頁中開啟）",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "此圖片太大，無法即時共用（上限約 1 MB）。它已儲存在你的副本中，但協作者不會看到。",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "此變更太大，無法即時共用（上限約 1 MB）。它已儲存在你的副本中，但協作者不會看到。",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "此即時工作階段空間已滿。你的變更已儲存在你的副本中，但協作者不會看到。",

@@ -10,6 +10,8 @@ export const es: Catalog = {
   "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "Guardar — descargar una copia actualizada (⌘S). Este navegador no puede reescribir el archivo abierto.",
   "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "Este navegador no puede reescribir archivos en su sitio. ⌘S descargará una copia actualizada — tu trabajo también se guarda en este navegador y se te ofrecerá si vuelves a abrirlo.",
   "Got it": "Entendido",
+  "What’s new →": "Novedades →",
+  "Read the release notes for v{v} (opens in a new tab)": "Leer las notas de la versión v{v} (se abre en una pestaña nueva)",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Esa imagen es demasiado grande para compartirla en vivo (máx. 1 MB aprox.). Se guarda en tu copia, pero los colaboradores no la verán.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Ese cambio es demasiado grande para compartirlo en vivo (máx. 1 MB aprox.). Se guarda en tu copia, pero los colaboradores no lo verán.",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Esta sesión en vivo se ha quedado sin espacio. Tu cambio se guarda en tu copia, pero los colaboradores no lo verán.",
