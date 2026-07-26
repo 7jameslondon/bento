@@ -67,18 +67,25 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
 
     @objc private func doneTapped() { onDone?() }
 
-    /// Fallback exit for when the nav bar is hidden (landscape). Lives in the
-    /// SAFE AREA inset — on a notched iPhone held sideways that gutter is dead
-    /// space no content can occupy, so this costs nothing at all, unlike the
-    /// 44pt the bar spends.
+    /// Fallback exit for when the nav bar is hidden (landscape).
+    ///
+    /// Deliberately DARK, not a light translucent pill: the first attempt used
+    /// 70%-white on Bento's white editor and was invisible on screen.
+    ///
+    /// Bottom-leading, not top-leading. Bento's editor occupies every top edge
+    /// — logo, toolbar, thumbnail rail — so a control up there lands on the
+    /// wordmark. Any host control overlaps SOMETHING while the page's own
+    /// chrome is this dense; the bottom-left corner is the quietest, and it is
+    /// where a thumb rests when a phone is held sideways.
     private lazy var floatingExit: UIButton = {
         let b = UIButton(type: .system)
         var cfg = UIButton.Configuration.filled()
-        cfg.image = UIImage(systemName: "chevron.left")
+        cfg.image = UIImage(systemName: "chevron.left",
+                            withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))
         cfg.cornerStyle = .capsule
-        cfg.baseBackgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
-        cfg.baseForegroundColor = .label
-        cfg.contentInsets = .init(top: 8, leading: 10, bottom: 8, trailing: 10)
+        cfg.baseBackgroundColor = UIColor.label.withAlphaComponent(0.55)
+        cfg.baseForegroundColor = .systemBackground
+        cfg.contentInsets = .init(top: 10, leading: 12, bottom: 10, trailing: 12)
         b.configuration = cfg
         b.accessibilityLabel = NSLocalizedString("Documents", comment: "back to the file browser")
         b.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
@@ -86,12 +93,25 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         return b
     }()
 
-    /// Keep exactly ONE exit affordance on screen. The bar auto-hides when the
-    /// vertical size class is compact (iPhone landscape), and the floating
-    /// control stands in for it there.
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        floatingExit.isHidden = !(navigationController?.isNavigationBarHidden ?? false)
+    /// Hide the bar whenever height is scarce, and show the floating exit
+    /// instead. Done EXPLICITLY: `hidesBarsWhenVerticallyCompact` was tried
+    /// first and simply did not fire for a modally-presented navigation
+    /// controller — the bar stayed put in landscape.
+    private func syncChrome() {
+        let short = traitCollection.verticalSizeClass == .compact
+        navigationController?.setNavigationBarHidden(short, animated: false)
+        floatingExit.isHidden = !short
+        view.bringSubviewToFront(floatingExit)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        syncChrome()
+    }
+
+    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
+        super.traitCollectionDidChange(previous)
+        if traitCollection.verticalSizeClass != previous?.verticalSizeClass { syncChrome() }
     }
     required init?(coder: NSCoder) { fatalError("not used") }
 
@@ -120,6 +140,16 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView.allowsBackForwardNavigationGestures = false
         view.addSubview(webView)
         webView.load(URLRequest(url: URL(string: "bento-tray://\(originHost)/index.html")!))
+
+        view.addSubview(floatingExit)
+        floatingExit.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            floatingExit.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+            floatingExit.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+            // Explicit size rather than relying on intrinsic content size.
+            floatingExit.widthAnchor.constraint(equalToConstant: 44),
+            floatingExit.heightAnchor.constraint(equalToConstant: 44),
+        ])
 
         // A way BACK. Presented full screen with no chrome, a document was a
         // one-way trip: full-screen modals have no interactive dismiss, so the

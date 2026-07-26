@@ -183,10 +183,11 @@ chevron stands in, pinned to the **safe-area inset** — on a notched iPhone hel
 sideways that gutter is dead space no content can occupy, so the exit costs
 nothing there.
 
-UNVERIFIED: the landscape path has not been exercised. `simctl` cannot rotate a
-device, and it captures the display buffer without the rotation transform, so
-its dimensions do not report orientation either. Rotate by hand (⌘← in
-Simulator) to confirm.
+Verified in landscape: the bar is gone, the chevron is present, and tapping it
+returns to the browser. `simctl` cannot rotate a device and its screenshots do
+not report orientation, so this was tested by having the app rotate ITSELF via a
+temporary launch-argument hook (`requestGeometryUpdate`) — worth remembering as
+the way to test orientation-dependent behaviour here.
 
 ### Platform notes worth keeping
 
