@@ -164,13 +164,33 @@ function digest(option: Opt, w: number, h: number): Digest {
   const twoAxes = !isPie && yAxes.length > 1
   const pieTop = legend?.top !== undefined ? legend.top + legendH : 0
   const pieBottom = legend && legend.top === undefined ? legend.bottom + legendH : 0
+  // A cartesian plot has to make room for the legend too, not just a pie.
+  //
+  // The legend's height now follows its own font size, so a big legend gets
+  // taller — but the default bottom inset is a fixed 44px, sized for the old
+  // 12px legend. Past roughly 20px the legend simply grew into the x-axis
+  // labels and the two overlapped. Only ever visible on a chart that does NOT
+  // set `grid` explicitly, which is why a chart authored with generous margins
+  // looks fine and the default one does not.
+  //
+  // An EXPLICIT grid value always wins: someone who wrote `grid.bottom` meant
+  // it, and silently enlarging their inset would be its own bug. This only
+  // raises the DEFAULT, and only by however much the legend actually outgrew
+  // the space that default assumed.
+  const legendPad = Math.max(0, legendH - 12) // 12px legend == the old default
+  const gridBottom = g.bottom !== undefined
+    ? num(g.bottom, 44)
+    : 44 + (legend && legend.top === undefined ? legendPad : 0)
+  const gridTop = g.top !== undefined
+    ? num(g.top, 24)
+    : 24 + (legend?.top !== undefined ? legendPad : 0)
   const grid = isPie
     ? { x: 0, y: pieTop, w, h: Math.max(0, h - pieTop - pieBottom) }
     : {
         x: num(g.left, 48),
-        y: num(g.top, 24),
+        y: gridTop,
         w: w - num(g.left, 48) - num(g.right, twoAxes ? 56 : 16),
-        h: h - num(g.top, 24) - num(g.bottom, 44),
+        h: Math.max(0, h - gridTop - gridBottom),
       }
   return {
     w, h,
