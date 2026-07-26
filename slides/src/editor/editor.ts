@@ -34,6 +34,9 @@ const i18nT = t
  *  notice has been acknowledged. It is a property of the browser. */
 const SAVE_NOTICE_KEY = 'bento-save-notice'
 
+/** Show the language search once the available list outgrows a glance. */
+const SEARCH_FROM = 8
+
 const SHAPE_MENU: Array<{ kind: ShapeKind; label: string; icon: string; draw?: 'line' | 'path' | 'connector' | 'free' | 'poly'; tip: string }> = [
   { kind: 'rect', label: 'Rectangle', icon: ICONS.rect, tip: 'A rectangle — rounded corners, fills, gradients and shadows in the panel' },
   { kind: 'ellipse', label: 'Ellipse', icon: ICONS.ellipse, tip: 'An ellipse or circle' },
@@ -1020,7 +1023,7 @@ export class Editor {
         b.textContent = blurb
         listHost.appendChild(b)
       }
-      const row = (label: string, sub: string, action?: HTMLElement) => {
+      const row = (label: string, sub: string, action?: HTMLElement, host: HTMLElement = listHost) => {
         const r = div('ed-lang-row')
         const txt = div('ed-lang-txt')
         const n = document.createElement('b')
@@ -1030,7 +1033,7 @@ export class Editor {
         txt.append(n, s)
         r.appendChild(txt)
         if (action) r.appendChild(action)
-        listHost.appendChild(r)
+        host.appendChild(r)
       }
 
       section(t('In this file'), t('Travels with the deck — anyone you send it to gets these too.'))
@@ -1060,14 +1063,44 @@ export class Editor {
         row(p.label || p.lang, p.version ? t('Language pack · built for v{v}', { v: p.version }) : t('Language pack'), rm)
       }
 
-      const avail = await availablePacks()
+      const all = await availablePacks()
       section(t('Available to add'), t('Adding one puts it on this computer. New languages arrive with each release.'))
-      if (!avail.length) {
+      if (!all.length) {
         const none = div('ed-hint')
         none.textContent = t('Nothing new right now.')
         listHost.appendChild(none)
       }
-      for (const p of avail) {
+      // Search + a scrolling list: this section is the one that grows without
+      // bound as more languages ship, while the two above stay short. Matching
+      // on the endonym AND the code means someone who knows "nl" but not
+      // "Nederlands" (or the reverse) finds it either way.
+      if (all.length > SEARCH_FROM) {
+        const search = document.createElement('input')
+        search.type = 'search'
+        search.className = 'ed-lang-search'
+        search.placeholder = t('Search languages')
+        search.addEventListener('input', () => renderAvail(search.value))
+        listHost.appendChild(search)
+      }
+      const scroller = div(all.length > SEARCH_FROM ? 'ed-lang-scroll' : '')
+      listHost.appendChild(scroller)
+
+      const renderAvail = (q = '') => {
+        scroller.textContent = ''
+        const needle = q.trim().toLowerCase()
+        const hits = needle
+          ? all.filter((p) => p.label.toLowerCase().includes(needle) || p.lang.toLowerCase().includes(needle))
+          : all
+        if (!hits.length) {
+          const none = div('ed-hint')
+          none.textContent = t('No language matches “{q}”.', { q: q.trim() })
+          scroller.appendChild(none)
+          return
+        }
+        for (const p of hits) addRow(p, scroller)
+      }
+
+      const addRow = (p: import('../packs').PackListing, host: HTMLElement) => {
         const add = document.createElement('button')
         add.className = 'ed-btn'
         add.textContent = t('Add')
@@ -1087,8 +1120,10 @@ export class Editor {
           this.rebuildSidebar()
           void paint()
         })
-        row(p.label, p.lang, add)
+        row(p.label, p.lang, add, host)
       }
+
+      renderAvail()
     }
     await paint()
 

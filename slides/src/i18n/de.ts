@@ -692,4 +692,6 @@ export const de: Catalog = {
   "{lang} is ready to use": "{lang} steht jetzt bereit",
   "Couldn’t download that language — check your connection and try again.": "Diese Sprache konnte nicht geladen werden — prüfe deine Verbindung und versuche es erneut.",
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "Es funktioniert jetzt, aber hier ist kein Platz zum Speichern — nach dem Neuladen ist es weg.",
+  "Search languages": "Sprachen suchen",
+  "No language matches “{q}”.": "Keine Sprache passt zu „{q}“.",
 }

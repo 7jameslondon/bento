@@ -692,4 +692,6 @@ export const zhHant: Catalog = {
   "{lang} is ready to use": "{lang} 已可使用",
   "Couldn’t download that language — check your connection and try again.": "無法下載該語言 — 請檢查網路後再試一次。",
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "現在可以使用，但這裡沒有空間保存 — 重新載入後將會消失。",
+  "Search languages": "搜尋語言",
+  "No language matches “{q}”.": "沒有與「{q}」相符的語言。",
 }

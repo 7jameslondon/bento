@@ -692,4 +692,6 @@ export const ja: Catalog = {
   "{lang} is ready to use": "{lang} を使えるようになりました",
   "Couldn’t download that language — check your connection and try again.": "その言語をダウンロードできませんでした — 接続を確認してもう一度お試しください。",
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "今は使えますが、ここに保存する空き容量がありません — 再読み込みすると消えます。",
+  "Search languages": "言語を検索",
+  "No language matches “{q}”.": "「{q}」に一致する言語はありません。",
 }

@@ -692,4 +692,6 @@ export const zhHans: Catalog = {
   "{lang} is ready to use": "{lang} 已可使用",
   "Couldn’t download that language — check your connection and try again.": "无法下载该语言 — 请检查网络后重试。",
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "现在可以使用，但这里没有空间保存 — 重新加载后将会消失。",
+  "Search languages": "搜索语言",
+  "No language matches “{q}”.": "没有与“{q}”匹配的语言。",
 }

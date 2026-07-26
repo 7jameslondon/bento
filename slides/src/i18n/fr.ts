@@ -692,4 +692,6 @@ export const fr: Catalog = {
   "{lang} is ready to use": "{lang} est prêt à l’emploi",
   "Couldn’t download that language — check your connection and try again.": "Impossible de télécharger cette langue — vérifiez votre connexion et réessayez.",
   "It works now, but there’s no room to save it here — it will be gone after a reload.": "Cela fonctionne pour l’instant, mais il n’y a pas de place pour l’enregistrer ici — ce sera perdu au rechargement.",
+  "Search languages": "Rechercher des langues",
+  "No language matches “{q}”.": "Aucune langue ne correspond à « {q} ».",
 }
