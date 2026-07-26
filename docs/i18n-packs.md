@@ -162,8 +162,8 @@ id="bento-lang-<lang>">` in `<head>`, holding the pack JSON with `<` escaped as
 `\u003c` — exactly the treatment `#bento-doc` gets. The kernel side is
 deliberately ignorant: `registerShellBlocks` / `readShellBlocks`
 (`kernel/src/save.ts`) carry *typed blocks*, and know nothing about languages.
-The app registers `shellBlocksForPacks()` once, at boot, and every serialize
-re-declares the whole set.
+The app registers `shellBlocksForPacks()` once, at boot — together with the
+block types it owns — and every serialize re-declares the whole set.
 
 ## Where a pack lives
 
@@ -202,16 +202,11 @@ File System Access API, "write" means **silently downloading a second copy of
 the user's deck**. Handing someone an unexpected `deck (1).bento.html` because
 they asked for Korean is a worse surprise than asking them to save.
 
-Removal is meant to be symmetric and to need no deletion path: `serializeBody`
-drops every block of a managed type and rewrites the current set, so "remove
-from this file" is just *stop listing it*.
-
-> **Known gap (kernel, unfixed at time of writing).** `serializeBody` derives
-> the managed types from the blocks it is *about* to write, so when the set is
-> EMPTY it removes nothing. Removing the file's **last** pack therefore leaves
-> the old block in the saved file — every other removal works. The fix is for
-> the provider to declare its managed types rather than have them inferred.
-> Kernel zone, so it wants its own small PR (`docs/PARALLEL-WORK.md` §1).
+Removal is symmetric and needs no deletion path: `serializeBody` drops every
+block of a managed type and rewrites the current set, so "remove from this
+file" is just *stop listing it*. The managed types are the ones the provider
+DECLARED at registration, not the ones it is about to write — so an empty set
+still clears, which is exactly what removing the file's last pack looks like.
 
 ### Staying current
 

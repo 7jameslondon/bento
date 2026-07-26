@@ -43,7 +43,7 @@ export interface PackListing {
 export type PackError = 'offline' | 'bad-pack' | 'wrong-app'
 
 /** The block type carrying a pack inside a saved shell. */
-const BLOCK_TYPE = 'application/bento+lang'
+export const PACK_BLOCK_TYPE = 'application/bento+lang'
 const blockId = (lang: string) => `bento-lang-${lang}`
 
 /** Packs destined for the file: those already in it, plus any staged since. */
@@ -58,7 +58,7 @@ const pending = new Set<string>()
  */
 export function readPacksFromShell(): number {
   let n = 0
-  for (const { body } of readShellBlocks(BLOCK_TYPE)) {
+  for (const { body } of readShellBlocks(PACK_BLOCK_TYPE)) {
     try {
       const pack = JSON.parse(body) as LanguagePack
       if (pack?.lang && pack.strings && addPack(pack, 'slides')) {
@@ -144,7 +144,7 @@ export function markFileSaved(): void {
 export function shellBlocksForPacks(): ShellBlock[] {
   return [...inFile.values()].map((p) => ({
     id: blockId(p.lang),
-    type: BLOCK_TYPE,
+    type: PACK_BLOCK_TYPE,
     body: JSON.stringify(p),
     attrs: { 'data-lang': p.lang },
   }))
