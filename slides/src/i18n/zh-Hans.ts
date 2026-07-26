@@ -659,4 +659,7 @@ export const zhHans: Catalog = {
   "Add a point on the path; double-click a point to remove it": "在路径上添加点；双击某点将其删除",
   "Set how fast the element moves through that point": "设置元素通过该点的速度",
   "Scroll a point": "滚动某点",
+  "Start from scratch…": "从头开始…",
+  "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "将所有幻灯片替换为一张空白幻灯片。演示文稿的主题、名称和实时协作会话都会保留 — ⌘Z 可撤销。",
+  "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "将全部 {n} 张幻灯片替换为一张空白幻灯片？⌘Z 可撤销。",
 }

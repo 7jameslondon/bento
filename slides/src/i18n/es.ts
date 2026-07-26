@@ -659,4 +659,7 @@ export const es: Catalog = {
   "Add a point on the path; double-click a point to remove it": "Añade un punto en la trayectoria; doble clic en un punto para quitarlo",
   "Set how fast the element moves through that point": "Ajusta la velocidad con que el elemento pasa por ese punto",
   "Scroll a point": "Desplázate sobre un punto",
+  "Start from scratch…": "Empezar de cero…",
+  "Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.": "Reemplaza todas las diapositivas por una diapositiva en blanco. Conserva el tema, el nombre y la sesión en vivo de la presentación — ⌘Z lo deshace.",
+  "Replace all {n} slides with one blank slide? ⌘Z undoes this.": "¿Reemplazar las {n} diapositivas por una diapositiva en blanco? ⌘Z lo deshace.",
 }
