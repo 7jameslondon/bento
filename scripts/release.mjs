@@ -13,6 +13,8 @@
 //     slides/index.html                      live demo (the shell itself)
 //     releases/slides/Bento_Slides.bento.html   the download
 //     releases/slides/manifest.json          signed update manifest
+//     releases/slides/packs/*.pack.json      language packs (hashes signed
+//                                            inside the manifest payload)
 //
 // The bytes that get SIGNED are the bytes that get SERVED — everything is
 // staged from one local build, so the manifest sha256 always matches the
@@ -56,11 +58,18 @@ cpSync(shellSrc, join(site, 'slides/index.html'))
 // scripts/shell-gate.mjs (shared with CI, which runs it on every PR build).
 gateShell(join(site, 'releases/slides/Bento_Slides.bento.html'))
 
+// Language packs: every non-core language, emitted from its catalog and
+// staged beside the shell. Their hashes go INTO the signed manifest payload
+// (docs/i18n-packs.md), so no separate signing step and no second key.
+const packsOut = join(site, 'releases/slides/packs')
+execFileSync('node', [join(root, 'scripts/build-i18n.mjs'), '--packs', packsOut], { stdio: 'inherit' })
+
 // Sign the manifest against the staged bytes.
 const signArgs = [
   join(root, 'scripts/sign-release.mjs'),
   join(site, 'releases/slides/Bento_Slides.bento.html'),
   '--out', join(site, 'releases/slides/manifest.json'),
+  '--packs', packsOut,
 ]
 const key = opt('key', null)
 if (key) signArgs.push('--key', key)
