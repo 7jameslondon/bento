@@ -134,10 +134,22 @@ Object.defineProperty(globalThis, 'fetch', {
 })
 
 // Imported AFTER the globals exist — module scope must find them in place.
+const { configureApp } = await import('../kernel/src/app.ts')
+configureApp({
+  appId: 'bento-slides',
+  appName: 'bento/slides',
+  manifestUrl: `${CHANNEL}/manifest.json`,
+})
 const packs = await import('../slides/src/packs.ts')
 
-const goodIndex = async (sha256 = packHash) =>
-  envelope([{ lang: 'xx', label: 'Testish', url: PACK_URL, version: '1.0.0', sha256 }])
+/** The index payload shape scripts/sign-packs.mjs publishes. */
+const index = async (listings: unknown[], app = 'bento-slides') =>
+  envelope({ app, version: '1.0.0', at: new Date().toISOString(), packs: listings })
+
+const listing = (sha256 = packHash, version = '1.0.0') => ({
+  lang: 'xx', label: 'Testish', version, url: PACK_URL, sha256, bytes: packBytes.length,
+})
+const goodIndex = async (sha256 = packHash) => index([listing(sha256)])
 
 // --- 1. the good path -------------------------------------------------------
 console.log('\nsigned index, matching hash')
@@ -166,7 +178,7 @@ servedPack = evilBytes
 const forgedHash = await sha256Hex(evilBytes)
 const honest = JSON.parse(await goodIndex())
 const forged = JSON.stringify({
-  payload: JSON.stringify([{ lang: 'xx', label: 'Testish', url: PACK_URL, version: '1.0.0', sha256: forgedHash }]),
+  payload: JSON.parse(await index([listing(forgedHash)])).payload,
   sig: honest.sig, // the old signature, over the old payload
 })
 servedIndex = forged
@@ -174,10 +186,20 @@ ok((await packs.availablePacks()).length === 0, 'an index whose signature fails 
 
 // --- 4. unsigned index ------------------------------------------------------
 console.log('\nunsigned index')
-servedIndex = JSON.stringify([{ lang: 'xx', label: 'Testish', url: PACK_URL, sha256: packHash }])
-ok((await packs.availablePacks()).length === 0, 'a bare (unsigned) listing array is refused — fail closed')
-servedIndex = await envelope([{ lang: 'xx', label: 'Testish', url: PACK_URL }])
+servedIndex = JSON.stringify({ app: 'bento-slides', version: '1.0.0', packs: [listing()] })
+ok((await packs.availablePacks()).length === 0, 'a bare (unsigned) payload is refused — fail closed')
+servedIndex = await index([{ lang: 'xx', label: 'Testish', url: PACK_URL }])
 ok((await packs.availablePacks()).length === 0, 'a signed listing with NO pinned hash is not offered')
+
+// --- 4b. an index signed for another app ------------------------------------
+// The release key is platform-wide, so a validly signed bento/spaces index is
+// a real thing an attacker could replay onto this channel. The app id is what
+// stops it — same check verifyManifest makes on the release manifest.
+console.log('\nindex signed for a different app')
+servedIndex = await index([listing()], 'bento-spaces')
+ok((await packs.availablePacks()).length === 0, 'a validly signed index for ANOTHER app offers nothing')
+servedIndex = await envelope([listing()])
+ok((await packs.availablePacks()).length === 0, 'a bare array payload (no app id) offers nothing')
 
 // --- 5. no pin at the fetch itself -----------------------------------------
 console.log('\nlisting with no usable pin, handed straight to fetchPack')
@@ -206,9 +228,7 @@ servedPack = packBytes
 const fresh = await packs.fetchPack((await packs.availablePacks())[0])
 ok(typeof fresh !== 'string' && packs.stageForFile(fresh), 'stage the verified pack into the file')
 servedPack = evilBytes // channel turns hostile between install and update
-servedIndex = await envelope([
-  { lang: 'xx', label: 'Testish', url: PACK_URL, version: '1.0.1', sha256: packHash },
-])
+servedIndex = await index([listing(packHash, '1.0.1')])
 const out = await packs.refreshPacksForVersion('1.0.1')
 ok(out.kept.includes('xx') && !out.refreshed.includes('xx'), 'the pack is KEPT, not refreshed')
 const inFile = packs.packsInFile().find((p) => p.lang === 'xx')

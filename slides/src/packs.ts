@@ -18,6 +18,7 @@
 // so a language belongs to the deck. The trade is that adding a language
 // requires saving the file — which the UI states plainly rather than hiding.
 
+import { appConfig } from '../../kernel/src/app.ts'
 import { addPack, removePack, type LanguagePack } from '../../kernel/src/i18n.ts'
 import { readShellBlocks, type ShellBlock } from '../../kernel/src/save.ts'
 import { fetchPinned, verifySigned } from '../../kernel/src/update.ts'
@@ -41,8 +42,10 @@ export interface PackListing {
   url: string
   /** app version the pack was built against, for display */
   version?: string
-  /** hex sha256 of the pack's bytes, PINNED by the signed index */
+  /** lowercase hex sha256 of the pack's bytes, PINNED by the signed index */
   sha256: string
+  /** size of the pack, for display */
+  bytes?: number
 }
 
 export type PackError = 'offline' | 'bad-pack' | 'wrong-app' | 'unverified'
@@ -205,25 +208,36 @@ export function shellBlocksForPacks(): ShellBlock[] {
  * FAIL CLOSED, no legacy path. An unsigned or badly signed index yields NO
  * listings — the Languages dialog then says there is nothing to add, which is
  * exactly right: an index we cannot authenticate is an index we know nothing
- * about. Nothing is published yet, so there is no old plain-array index in the
- * world to be compatible with, and adding a permissive fallback would mean
- * anyone who can answer for the channel picks the strings in your UI.
+ * about. Nothing is published yet, so there is no unsigned index in the world
+ * to be compatible with, and adding a permissive fallback would mean anyone
+ * who can answer for the channel picks the strings in your UI.
  *
- * The payload is a listing array, or an object carrying one under `packs` —
- * which is the shape of the signed release manifest itself (sign-release.mjs
- * puts pack hashes in the manifest payload), so one signed file can serve as
- * both if the channel prefers that. Same envelope either way.
+ * Payload shape, produced by scripts/sign-packs.mjs (spec in
+ * docs/i18n-packs.md §"Signing and release"):
+ *
+ *     { app: 'bento-slides', version, at, packs: [ { lang, label, version,
+ *       url, sha256, bytes } ] }
+ *
+ * `app` is checked exactly as the release manifest's is: the signing key is
+ * platform-wide, so the id is what stops a validly-signed bento/spaces index
+ * being served to bento/slides. `url` is relative to the channel unless
+ * absolute, so a dev channel serves its OWN packs instead of quietly reaching
+ * back to bento.page.
  */
 async function fetchIndex(): Promise<PackListing[]> {
   try {
     const res = await fetch(`${channel()}/packs.json`, { cache: 'no-store' })
     if (!res.ok) return []
-    const payload = await verifySigned(await res.text(), 'language pack index')
-    const list = Array.isArray(payload) ? payload : (payload as { packs?: unknown })?.packs
-    if (!Array.isArray(list)) return []
+    const payload = (await verifySigned(await res.text(), 'language pack index')) as {
+      app?: unknown
+      packs?: unknown
+    }
+    if (!payload || typeof payload !== 'object') return []
+    if (payload.app !== appConfig().appId) return []
+    if (!Array.isArray(payload.packs)) return []
     // A listing with no usable pin can never be verified, so it can never be
     // offered — drop it here rather than let it fail later at the Add button.
-    return (list as PackListing[]).filter(
+    return (payload.packs as PackListing[]).filter(
       (p) => p?.lang && p?.url && /^[0-9a-f]{64}$/i.test(p?.sha256 ?? ''),
     )
   } catch {

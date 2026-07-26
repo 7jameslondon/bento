@@ -109,12 +109,14 @@ sha256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
 signs packs beside the shell, and the manifest gains a `packs` array listing
 `{lang, version, sha256, url}`. No new trust root, no second key.
 
-### What the client checks (implemented)
+### Loading
 
-The INDEX is signed; individual packs are not separately signed. The index is
-a signed envelope — `{payload: "<json string>", sig: "<base64>"}`, the exact
-shape `sign-release.mjs` already emits for the update manifest — and every
-listing in it pins its pack's `sha256`. So:
+`registerI18n` already accepts a packed table (kernel). Pack loading adds a
+merge step: a pack's strings layer over the bundled core for its language.
+Lookup misses fall back per string to the English key, which is what makes a
+partial or stale pack degrade gracefully rather than break.
+
+### What the client checks (implemented)
 
 ```
 embedded release key  ->  signs the index
@@ -130,15 +132,19 @@ else in the codebase does release-channel crypto:
 - `fetchPinned(url, sha256)` — fetch, hash, compare; `null` on any mismatch.
 
 They verify BYTES. They do not decide what is safe to use — that policy is the
-caller's, and packs are DATA (see the decision log entry, 2026-07-26).
+caller's, and packs are DATA (see the decision log entry, 2026-07-26). Anything
+side-loaded that ever carries CODE needs stricter policy — pinned at install,
+never auto-refreshed — and must not inherit the pack rules by reusing this
+fetch.
 
-`slides/src/packs.ts` composes them and **fails closed**: an unsigned index, a
-listing with no pin, or bytes that don't match yield nothing to add and a
-`'unverified'` error in the UI. There is no permissive fallback for an
+`slides/src/packs.ts` composes them and **fails closed**. It expects the index
+payload specified above: an object whose `app` is this app's id (the signing
+key is platform-wide, so the id is what stops a validly signed index for
+another app) carrying a `packs` array. An unsigned index, an index for another
+app, a listing with no pin, or bytes that don't match all yield nothing to add
+and a `'unverified'` error in the UI. There is no permissive fallback for an
 unsigned index — nothing is published yet, so there is nothing to be
-compatible with. The index payload may be a listing array or an object with a
-`packs` array, which is the manifest's own shape, so one signed file can serve
-as both.
+compatible with, and a fallback shipped now would be permanent.
 
 Two things deliberately NOT checked:
 
@@ -150,16 +156,9 @@ Two things deliberately NOT checked:
   already holds rather than dropping it. The unverified bytes are refused; the
   previously verified ones stay. Degraded beats absent.
 
-Rig: `node scripts/test-packs.ts` — tampered pack, tampered index, unsigned
-index, missing pin, and the good path, against real WebCrypto with a
-throwaway key standing in for the release key.
-
-### Loading
-
-`registerI18n` already accepts a packed table (kernel). Pack loading adds a
-merge step: a pack's strings layer over the bundled core for its language.
-Lookup misses fall back per string to the English key, which is what makes a
-partial or stale pack degrade gracefully rather than break.
+Rig: `node scripts/test-packs.ts` (in CI) — tampered pack, tampered index,
+unsigned index, index signed for another app, missing pin, and the good path,
+against real WebCrypto with a throwaway key standing in for the release key.
 
 ### Incorporation into the file
 
