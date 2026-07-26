@@ -1978,3 +1978,8 @@ input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: poin
 }
 .ed-lang-acts { display: flex; gap: 6px; flex: 0 0 auto; }
 .ed-lang-acts .ed-btn { white-space: nowrap; }
+.ed-lang-warn {
+  font-size: 11.5px; line-height: 1.5; color: var(--muted);
+  background: var(--bg); border-left: 2px solid var(--line);
+  padding: 5px 8px; margin: 0 0 6px; border-radius: 0 5px 5px 0;
+}

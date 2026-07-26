@@ -689,4 +689,5 @@ export const pt: Catalog = {
   "Take out of the file — applies when you next save": "Tirar do arquivo — vale a partir do próximo salvamento",
   "Goes into the deck itself, so it travels with the file. Written when you next save.": "Vai para dentro da apresentação, então viaja com o arquivo. Gravado no próximo salvamento.",
   "Put it in the deck — written when you next save.": "Colocar na apresentação — gravado no próximo salvamento.",
+  "Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.": "Criado para a v{v} — {n} frases ainda aparecem em inglês. Atualizar o Bento resolve.",
 }

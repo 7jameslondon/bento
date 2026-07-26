@@ -691,4 +691,5 @@ export const ja: Catalog = {
   "Take out of the file — applies when you next save": "ファイルから削除 — 次回の保存時に反映",
   "Goes into the deck itself, so it travels with the file. Written when you next save.": "デッキ自体に入り、ファイルと一緒に配布されます。次回の保存時に書き込まれます。",
   "Put it in the deck — written when you next save.": "デッキに入れます — 次回の保存時に書き込まれます。",
+  "Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.": "v{v} 用に作られています — {n} 個の語句はまだ英語で表示されます。Bento を更新すると解消します。",
 }

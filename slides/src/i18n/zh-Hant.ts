@@ -691,4 +691,5 @@ export const zhHant: Catalog = {
   "Take out of the file — applies when you next save": "從檔案中移除 — 下次儲存時生效",
   "Goes into the deck itself, so it travels with the file. Written when you next save.": "放入簡報本身，隨檔案一起傳遞。下次儲存時寫入。",
   "Put it in the deck — written when you next save.": "放入簡報 — 下次儲存時寫入。",
+  "Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.": "為 v{v} 建置 — 仍有 {n} 條文字顯示為英文。更新 Bento 即可重新整理。",
 }

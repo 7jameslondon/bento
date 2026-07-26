@@ -20,6 +20,7 @@
 
 import { addPack, removePack, type LanguagePack } from '../../kernel/src/i18n.ts'
 import { readShellBlocks, type ShellBlock } from '../../kernel/src/save.ts'
+import { PACKED } from './i18n/packed'
 
 /**
  * Where the release channel publishes the pack index and the packs.
@@ -69,6 +70,23 @@ export function readPacksFromShell(): number {
     }
   }
   return n
+}
+
+/**
+ * How much of the app's CURRENT interface a pack actually covers.
+ *
+ * Measured, not inferred from the version number. A pack built for an older
+ * release may still cover everything — if that release added no strings, the
+ * version differs and nothing is missing — while a same-version pack could be
+ * incomplete. What the reader cares about is how much English they will see,
+ * so count that directly. PACKED's keys are exactly the strings the running
+ * app asks for.
+ */
+export function packCoverage(pack: LanguagePack): { missing: number; total: number } {
+  const keys = Object.keys(PACKED)
+  let missing = 0
+  for (const k of keys) if (!pack.strings[k]) missing++
+  return { missing, total: keys.length }
 }
 
 /** Packs in the file, flagged if they are still waiting for a save. */

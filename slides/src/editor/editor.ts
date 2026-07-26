@@ -24,7 +24,7 @@ import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
 import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
-import { availablePacks, fetchPack, markFileSaved, packsInFile, stageForFile, unstageFromFile } from '../packs'
+import { availablePacks, fetchPack, markFileSaved, packCoverage, packsInFile, stageForFile, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -1057,6 +1057,20 @@ export class Editor {
           p.pending ? t('Added when you next save') : t('Saved in this file'),
           [rm],
         )
+        // Say how much English this pack will actually show. A pack is frozen
+        // at the version it was built for while the app keeps gaining strings,
+        // so a translated deck slowly reverts — silently, per string. Naming
+        // the number turns "why is some of this English?" into a fact, and the
+        // sentence says it fixes itself so nobody goes hunting for a button.
+        const cov = packCoverage(p)
+        if (cov.missing > 0) {
+          const warn = div('ed-lang-warn')
+          warn.textContent = t(
+            'Built for v{v} — {n} phrases still show in English. Updating Bento refreshes it.',
+            { v: p.version ?? '?', n: String(cov.missing) },
+          )
+          listHost.appendChild(warn)
+        }
       }
 
       const all = await availablePacks()
