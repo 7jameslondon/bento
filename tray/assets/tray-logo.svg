@@ -1,32 +1,26 @@
 <!--
   bento/tray mark.
 
-  The parent Bento mark unchanged — steel, peach and cream compartments on navy
-  — seated in a shallow peach tray.
+  The mark inverts the parent rather than adding anything to it: the TRAY is the
+  surface, filling the frame, and the Bento compartments sit on it. That changes
+  the silhouette from dark to light so the sub-brand is its own thing at a
+  glance, while the compartment block keeps the parent's exact rhythm — left 7,
+  gap 2, right 13; rows 10, gap 2, 10 — so it is unmistakably the same family.
 
-  The tray is peach because it is the one thing this product adds: the accent
-  marks what is new, and the compartments stay exactly as the parent draws them.
-  Cream was tried first, on the argument that the host is a neutral courier, and
-  it failed on contact: the bottom-right compartment is cream too, so tray and
-  tile fused into one pale blob the moment the mark got small. Peach touches
-  nothing it matches.
+  The third compartment is navy because cream-on-cream would vanish; it borrows
+  the frame's colour rather than introducing a fifth.
 
-  Geometry is the parent's 32-unit grid, so the two sit together. The tray runs
-  WIDER than the box it holds and its walls are short — a tray carrying
-  something, not a basket containing it — and the box is seated 1.5 units clear
-  of the floor, with the same 1.5 either side, so no two shapes ever touch.
+  Earlier attempts bolted a tray UNDER the mark — a U-shaped cradle, a plinth, a
+  lid peeking out behind. All of them fought the format: a tray is wide and flat
+  and the frame is square, so anything added below reads as bolted on, and the
+  reveal is too narrow to say "surface". Making the tray the ground solves it
+  with one shape instead of two.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 32 32"
      role="img" aria-label="Bento Tray">
   <rect width="32" height="32" rx="7" fill="#16273E"/>
-
-  <!-- The document: the Bento mark's own compartments. -->
-  <rect x="6" y="4.6" width="6.4" height="18.4" rx="2.3" fill="#5E7699"/>
-  <rect x="14.4" y="4.6" width="11.6" height="8.2" rx="2.3" fill="#FF9E8A"/>
-  <rect x="14.4" y="14.8" width="11.6" height="8.2" rx="2.3" fill="#F0EBE0"/>
-
-  <!-- The tray it is carried on. -->
-  <path d="M3.4 20.4 V23.2 A3 3 0 0 0 6.4 26.2 H25.6 A3 3 0 0 0 28.6 23.2 V20.4"
-        fill="none" stroke="#FF9E8A" stroke-width="2.2"
-        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="3.6" y="3.6" width="24.8" height="24.8" rx="5" fill="#F0EBE0"/>
+  <rect x="6.400" y="6.400" width="6.109" height="19.200" rx="2.182" fill="#5E7699"/>
+  <rect x="14.255" y="6.400" width="11.345" height="8.727" rx="2.182" fill="#FF9E8A"/>
+  <rect x="14.255" y="16.873" width="11.345" height="8.727" rx="2.182" fill="#16273E"/>
 </svg>

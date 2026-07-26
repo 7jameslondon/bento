@@ -1,23 +1,21 @@
 <!--
-  bento/tray iOS app icon — same artwork as tray-logo.svg, full bleed.
+  bento/tray iOS app icon — the mark from tray-logo.svg, full bleed.
 
-  No corner radius here: iOS applies its own squircle mask, and a rounded rect
-  drawn inside one shows as a dark seam along every edge. The 32-unit grid is
-  kept so icon and mark stay identical in proportion; artwork sits 2.3 units
-  (7.2%) clear of every edge and its outermost points are the tray's ends, which
-  are low and central — well inside where the squircle cuts.
+  No corner radius: iOS applies its own squircle mask, and a rounded rect drawn
+  inside one shows as a seam along every edge.
 
-  Export at 1024x1024 for App Store Connect.
+  The navy rim is WIDER here than in the logo (4.2 units against 3.6) because
+  the mask eats it unevenly — at 3.0 the band thinned out at the middle of each
+  edge while staying fat at the corners, which reads as a mistake rather than a
+  frame. 4.2 survives masking as an even rim down to the 40px notification size.
+
+  Export at 1024x1024 for App Store Connect (opaque, no alpha).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 32 32"
      role="img" aria-label="Bento Tray">
   <rect width="32" height="32" fill="#16273E"/>
-
-  <rect x="6" y="4.6" width="6.4" height="18.4" rx="2.3" fill="#5E7699"/>
-  <rect x="14.4" y="4.6" width="11.6" height="8.2" rx="2.3" fill="#FF9E8A"/>
-  <rect x="14.4" y="14.8" width="11.6" height="8.2" rx="2.3" fill="#F0EBE0"/>
-
-  <path d="M3.4 20.4 V23.2 A3 3 0 0 0 6.4 26.2 H25.6 A3 3 0 0 0 28.6 23.2 V20.4"
-        fill="none" stroke="#FF9E8A" stroke-width="2.2"
-        stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="4.2" y="4.2" width="23.6" height="23.6" rx="4.8" fill="#F0EBE0"/>
+  <rect x="6.800" y="6.800" width="5.855" height="18.400" rx="2.091" fill="#5E7699"/>
+  <rect x="14.327" y="6.800" width="10.873" height="8.364" rx="2.091" fill="#FF9E8A"/>
+  <rect x="14.327" y="16.836" width="10.873" height="8.364" rx="2.091" fill="#16273E"/>
 </svg>
