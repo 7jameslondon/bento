@@ -95,7 +95,16 @@ option { background: #fff; color: #1e2a3a; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 14px;
+  /* viewport-fit=cover puts the page under the rounded corners, the Dynamic
+     Island and the home indicator, so fixed chrome has to inset ITSELF or its
+     end buttons sit under the curve. env(safe-area-inset-*) is the only handle
+     the platform gives — there is no corner-radius API — and it already encodes
+     corners, island and indicator together.
+     max() keeps the normal padding on every device that reports 0. The
+     BACKGROUND still bleeds to the edge; only the content is inset, which is
+     the point: colour to the edge, controls out of the curve. */
+  padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+           8px max(14px, env(safe-area-inset-left));
   background: #fff;
   border-bottom: 1px solid var(--line);
   z-index: 20;
@@ -1591,8 +1600,14 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
 /* bottom-end cluster: [Slideshow pill] [zoom pill] */
 .ed-corner-br {
   position: absolute;
+<<<<<<< HEAD
   inset-inline-end: 14px;
   bottom: 14px;
+=======
+  /* the present/zoom cluster sits in the corner most likely to be clipped */
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+>>>>>>> 647c467 (Editor: keep chrome clear of rounded corners and the Dynamic Island)
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1814,10 +1829,19 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
      their labels left icon-only mystery menus on phones. */
   .ed-topbar .ed-menu .ed-btn > span,
   .ed-topbar .ed-menu button > span { display: inline; }
-  .ed-topbar { gap: 6px; padding: 8px 8px; }
+  /* keep the safe-area insets — a bare padding here would undo them */
+  .ed-topbar {
+    gap: 6px;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+             8px max(8px, env(safe-area-inset-left));
+  }
 }
 @media (max-width: 760px) {
-  .ed-topbar { gap: 4px; padding: 6px 6px; }
+  .ed-topbar {
+    gap: 4px;
+    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
+             6px max(6px, env(safe-area-inset-left));
+  }
   .ed-logo > b { display: none; } /* mark only — the icon is the brand */
 }
 
