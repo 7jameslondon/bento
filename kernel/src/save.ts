@@ -46,10 +46,21 @@ export interface ShellBlock {
   attrs?: Record<string, string>
 }
 let shellBlocks: () => ShellBlock[] = () => []
+let managedTypes: string[] = []
 
-/** Register the provider consulted on every serialize. Call once, at boot. */
-export function registerShellBlocks(fn: () => ShellBlock[]): void {
+/**
+ * Register the provider consulted on every serialize, and the block types it
+ * OWNS. Call once, at boot.
+ *
+ * The types are declared rather than inferred from what the provider returns,
+ * because the empty list is meaningful: "this file should carry no language
+ * pack" has to clear the blocks the file arrived with, and a set derived from
+ * the blocks about to be written would be empty exactly then — leaving the
+ * last removed pack in the file (it would come back on the next open).
+ */
+export function registerShellBlocks(fn: () => ShellBlock[], types: string[]): void {
   shellBlocks = fn
+  managedTypes = types
 }
 
 /** Every extra block currently in THIS document (as loaded from disk). */
@@ -67,9 +78,12 @@ function serializeBody(shell: Document, body: string, title: string): string {
 
   // Re-declare the app's extra blocks: drop every one of a managed type, then
   // write the current set back. Removing a language from the file is therefore
-  // just "stop listing it" — no deletion path to get wrong.
+  // just "stop listing it" — no deletion path to get wrong. The clear-set is
+  // the DECLARED types, never the types about to be written: an empty write
+  // set still has to clear (that is what removing the file's last pack looks
+  // like).
   const wanted = shellBlocks()
-  for (const type of new Set(wanted.map((b) => b.type))) {
+  for (const type of new Set([...managedTypes, ...wanted.map((b) => b.type)])) {
     for (const stale of Array.from(clone.querySelectorAll(`script[type="${type}"]`))) stale.remove()
   }
   for (const b of wanted) {
