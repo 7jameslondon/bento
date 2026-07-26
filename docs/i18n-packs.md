@@ -366,7 +366,13 @@ pack's *contents* are right.
 **RTL is not a pack.** Arabic, Urdu, Persian and Hebrew are among the largest
 gaps by population, but they need bidi and mirroring work in the CSS. Ranking
 them by catalog bytes flatters them badly. Treat RTL as its own project; a pack
-alone will not make the UI usable.
+alone will not make the UI usable. *Handled:* content bidi and chrome
+mirroring shipped first (#92, #99, #101) and `RTL_LANGS` in `slides/src/i18n.ts`
+matches on the BASE language, so all four arrived as ordinary packs and got
+mirrored chrome with no code change. Sequencing it that way is the reason —
+see `docs/DECISIONS.md`, *"RTL is two separable problems"*. What a pack still
+cannot fix by itself is directional glyphs inside the strings: Hebrew shipped
+with four `→` arrows pointing the wrong way and needed #111.
 
 **Translation quality is the real constraint, not size.** The catalogs are
 machine-drafted with "native review welcome" in their headers. Packs improve
@@ -424,10 +430,35 @@ but not yet on `main` — do not describe it as shipped.
 - [x] Client verifies the index signature and each pack's pinned hash, fails
       closed; proof rig `scripts/test-packs.ts` — #94
 - [x] `shell-gate.mjs` covers a pack-carrying shell, including an adversarial
-      block both below AND above `#bento-doc`; mutation-tested — *branch
-      `claude/i18n-pack-gate`, PR #95*
-- [x] Removing a file's LAST pack now actually sticks — *PR #96*
-- [x] Hebrew (he), 683/683 — the first RTL language — *PR #100*
+      block both below AND above `#bento-doc`; mutation-tested — #95
+- [x] Removing a file's LAST pack now actually sticks — #96
+- [x] Hebrew (he) — the first RTL language — #100, completed and its four
+      directional arrows flipped for RTL in #111
+- [x] **21 packs on `main`, all complete at 693/693** — #102–#120 added
+      nineteen in one batch (`id` and `ms` share #109), joining `he` and the
+      original `ko`. With the 9 bundled catalogs that is 30 languages:
+
+      ar bn da fa fi he hi id ko ms nb nl pl ru sv th tl tr uk ur vi
+
+      Four are RTL (ar, fa, he, ur) and every one of them is a pack — the
+      chrome-direction work landed before any of them, so each got mirrored
+      chrome with no code change, which was the point of doing it that way.
+- [x] Korean completed — 662 → 693 in #129. It was first (#81) and therefore
+      predated the Languages dialog, so 22 of its 32 gaps were that dialog
+      entire: a Korean user opening "Manage languages…" read it in English.
+      Worth remembering for the next pack that lands before a feature does.
+- [x] Duplicated catalog keys disambiguated before publication — #121. `Loop`
+      meant both the animation loop and media playback; `solid` meant both a
+      fill and a line style; every language had to be wrong in one of the two
+      places. Source strings went 684 → 693 and every pack was topped up in
+      step (#122). Cheap now, a coordinated break across 21 languages once
+      packs are published — see `docs/DECISIONS.md`, *"One English word, two
+      meanings = two keys"*.
 - [ ] A pack index live on the channel in the wild — needs an actual release
       cut, so "Available to add" stays empty until then.
-- [ ] Native-speaker review of the Hebrew pack before it is published.
+- [ ] **Native-speaker review of any pack.** All 21 are machine-drafted and
+      none has been reviewed; each file says so in its own header. Merging a
+      pack has never been a claim about its wording, and a pack can be
+      corrected and re-released without cutting an app release, so review is
+      continuous rather than a release blocker. #17 is a standing volunteer
+      offer for Korean.
