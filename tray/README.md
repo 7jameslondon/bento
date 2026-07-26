@@ -176,6 +176,18 @@ file outside the container.
 The nav bar does NOT intrude on a slideshow, because presenting takes real
 element fullscreen — see below. It is chrome for editing only.
 
+It also **auto-hides in landscape** (`hidesBarsWhenVerticallyCompact`). A phone
+in landscape is only ~390pt tall, so 44pt is over a tenth of the height, on the
+very axis a 16:9 canvas needs most. When the bar is away, a small floating
+chevron stands in, pinned to the **safe-area inset** — on a notched iPhone held
+sideways that gutter is dead space no content can occupy, so the exit costs
+nothing there.
+
+UNVERIFIED: the landscape path has not been exercised. `simctl` cannot rotate a
+device, and it captures the display buffer without the rotation transform, so
+its dimensions do not report orientation either. Rotate by hand (⌘← in
+Simulator) to confirm.
+
 ### Platform notes worth keeping
 
 `didImportDocumentAt` is **never called for the creation flow** on iOS 26. The

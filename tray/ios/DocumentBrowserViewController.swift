@@ -98,6 +98,11 @@ final class DocumentBrowserViewController: UIDocumentBrowserViewController,
             editor.title = url.deletingPathExtension().deletingPathExtension().lastPathComponent
             let nav = UINavigationController(rootViewController: editor)
             nav.modalPresentationStyle = .fullScreen
+            // Landscape on a phone is SHORT — ~390pt — so a 44pt bar is over a
+            // tenth of the height, on the axis a 16:9 canvas needs most. UIKit
+            // has this exact case built in; the editor supplies a floating exit
+            // for when the bar is away.
+            nav.hidesBarsWhenVerticallyCompact = true
             editor.onDone = { [weak self, weak nav] in
                 // close() flushes and relinquishes file coordination; without it
                 // the document stayed open for the life of the app. The scope is

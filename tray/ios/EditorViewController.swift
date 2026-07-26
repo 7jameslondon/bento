@@ -66,6 +66,33 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     }
 
     @objc private func doneTapped() { onDone?() }
+
+    /// Fallback exit for when the nav bar is hidden (landscape). Lives in the
+    /// SAFE AREA inset — on a notched iPhone held sideways that gutter is dead
+    /// space no content can occupy, so this costs nothing at all, unlike the
+    /// 44pt the bar spends.
+    private lazy var floatingExit: UIButton = {
+        let b = UIButton(type: .system)
+        var cfg = UIButton.Configuration.filled()
+        cfg.image = UIImage(systemName: "chevron.left")
+        cfg.cornerStyle = .capsule
+        cfg.baseBackgroundColor = UIColor.systemBackground.withAlphaComponent(0.7)
+        cfg.baseForegroundColor = .label
+        cfg.contentInsets = .init(top: 8, leading: 10, bottom: 8, trailing: 10)
+        b.configuration = cfg
+        b.accessibilityLabel = NSLocalizedString("Documents", comment: "back to the file browser")
+        b.addTarget(self, action: #selector(doneTapped), for: .touchUpInside)
+        b.isHidden = true
+        return b
+    }()
+
+    /// Keep exactly ONE exit affordance on screen. The bar auto-hides when the
+    /// vertical size class is compact (iPhone landscape), and the floating
+    /// control stands in for it there.
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        floatingExit.isHidden = !(navigationController?.isNavigationBarHidden ?? false)
+    }
     required init?(coder: NSCoder) { fatalError("not used") }
 
     override func viewDidLoad() {
