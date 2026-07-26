@@ -130,6 +130,22 @@ locally so the signing key never leaves the maintainer's machine — see
 Contributions welcome — start with [CONTRIBUTING.md](CONTRIBUTING.md). Found a
 security issue? See [SECURITY.md](SECURITY.md).
 
+## Community
+
+- **Questions and help** — [Discussions →
+  Q&A](https://github.com/nyblnet/bento/discussions/categories/q-a)
+- **Ideas and feature requests** — [Discussions →
+  Ideas](https://github.com/nyblnet/bento/discussions/categories/ideas)
+- **Built something with Bento?** — [Show and
+  tell](https://github.com/nyblnet/bento/discussions/categories/show-and-tell)
+- **Bugs** — [open an issue](https://github.com/nyblnet/bento/issues).
+  Security issues go through [SECURITY.md](SECURITY.md) instead, never a
+  public issue.
+
+Planning a substantial contribution? Check the pinned **What's in flight**
+issue and the open PRs first, and say what you're planning before you build it
+— see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Roadmap
 
 **bento/slides** is the first app — a PowerPoint alternative, shipping now.
