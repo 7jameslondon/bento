@@ -21,8 +21,9 @@
 // never agree with anything and are left as they are.
 //
 // GENDER. Past-tense verbs agree with the subject's gender in Ukrainian, so
-// «{name} joined» would misgender half the people it names. Those strings are
-// rephrased into gender-free forms («{name} — у сеансі»).
+// «{name} joined/left» would misgender half the people it names. Those strings
+// use the gender-free present tense («{name} приєднується», «{name} залишає
+// сеанс») and impersonal forms («{name} — вилучено») instead.
 import type { Catalog } from '../../i18n'
 
 export const label = 'Українська'
