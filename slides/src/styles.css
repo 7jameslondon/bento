@@ -1605,19 +1605,11 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
 /* bottom-end cluster: [Slideshow pill] [zoom pill] */
 .ed-corner-br {
   position: absolute;
-<<<<<<< HEAD
-  inset-inline-end: 14px;
-  bottom: 14px;
-=======
-  /* the present/zoom cluster sits in the corner most likely to be clipped */
-<<<<<<< HEAD
-  right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
->>>>>>> 647c467 (Editor: keep chrome clear of rounded corners and the Dynamic Island)
-=======
-  right: max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px));
+  /* the present/zoom cluster sits in the corner most likely to be clipped.
+     Kept LOGICAL (inset-inline-end, not right) so the cluster still lands in
+     the correct corner under RTL — ar/fa/he/ur ship as language packs. */
+  inset-inline-end: max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px));
   bottom: max(14px, env(safe-area-inset-bottom), var(--tray-safe-bottom, 0px));
->>>>>>> 43ad9b7 (Editor: accept host-published safe-area insets as a fallback)
   display: flex;
   align-items: center;
   gap: 10px;
