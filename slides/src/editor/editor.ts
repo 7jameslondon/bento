@@ -24,7 +24,7 @@ import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
 import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
-import { availablePacks, fetchPack, installPack, installedPacks, packsInFile, stageForFile, uninstallPack, unstageFromFile } from '../packs'
+import { availablePacks, fetchPack, packsInFile, stageForFile, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -1012,7 +1012,6 @@ export class Editor {
 
     const paint = async () => {
       listHost.textContent = ''
-      const installed = installedPacks()
       const bundled = LOCALE_CHOICES.filter((c) => c.code !== 'en')
 
       const section = (label: string, blurb: string) => {
@@ -1060,32 +1059,8 @@ export class Editor {
         )
       }
 
-      section(
-        t('On this computer'),
-        t('This browser only, for every deck you open here. Files you send stay unchanged.'),
-      )
-      if (!installed.length) {
-        const none = div('ed-hint')
-        none.textContent = t('None yet — add one below.')
-        listHost.appendChild(none)
-      }
-      for (const p of installed) {
-        const rm = document.createElement('button')
-        rm.className = 'ed-btn'
-        rm.textContent = t('Remove')
-        rm.title = t('Remove from this computer')
-        rm.addEventListener('click', () => {
-          uninstallPack(p.lang)
-          // the active locale may have just vanished — rebuild everything
-          this.build()
-          this.rebuildSidebar()
-          void paint()
-        })
-        row(p.label || p.lang, p.version ? t('Language pack · built for v{v}', { v: p.version }) : t('Language pack'), [rm])
-      }
-
       const all = await availablePacks()
-      section(t('Available to add'), t('Choose where it goes: just for you, or into the deck so it travels.'))
+      section(t('Available to add'), t('Goes into the deck itself, so it travels with the file. Written when you next save.'))
       if (!all.length) {
         const none = div('ed-hint')
         none.textContent = t('Nothing new right now.')
@@ -1124,55 +1099,30 @@ export class Editor {
         for (const p of hits) addRow(p, scroller)
       }
 
-      // Two destinations, labelled with the SAME words as the sections above,
-      // so the button says where the language will end up. Nobody should have
-      // to install a language locally just to put it in a file they are
-      // sending to someone else.
+      // One destination. A pack lives in the FILE — see packs.ts for why the
+      // "on this computer" option was removed rather than kept alongside.
       const addRow = (p: import('../packs').PackListing, host: HTMLElement) => {
-        const mk = (label: string, title: string, run: () => Promise<string | null>) => {
-          const b = document.createElement('button')
-          b.className = 'ed-btn'
-          b.textContent = label
-          b.title = title
-          b.addEventListener('click', async () => {
-            const siblings = [...(b.parentElement?.children ?? [])] as HTMLButtonElement[]
-            siblings.forEach((s) => (s.disabled = true))
-            b.textContent = t('Adding…')
-            const err = await run()
-            if (err) {
-              this.toast(languageInstallError(err as 'offline'))
-              siblings.forEach((s) => (s.disabled = false))
-              b.textContent = label
-              return
-            }
-            this.build()
-            this.rebuildSidebar()
-            void paint()
-          })
-          return b
-        }
-
-        const toComputer = mk(
-          t('This computer'),
-          t('Download and use here. The deck itself is not changed.'),
-          async () => {
-            const err = await installPack(p)
-            if (!err) this.toast(t('{lang} is ready to use', { lang: p.label }))
-            return err
-          },
-        )
-        const toFile = mk(
-          t('This file'),
-          t('Put it in the deck so it travels — written when you next save.'),
-          async () => {
-            const err = await fetchPack(p)
-            if (typeof err === 'string') return err
-            stageForFile(err)
-            this.toast(t('{lang} will be saved with this deck', { lang: p.label }))
-            return null
-          },
-        )
-        row(p.label, p.lang, [toComputer, toFile], host)
+        const add = document.createElement('button')
+        add.className = 'ed-btn'
+        add.textContent = t('Add')
+        add.title = t('Put it in the deck — written when you next save.')
+        add.addEventListener('click', async () => {
+          add.disabled = true
+          add.textContent = t('Adding…')
+          const got = await fetchPack(p)
+          if (typeof got === 'string') {
+            this.toast(languageInstallError(got))
+            add.disabled = false
+            add.textContent = t('Add')
+            return
+          }
+          stageForFile(got)
+          this.toast(t('{lang} will be saved with this deck', { lang: p.label }))
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(p.label, p.lang, [add], host)
       }
 
       renderAvail()
@@ -2516,7 +2466,7 @@ export class Editor {
  * Turn a pack-install failure into a sentence. Built at display time because
  * t() must never be frozen into a module-level const.
  */
-function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'): string {
+function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app'): string {
   switch (code) {
     case 'offline':
       return t('Couldn’t download that language — check your connection and try again.')
@@ -2524,8 +2474,6 @@ function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app' | 'no-s
       return t('That language pack couldn’t be read.')
     case 'wrong-app':
       return t('That language pack was built for a different Bento app.')
-    case 'no-space':
-      return t('It works now, but there’s no room to save it here — it will be gone after a reload.')
   }
 }
 
