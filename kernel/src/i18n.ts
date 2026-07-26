@@ -20,14 +20,63 @@
 export type Catalog = Record<string, string>
 export interface LocaleChoice { code: string; label: string }
 
+/**
+ * Key-once catalog shape. English-string-as-key means the source sentence is
+ * the key in EVERY locale, so N catalogs store the same English text N times —
+ * and deflate can't dedupe it (32KB window vs catalogs spanning hundreds of
+ * KB). Packing stores each key once with translations positional by `locales`;
+ * a 0, a short row, or an absent key all mean "fall back to English".
+ */
+export interface PackedCatalogs {
+  locales: readonly string[]
+  table: Record<string, ReadonlyArray<string | 0>>
+  /** extra locale codes mapping onto a column, e.g. { 'zh-TW': 'zh-Hant' } */
+  alias?: Record<string, string>
+}
+
 let CATALOGS: Record<string, Catalog> = {}
+let PACKED: PackedCatalogs | null = null
+/** locale code -> column index in PACKED.table rows */
+let COLUMN: Record<string, number> = {}
 let CHOICES: LocaleChoice[] = [{ code: 'en', label: 'English' }]
 
-/** Register this app's catalogs + picker choices. Call once, at boot. */
-export function registerI18n(opts: { catalogs: Record<string, Catalog>; choices: LocaleChoice[] }): void {
-  CATALOGS = opts.catalogs
+/**
+ * Register this app's catalogs + picker choices. Call once, at boot.
+ * Takes either `catalogs` (plain per-locale maps) or `packed` (key-once).
+ */
+export function registerI18n(opts: {
+  catalogs?: Record<string, Catalog>
+  packed?: PackedCatalogs
+  choices: LocaleChoice[]
+}): void {
+  CATALOGS = opts.catalogs ?? {}
+  PACKED = opts.packed ?? null
+  COLUMN = {}
+  if (PACKED) {
+    PACKED.locales.forEach((code, i) => { COLUMN[code] = i })
+    for (const [from, to] of Object.entries(PACKED.alias ?? {})) {
+      const i = PACKED.locales.indexOf(to)
+      if (i >= 0) COLUMN[from] = i
+    }
+  }
   CHOICES = opts.choices
   current = null // re-resolve: the registry the resolution depends on just changed
+}
+
+/** Do we actually carry strings for this locale code? Drives resolve(). */
+function hasLocale(code: string): boolean {
+  return PACKED ? COLUMN[code] !== undefined : !!CATALOGS[code]
+}
+
+/** The translation for `en` in the active locale, or undefined to fall back. */
+function lookup(en: string, loc: string): string | undefined {
+  if (PACKED) {
+    const col = COLUMN[loc]
+    if (col === undefined) return undefined
+    const hit = PACKED.table[en]?.[col]
+    return hit === 0 || hit === undefined ? undefined : hit
+  }
+  return CATALOGS[loc]?.[en]
 }
 
 /** Locales offered in the picker (label in its own language). */
@@ -50,10 +99,10 @@ function resolve(): string {
   const saved = localStorage.getItem('bento-lang')
   if (saved) return saved
   const nav = navigator.language || 'en'
-  if (CATALOGS[nav]) return nav
+  if (hasLocale(nav)) return nav
   const base = nav.split('-')[0]
   if (base === 'zh') return 'zh-Hans'
-  return CATALOGS[base] ? base : 'en'
+  return hasLocale(base) ? base : 'en'
 }
 
 let current: string | null = null
@@ -75,7 +124,7 @@ export function setLocale(code: string): void {
 /** Translate an English source string, then interpolate {placeholders}. */
 export function t(en: string, vars?: Record<string, string | number>): string {
   const cur = activeLocale()
-  let out = cur === 'x-pseudo' ? pseudo(en) : (CATALOGS[cur]?.[en] ?? en)
+  let out = cur === 'x-pseudo' ? pseudo(en) : (lookup(en, cur) ?? en)
   if (vars) {
     for (const [k, v] of Object.entries(vars)) out = out.replaceAll(`{${k}}`, String(v))
   }
