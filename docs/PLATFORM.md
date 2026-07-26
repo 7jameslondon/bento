@@ -146,8 +146,36 @@ Four pack rules are platform-level, not app choices:
   that cannot be re-fetched is kept, never dropped.
 - **Fetched packs are verified against the signed release channel; embedded
   packs are not re-verified** — they carry the same trust as the document
-  around them, and opening a file must never require the network. (Design
-  settled; the client-side check lands on `claude/i18n-pack-verify`.)
+  around them, and opening a file must never require the network.
+
+### Direction (RTL) — two halves, never confuse them
+
+**Content direction belongs to the DOCUMENT and is per element.** Text
+resolves its own base direction from what the author typed (`dir="auto"` in
+the renderer), so an Arabic paragraph reads RTL beside an English one in the
+same file. This is data: it renders identically for every viewer, and it is
+the half that fixes real bugs (misplaced sentence-final punctuation).
+
+**Chrome direction belongs to the VIEWER and never enters the format.** The
+editor flips to RTL when the viewer's locale is RTL — the same viewer-scoped
+pattern as `bento-lang` and reduce-motion. `applyDirection()` runs AFTER
+`capturePristine()`, so a saved file can never carry a `dir` attribute. Lay
+chrome out with logical properties (`inset-inline-start`, `margin-inline-end`,
+`text-align: start`) and it mirrors itself; only glyphs that encode a
+direction in their SHAPE need flipping by hand.
+
+> **INVARIANT — the document never mirrors.** Elements carry absolute x/y
+> model coordinates, so a document MUST render identically regardless of who
+> opens it. A document whose appearance depends on the viewer's locale is a
+> format-level bug, and a worse outcome than an unmirrored UI. Every surface
+> that renders document content is therefore pinned `direction: ltr`: the
+> document root, thumbnails, the scroller, the present overlay, print, and any
+> body-mounted overlay that reads coordinates (e.g. Moveable's control box,
+> which mounts outside the document subtree and needs its own pin).
+>
+> An app adding a new document-rendering surface MUST pin it. The pin is also
+> what keeps direction away from `scrollLeft` — the one layout API whose
+> meaning genuinely changes under RTL — so coordinate math stays untouched.
 
 ## 9. What is kernel vs what is app
 

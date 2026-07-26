@@ -23,7 +23,7 @@ import { insertElements, insertSlides, parseClip, serializeElements, serializeSl
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
-import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
+import { t, setLocale, locale, localeChoices, LOCALE_CHOICES, applyDirection, isRtl } from '../i18n'
 import { availablePacks, fetchPack, markFileSaved, packCoverage, packsInFile, stageForFile, unstageFromFile } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
@@ -395,8 +395,11 @@ export class Editor {
   private updatePanelChevrons() {
     const glyph = (side: 'left' | 'right') => {
       const collapsed = (side === 'left' ? this.sidebar : this.props).classList.contains('ed-collapsed')
-      // chevron points where clicking will move the boundary
-      return side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      // chevron points where clicking will move the boundary. 'left'/'right'
+      // name the DOM order, not the screen: under an RTL chrome the slide list
+      // sits on the right, so the arrow that means "open me" turns around too.
+      const g = side === 'left' ? (collapsed ? '›' : '‹') : (collapsed ? '‹' : '›')
+      return isRtl() ? (g === '›' ? '‹' : '›') : g
     }
     for (const side of ['left', 'right'] as const) {
       const b = this.panelToggles[side]
@@ -439,7 +442,10 @@ export class Editor {
       document.body.classList.add('ed-col-resizing')
       const move = (ev: MouseEvent) => {
         const dx = ev.clientX - startX
-        this.panelW[side] = Math.min(max, Math.max(min, startW + (side === 'left' ? dx : -dx)))
+        // clientX is physical; which way widens the panel depends on which
+        // screen edge it is docked to, and RTL swaps the two panels over.
+        const widens = (side === 'left') !== isRtl() ? dx : -dx
+        this.panelW[side] = Math.min(max, Math.max(min, startW + widens))
         this.applyPanelWidths()
       }
       const up = () => {
@@ -1167,6 +1173,8 @@ export class Editor {
       const b = btn('', c.label, () => {
         wrap.classList.remove('open')
         setLocale(c.code)
+        // switching to (or away from) Arabic/Hebrew/… turns the chrome around
+        applyDirection()
         this.build()
         this.rebuildSidebar()
       })
@@ -1178,9 +1186,9 @@ export class Editor {
       wrap.classList.remove('open')
       void this.openLanguages()
     }))
-    // right-anchor so the menu never overflows the window edge
-    menu.style.left = 'auto'
-    menu.style.right = '0'
+    // end-anchored so the menu never overflows the window edge — as a class,
+    // not inline left/right, so it follows the chrome's direction (.ed-lang-menu
+    // in styles.css, alongside the Save menu's identical rule)
     wrap.append(trigger, menu)
     document.addEventListener('pointerdown', (ev) => {
       if (!wrap.contains(ev.target as Node)) wrap.classList.remove('open')

@@ -365,3 +365,42 @@ something is actually failing.
 Human review is a practice, not a GitHub setting, for as long as the team is
 one person. Restore a real approval count the moment a second reviewer exists;
 the future-action exclusion list in the amended entry still applies.
+
+## RTL is two separable problems; only one of them is the document's
+
+**Decided:** 2026-07-26. Supersedes nothing; establishes the split.
+
+Content bidi and chrome mirroring get confused constantly, and treating them
+as one feature produces the wrong answer to both.
+
+*Content* direction is a correctness bug and belongs to the document: an
+Arabic sentence puts its full stop in the wrong place without `dir="auto"`,
+and it is wrong for everyone who opens the file. Cheap, uncontroversial, do it.
+
+*Chrome* mirroring is a UI convention. Nothing is incorrect without it; the
+editor merely feels foreign to an RTL reader. It was deliberately sequenced
+AFTER an RTL language pack existed, because mirroring a UI whose every label
+is still English is worse than not mirroring — and because the point of
+shipping a pack first is to learn whether RTL users actually turn up.
+
+The invariant that falls out of the split — **the document never mirrors** —
+is recorded in `PLATFORM.md` §8 and binds every Bento app. A document that
+looks different depending on the viewer's locale is a format-level bug.
+
+Cost, measured rather than guessed: ~430 bytes in the shipped shell for the
+whole chrome conversion, and **zero** for the languages themselves, because
+every RTL language is a pack. Size was never the constraint here. The real
+constraint is that 32 of the editor's ~36 direction-adjacent coordinate sites
+live in `canvas.ts` (Moveable/Selecto), which cannot be verified by an agent —
+synthetic drags on Moveable handles do not register at all. Pinning the
+document surfaces LTR was sufficient to leave that math untouched, and that is
+the outcome to preserve: if a future change makes chrome direction reach
+`canvas.ts`, stop and reconsider rather than refactoring the coordinate code.
+
+**No plural system.** Hebrew (and later Arabic) ship without one. Of 15
+count-bearing strings only 6 take a real count; the rest are index labels
+(`Axis {n}`, `slide {n}`) or abbreviated times. Six strings do not justify
+changing the catalog format, the build script, the CI gate and every catalog.
+Translators phrase them count-agnostically instead (`מחוברים: {n}`), which is
+standard practice when a framework lacks plurals and costs nothing at runtime.
+Revisit only if a language arrives where the workaround genuinely fails.
