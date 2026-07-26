@@ -132,19 +132,60 @@ export function shellBlocksForPacks(): ShellBlock[] {
   }))
 }
 
-/**
- * Packs on offer from the release channel, minus those the file already has.
- * Returns [] when the index isn't published yet or the network is unavailable
- * — "no packs to offer" is a normal state, not an error worth shouting about.
- */
-export async function availablePacks(): Promise<PackListing[]> {
+/** The channel's whole index, unfiltered. [] if unpublished or unreachable. */
+async function fetchIndex(): Promise<PackListing[]> {
   try {
     const res = await fetch(`${channel()}/packs.json`, { cache: 'no-store' })
     if (!res.ok) return []
     const list = (await res.json()) as PackListing[]
-    if (!Array.isArray(list)) return []
-    return list.filter((p) => p?.lang && p?.url && !inFile.has(p.lang))
+    return Array.isArray(list) ? list.filter((p) => p?.lang && p?.url) : []
   } catch {
     return []
   }
+}
+
+/**
+ * Packs on offer from the release channel, minus those the file already has.
+ * "Nothing to offer" is a normal state, not an error worth shouting about.
+ */
+export async function availablePacks(): Promise<PackListing[]> {
+  return (await fetchIndex()).filter((p) => !inFile.has(p.lang))
+}
+
+/**
+ * Bring this file's packs up to a new app version, called from the update
+ * flow once the release is verified.
+ *
+ * WHY THIS EXISTS. A pack is written into the file at the version it was
+ * built for and then never changes, while the app around it keeps updating.
+ * Every release that adds UI strings makes that pack a little more
+ * incomplete — the new strings fall back to English, per string, silently.
+ * Over a few releases a fully translated deck drifts back toward English
+ * with nothing to fix it. Update is the one moment we know the version
+ * changed, and the packs are on the same signed channel, so it is also the
+ * cheapest moment to put them right.
+ *
+ * Refusing to fail is the whole point: any pack we cannot re-fetch is simply
+ * KEPT at its current version. Degraded beats absent.
+ */
+export async function refreshPacksForVersion(version: string): Promise<{ refreshed: string[]; kept: string[] }> {
+  const refreshed: string[] = []
+  const kept: string[] = []
+  const langs = [...inFile.keys()]
+  if (!langs.length) return { refreshed, kept }
+
+  const index = await fetchIndex()
+  for (const lang of langs) {
+    const listing = index.find((p) => p.lang === lang)
+    if (!listing) { kept.push(lang); continue }
+    const got = await fetchPack(listing)
+    if (typeof got === 'string' || got.lang !== lang) { kept.push(lang); continue }
+    // Only replace with something actually built for the incoming version —
+    // a channel still serving the old pack should leave the file untouched.
+    if (got.version && version && got.version !== version) { kept.push(lang); continue }
+    inFile.set(lang, got)
+    addPack(got, 'slides')
+    refreshed.push(lang)
+  }
+  return { refreshed, kept }
 }
