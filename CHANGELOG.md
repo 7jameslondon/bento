@@ -11,6 +11,11 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Fix: presenting was broken.** Slides showed at a fraction of the screen
+  with speaker notes spilling underneath. A stray missing bracket in the
+  stylesheet swallowed all of the presentation layout rules. Nothing was wrong
+  with your decks — presenting is back to full screen.
+
 - **You can see what changed, on both sides of an update.** When an update is
   available the About dialog now lists the headlines from that release inline,
   instead of only a version number and a link off to GitHub — and because they
