@@ -100,11 +100,16 @@ option { background: #fff; color: #1e2a3a; }
      end buttons sit under the curve. env(safe-area-inset-*) is the only handle
      the platform gives — there is no corner-radius API — and it already encodes
      corners, island and indicator together.
+     Each max() also lists var(--tray-safe-*). Inside a WKWebView host,
+     env(safe-area-inset-*) reads 0px even when the device genuinely has insets
+     (measured: native 62/0/34/0, CSS 0px), so bento/tray publishes the real
+     numbers under those names. In a browser the variables are undefined, resolve
+     to 0px, and env() does the work as normal.
      max() keeps the normal padding on every device that reports 0. The
      BACKGROUND still bleeds to the edge; only the content is inset, which is
      the point: colour to the edge, controls out of the curve. */
-  padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
-           8px max(14px, env(safe-area-inset-left));
+  padding: max(8px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+           8px max(14px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
   background: #fff;
   border-bottom: 1px solid var(--line);
   z-index: 20;
@@ -1605,9 +1610,14 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
   bottom: 14px;
 =======
   /* the present/zoom cluster sits in the corner most likely to be clipped */
+<<<<<<< HEAD
   right: max(14px, env(safe-area-inset-right));
   bottom: max(14px, env(safe-area-inset-bottom));
 >>>>>>> 647c467 (Editor: keep chrome clear of rounded corners and the Dynamic Island)
+=======
+  right: max(14px, env(safe-area-inset-right), var(--tray-safe-right, 0px));
+  bottom: max(14px, env(safe-area-inset-bottom), var(--tray-safe-bottom, 0px));
+>>>>>>> 43ad9b7 (Editor: accept host-published safe-area insets as a fallback)
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1832,15 +1842,15 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
   /* keep the safe-area insets — a bare padding here would undo them */
   .ed-topbar {
     gap: 6px;
-    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
-             8px max(8px, env(safe-area-inset-left));
+    padding: max(8px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(8px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+             8px max(8px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
   }
 }
 @media (max-width: 760px) {
   .ed-topbar {
     gap: 4px;
-    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
-             6px max(6px, env(safe-area-inset-left));
+    padding: max(6px, env(safe-area-inset-top), var(--tray-safe-top, 0px)) max(6px, env(safe-area-inset-right), var(--tray-safe-right, 0px))
+             6px max(6px, env(safe-area-inset-left), var(--tray-safe-left, 0px));
   }
   .ed-logo > b { display: none; } /* mark only — the icon is the brand */
 }
