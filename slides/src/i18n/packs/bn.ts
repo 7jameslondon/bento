@@ -698,7 +698,7 @@ export const strings: Catalog = {
   "Available to add": "যোগ করার জন্য পাওয়া যাচ্ছে",
   "Adding…": "যোগ করা হচ্ছে…",
   "That language pack couldn’t be read.": "সেই ভাষা প্যাকটি পড়া গেল না।",
-  "That language pack failed its security check, so it wasn’t added.": "সেই ভাষা প্যাকটি নিরাপত্তা যাচাইয়ে পাশ করেনি, তাই যোগ করা হয়নি।",
+  "That language pack failed its security check, so it wasn’t added.": "সেই ভাষা প্যাকটি নিরাপত্তা যাচাইয়ে উত্তীর্ণ হয়নি, তাই যোগ করা হয়নি।",
   "That language pack was built for a different Bento app.": "সেই ভাষা প্যাকটি অন্য একটি bento অ্যাপের জন্য তৈরি।",
   "Manage languages…": "ভাষা পরিচালনা করুন…",
   "In this file": "এই ফাইলে",
