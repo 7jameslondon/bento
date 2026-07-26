@@ -45,6 +45,8 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// not overwrite it. Comparing filenames instead would fail: Bento derives
     /// its suggested name from the deck TITLE, so it rarely matches.
     private var openDocumentVended = false
+    private var isPresentingFullscreen = false
+    private var fullscreenObs: NSKeyValueObservation?
     private var pendingExportName: String?
 
     /// Stable per-document host: a truncated SHA-256 of the file's path. Hex
@@ -98,6 +100,11 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// first and simply did not fire for a modally-presented navigation
     /// controller — the bar stayed put in landscape.
     private func syncChrome() {
+        if isPresentingFullscreen {
+            navigationController?.setNavigationBarHidden(true, animated: false)
+            floatingExit.isHidden = true
+            return
+        }
         let short = traitCollection.verticalSizeClass == .compact
         navigationController?.setNavigationBarHidden(short, animated: false)
         floatingExit.isHidden = !short
@@ -107,6 +114,18 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         syncChrome()
+    }
+
+    /// While the page is presenting, the host shows NOTHING. Element fullscreen
+    /// puts the deck edge to edge, and a floating control sitting over it is
+    /// exactly the chrome a slideshow is supposed to shed. Restored on exit.
+    private func observeFullscreen() {
+        fullscreenObs = webView.observe(\.fullscreenState, options: [.new]) { [weak self] wv, _ in
+            guard let self else { return }
+            let presenting = wv.fullscreenState == .inFullscreen || wv.fullscreenState == .enteringFullscreen
+            self.isPresentingFullscreen = presenting
+            self.syncChrome()
+        }
     }
 
     override func traitCollectionDidChange(_ previous: UITraitCollection?) {
@@ -138,7 +157,14 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         webView = WKWebView(frame: view.bounds, configuration: cfg)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         webView.allowsBackForwardNavigationGestures = false
+        // The page must reach every physical edge. Left at .automatic, UIKit
+        // insets the scroll view by the safe area, so in landscape the deck
+        // stopped short of the left, right and bottom edges — visible as bands
+        // down three sides during a slideshow. The document decides its own
+        // margins; the host must not add any.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
         view.addSubview(webView)
+        observeFullscreen()
         webView.load(URLRequest(url: URL(string: "bento-tray://\(originHost)/index.html")!))
 
         view.addSubview(floatingExit)

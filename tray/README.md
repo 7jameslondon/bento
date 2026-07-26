@@ -83,6 +83,15 @@ of this bridge did exactly that and prompted on every single save.
   launch would wipe that storage on every open. The trade is that moving or
   renaming a file gives it a new origin and orphans its local state — which is a
   cache and a backstop, never the document itself.
+- **The page reaches every physical edge.** `contentInsetAdjustmentBehavior` is
+  set to `.never`; left at its default UIKit insets the scroll view by the safe
+  area, which in landscape left visible bands down the left, right and bottom of
+  a slideshow. The document owns its margins; the host adds none.
+- **The host shows nothing while the page presents.** `webView.fullscreenState`
+  is observed, and entering fullscreen hides both the nav bar and the floating
+  exit — a control sitting over a slideshow is exactly the chrome presenting is
+  meant to shed. (Contrary to one analysis, `fullscreenState` IS usable here,
+  because element fullscreen genuinely works — see below.)
 - **Element fullscreen is enabled** (`preferences.isElementFullscreenEnabled`).
   iPhone Safari has never offered element fullscreen to web pages, which is why
   Bento's present mode falls back to filling its view in a browser — but
