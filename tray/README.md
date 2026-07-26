@@ -124,6 +124,17 @@ actual device or simulator. Runtime behaviour — the scheme handler serving
 bytes, security-scoped access, the save round trip reaching disk — is still
 unproven.
 
+### Platform notes worth keeping
+
+`didImportDocumentAt` is **never called for the creation flow** on iOS 26. The
+creation handler fires and the file lands correctly, but the delegate callback
+does not arrive — so an app that opens the editor from that callback silently
+creates files and appears to do nothing. `tray/ios` therefore places new
+documents itself and hands the browser `.none` ("already in its final
+location"), which also puts collision naming under our control: the system
+renames `Untitled.bento.html` to `Untitled.bento 2.html`, reading `.bento.html`
+as a name plus one extension.
+
 Still to do:
 
 - App icon, launch screen, signing, an Apple Developer account ($99/yr).
