@@ -18,7 +18,7 @@
 //     node scripts/build-i18n.mjs
 //
 import { PACKED, PACKED_LOCALES } from './i18n/packed'
-import { registerI18n } from '../../kernel/src/i18n.ts'
+import { registerI18n, locale as localeCode } from '../../kernel/src/i18n.ts'
 import type { LocaleChoice } from '../../kernel/src/i18n.ts'
 
 export type { Catalog } from '../../kernel/src/i18n.ts'
@@ -59,3 +59,51 @@ registerI18n({
 export const LOCALE_CHOICES = CHOICES
 
 export { t, locale, setLocale, i18nApi, localeChoices } from '../../kernel/src/i18n.ts'
+
+// --- writing direction -------------------------------------------------------
+//
+// Direction is a property of the VIEWER's language, exactly like the language
+// itself: it follows navigator.language / the 'bento-lang' override and NEVER
+// enters the document format. A deck authored in Cairo must open in Chicago
+// looking byte-identical — only the chrome around it turns around.
+//
+// Base-language matching (not a full locale table) so a runtime language pack
+// (docs/i18n-packs.md) adding Arabic or Hebrew gets an RTL chrome for free,
+// with no release: 'ar', 'ar-EG' and 'he-IL' all resolve here.
+const RTL_LANGS = new Set([
+  'ar', // Arabic
+  'he', // Hebrew
+  'fa', // Persian
+  'ur', // Urdu
+  'ps', // Pashto
+  'sd', // Sindhi
+  'ug', // Uyghur
+  'yi', // Yiddish
+  'dv', // Divehi
+  'ckb', // Central Kurdish
+  'ku', // Kurdish (Sorani conventions)
+  'nqo', // N'Ko
+])
+
+/** Does this locale (default: the active one) write right-to-left? */
+export function isRtl(code?: string): boolean {
+  return RTL_LANGS.has((code ?? localeCode()).split('-')[0])
+}
+
+/**
+ * Point the CHROME at the viewer's writing direction.
+ *
+ * Set on <html> so body-mounted chrome (dialogs, menus, popovers, toasts)
+ * turns around with the editor. Everything that draws the DOCUMENT is pinned
+ * back to `direction: ltr` in styles.css — the slide surface carries absolute
+ * x/y model coordinates, so mirroring it would move every element of every
+ * existing deck. See the "never mirror the document" block there.
+ *
+ * Safe to call any time AFTER capturePristine(): saves re-serialize the
+ * pristine boot clone, so this attribute can never reach a saved file.
+ */
+export function applyDirection(): void {
+  const el = document.documentElement
+  el.dir = isRtl() ? 'rtl' : 'ltr'
+  el.lang = localeCode()
+}

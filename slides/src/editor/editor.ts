@@ -23,7 +23,7 @@ import { insertElements, insertSlides, parseClip, serializeElements, serializeSl
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
-import { t, setLocale, locale, LOCALE_CHOICES } from '../i18n'
+import { t, setLocale, locale, LOCALE_CHOICES, applyDirection } from '../i18n'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -987,6 +987,8 @@ export class Editor {
       const b = btn('', c.label, () => {
         wrap.classList.remove('open')
         setLocale(c.code)
+        // switching to (or away from) Arabic/Hebrew/… turns the chrome around
+        applyDirection()
         this.build()
         this.rebuildSidebar()
       })

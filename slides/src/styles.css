@@ -51,6 +51,40 @@ select, .ed-row input, .ed-row textarea {
 }
 option { background: #fff; color: #1e2a3a; }
 
+/* ————— THE DOCUMENT NEVER MIRRORS —————————————————————————————————————————
+   An Arabic/Hebrew viewer gets an RTL *chrome* (i18n.ts applyDirection sets
+   dir on <html>). The DOCUMENT must be immune to that: slide elements carry
+   absolute x/y model coordinates, so a mirrored surface would move every
+   element of every existing deck, and the same file would look different
+   depending on who opened it — a format-level bug, far worse than an
+   unmirrored panel.
+
+   So every surface that draws slide content is pinned back to LTR:
+
+   - .bento-slide is the SHARED root of the canvas stage, sidebar thumbnails,
+     present sections, print pages and the speaker view's frames (render.ts
+     renderSlide), so this one rule covers all four surfaces at once. The
+     containers are pinned too, belt and braces, because they also carry
+     positioned chrome of their own.
+   - .ed-scroll additionally protects the canvas COORDINATE MATH: direction
+     changes what scrollLeft means (0 at the right edge, negative leftwards),
+     and canvas.ts reads/writes scrollLeft to centre and to pin the stage
+     during Moveable gestures. Pinned, none of that math can shift.
+   - .moveable-control-box is mounted with rootContainer: document.body, i.e.
+     outside the canvas subtree — it needs its own pin.
+
+   Text INSIDE elements still resolves its own direction per element, from the
+   content the author typed (render.ts sets dir="auto"). That is the content
+   half of RTL and is unaffected by any of this. */
+.bento-slide,
+.bento-thumb-surface,
+.ed-scroll,
+.bento-present-overlay,
+.moveable-control-box,
+#bento-print {
+  direction: ltr;
+}
+
 /* ————— topbar ————— */
 
 .ed-topbar {
