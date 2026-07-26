@@ -131,8 +131,8 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
         view.bringSubviewToFront(floatingExit)
     }
 
-    /// PORTRAIT: start the page below the status bar / camera pill, so a
-    /// document's own toolbar is reachable. LANDSCAPE: full bleed.
+    /// Start the page BELOW the status bar wherever iOS is drawing one, so a
+    /// document's own toolbar is reachable; go full bleed where it is not.
     ///
     /// Done NATIVELY rather than by asking the page to pad itself. env() is dead
     /// in this WKWebView, and --tray-safe-* only helps a page that has heard of
@@ -140,16 +140,19 @@ final class EditorViewController: UIViewController, WKScriptMessageHandler, WKUR
     /// controls ended up under the pill and could not be tapped. Insetting the
     /// web view works for every document without any cooperation.
     ///
-    /// Landscape stays edge to edge on purpose: there the unsafe strip is a thin
-    /// side gutter rather than a band across the controls, and a maximised page
-    /// is what you want when presenting.
+    /// A regular vertical size class is the test because it tracks exactly the
+    /// thing that matters: iOS hides the status bar in a compact height and
+    /// shows it otherwise. On iPhone that reads as portrait-inset /
+    /// landscape-full-bleed, which is what a presenter wants. On iPad it is
+    /// regular in BOTH orientations — and correctly so, because an iPad keeps
+    /// its status bar in both, and a deck presenting there letterboxes anyway.
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        let portrait = traitCollection.verticalSizeClass == .regular
-        let top = portrait ? view.safeAreaInsets.top : 0
+        let statusBarShowing = traitCollection.verticalSizeClass == .regular
+        let top = statusBarShowing ? view.safeAreaInsets.top : 0
         webView.frame = CGRect(x: 0, y: top, width: view.bounds.width,
                                height: max(0, view.bounds.height - top))
-        publishSafeArea(topHandledNatively: portrait)
+        publishSafeArea(topHandledNatively: statusBarShowing)
     }
 
     override func viewDidAppear(_ animated: Bool) {
