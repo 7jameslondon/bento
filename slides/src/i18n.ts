@@ -18,6 +18,7 @@
 //     node scripts/build-i18n.mjs
 //
 import { PACKED, PACKED_LOCALES } from './i18n/packed'
+import { restoreInstalledPacks } from './packs'
 import { registerI18n } from '../../kernel/src/i18n.ts'
 import type { LocaleChoice } from '../../kernel/src/i18n.ts'
 
@@ -55,7 +56,15 @@ registerI18n({
   choices: CHOICES,
 })
 
-/** Kept as a const export for call sites that read it directly. */
+// Packs installed on THIS browser, re-registered before the first t() — same
+// module-evaluation-order guarantee that makes the facade own registration.
+restoreInstalledPacks()
+
+/**
+ * The BUNDLED locales only. Call sites that need the live list — including any
+ * language an installed pack added — must use `localeChoices()` instead: this
+ * const is frozen at import and can never grow.
+ */
 export const LOCALE_CHOICES = CHOICES
 
 export { t, locale, setLocale, i18nApi, localeChoices } from '../../kernel/src/i18n.ts'

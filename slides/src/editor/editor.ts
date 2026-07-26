@@ -23,7 +23,8 @@ import { insertElements, insertSlides, parseClip, serializeElements, serializeSl
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
 import { borderPoint, boxCenter, lineEndpoints, setLineEndpoints, sideMidpoint } from './lineedit'
 import { ICONS } from '../icons'
-import { t, setLocale, locale, LOCALE_CHOICES } from '../i18n'
+import { t, setLocale, locale, localeChoices, LOCALE_CHOICES } from '../i18n'
+import { availablePacks, installPack, installedPacks, uninstallPack } from '../packs'
 import { appConfig } from '../../../kernel/src/app.ts'
 import { disconnectOnline, joinFromDoc, mintCollab, mintInvite, onlineTransport, rotateKeys, sharingOn, startSharing, stopSharing } from '../sync/online'
 
@@ -978,12 +979,127 @@ export class Editor {
     await this.save(true)
   }
 
+  /**
+   * Languages dialog: what is built in, what this browser has installed, and
+   * what the release channel is offering.
+   *
+   * An installed pack belongs to the READER, not the file — it lives in this
+   * browser next to the locale preference, because language never enters the
+   * document format (PLATFORM.md §3). So installing one costs nothing: no
+   * re-splice, no new file, no touching a document you may not own. The dialog
+   * says so, because "add a language" sounding like it edits the deck would be
+   * a fair thing to worry about.
+   */
+  private async openLanguages() {
+    document.querySelector('.ed-about-overlay')?.remove()
+    const overlay = div('ed-about-overlay')
+    const box = div('ed-about')
+    const h = div('ed-about-h')
+    h.textContent = t('Languages')
+    box.appendChild(h)
+
+    const note = div('ed-hint')
+    note.textContent = t('Added languages are kept in this browser, not in the deck — the file you send someone is unchanged.')
+    box.appendChild(note)
+
+    const listHost = div('ed-lang-manage')
+    box.appendChild(listHost)
+
+    const paint = async () => {
+      listHost.textContent = ''
+      const installed = installedPacks()
+      const bundled = LOCALE_CHOICES.filter((c) => c.code !== 'en')
+
+      const section = (label: string) => {
+        const s = div('ed-lang-sec')
+        s.textContent = label
+        listHost.appendChild(s)
+      }
+      const row = (label: string, sub: string, action?: HTMLElement) => {
+        const r = div('ed-lang-row')
+        const txt = div('ed-lang-txt')
+        const n = document.createElement('b')
+        n.textContent = label
+        const s = document.createElement('span')
+        s.textContent = sub
+        txt.append(n, s)
+        r.appendChild(txt)
+        if (action) r.appendChild(action)
+        listHost.appendChild(r)
+      }
+
+      section(t('Built in'))
+      row('English, ' + bundled.map((c) => c.label).join(', '), t('always available, no download'))
+
+      if (installed.length) {
+        section(t('Added to this browser'))
+        for (const p of installed) {
+          const rm = document.createElement('button')
+          rm.className = 'ed-btn'
+          rm.textContent = t('Remove')
+          rm.addEventListener('click', () => {
+            uninstallPack(p.lang)
+            // the active locale may have just vanished — rebuild everything
+            this.build()
+            this.rebuildSidebar()
+            void paint()
+          })
+          row(p.label || p.lang, p.version ? t('pack for v{v}', { v: p.version }) : t('language pack'), rm)
+        }
+      }
+
+      const avail = await availablePacks()
+      section(t('Available to add'))
+      if (!avail.length) {
+        const none = div('ed-hint')
+        none.textContent = t('Nothing to add right now — more languages are published with each release.')
+        listHost.appendChild(none)
+      }
+      for (const p of avail) {
+        const add = document.createElement('button')
+        add.className = 'ed-btn'
+        add.textContent = t('Add')
+        add.addEventListener('click', async () => {
+          add.disabled = true
+          add.textContent = t('Adding…')
+          const err = await installPack(p)
+          if (err) {
+            this.toast(languageInstallError(err))
+            add.disabled = false
+            add.textContent = t('Add')
+            return
+          }
+          this.toast(t('{lang} added', { lang: p.label }))
+          this.build()
+          this.rebuildSidebar()
+          void paint()
+        })
+        row(p.label, p.lang, add)
+      }
+    }
+    await paint()
+
+    const row = div('ed-about-row')
+    const close = document.createElement('button')
+    close.className = 'ed-btn'
+    close.textContent = t('Done')
+    close.addEventListener('click', () => overlay.remove())
+    row.appendChild(close)
+    box.appendChild(row)
+
+    overlay.appendChild(box)
+    overlay.addEventListener('click', (ev) => { if (ev.target === overlay) overlay.remove() })
+    document.body.appendChild(overlay)
+  }
+
   /** Globe → locale picker. UI language follows the VIEWER, never the file. */
   private languageDropdown(): HTMLElement {
     const wrap = div('ed-dropdown')
     const trigger = btn(ICONS.globe, '', () => wrap.classList.toggle('open'), t('Language'))
     const menu = div('ed-menu ed-lang-menu')
-    for (const c of LOCALE_CHOICES) {
+    // localeChoices(), NOT the frozen LOCALE_CHOICES const: installing a pack
+    // appends a language at runtime, and a static list could never show it.
+    for (const c of localeChoices()) {
       const b = btn('', c.label, () => {
         wrap.classList.remove('open')
         setLocale(c.code)
@@ -993,6 +1109,11 @@ export class Editor {
       if (c.code === locale()) b.classList.add('ed-lang-on')
       menu.appendChild(b)
     }
+    menu.appendChild(div('ed-menu-sep'))
+    menu.appendChild(btn('', t('Add or remove languages…'), () => {
+      wrap.classList.remove('open')
+      void this.openLanguages()
+    }))
     // right-anchor so the menu never overflows the window edge
     menu.style.left = 'auto'
     menu.style.right = '0'
@@ -2291,6 +2412,23 @@ export class Editor {
  * never receive it, and no later sync repairs that. Built at display time
  * because t() must never be frozen into a module-level const.
  */
+/**
+ * Turn a pack-install failure into a sentence. Built at display time because
+ * t() must never be frozen into a module-level const.
+ */
+function languageInstallError(code: 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'): string {
+  switch (code) {
+    case 'offline':
+      return t('Couldn’t reach the language server — check your connection and try again.')
+    case 'bad-pack':
+      return t('That language pack couldn’t be read.')
+    case 'wrong-app':
+      return t('That language pack was built for a different Bento app.')
+    case 'no-space':
+      return t('Added for now, but this browser has no room to keep it — it will be gone after a reload.')
+  }
+}
+
 function syncNoticeText(n: import('../sync/session').SyncNotice): string {
   switch (n.code) {
     case 'too-large':
