@@ -38,7 +38,7 @@ const ROW_TIPS: Record<string, string> = {
   'Preview set': 'Which hover set to show on the canvas while you edit',
   'Role': 'What this text IS in a layout (title, body…) — applying a layout matches elements by role',
   'Shadow': 'Drop-shadow presets — the shadow follows the element’s real shape, corners and transparency',
-  'Color': 'Colour with opacity — pick with the swatch, the % field is transparency',
+  'Color': 'Colour with opacity — pick with the swatch, the % field is how opaque it is',
   'Enter': 'Entrance animation when the slide appears (plays on non-morph entries; equal order = together)',
   'Enter secs': 'How long the entrance takes, in seconds',
   'Count up': 'Numbers in this text count up from zero when the slide enters',
@@ -46,7 +46,10 @@ const ROW_TIPS: Record<string, string> = {
   'Zoom': 'Ken Burns direction — drift, settle out, or settle in',
   'Zoom %': 'How far the Ken Burns zoom travels',
   'Zoom secs': 'How long one Ken Burns pass takes',
-  'Loop': 'A repeating animation: marching dashes along strokes, or motion along a drawn path',
+  // 'Loop animation' — NOT 'Loop': the media panel's playback toggle owns that
+  // word, and one key cannot mean both (a language must pick one and be wrong
+  // in the other place).
+  'Loop animation': 'A repeating animation: marching dashes along strokes, or motion along a drawn path',
   'Loop secs': 'Seconds per lap of the loop',
   'Path': 'The motion path — edit it as draggable points on the canvas',
   'Lap easing': 'Tempo across one lap — ease-in-out dwells at the ends, linear is constant',
@@ -82,6 +85,19 @@ const ROW_TIPS: Record<string, string> = {
   'Poster': 'Preview image shown before the video plays',
   'State of': 'Makes this slide a hidden state of another — reached by clicked links, skipped by arrow keys',
 }
+
+/**
+ * Fill-style options: the stored model words are 'solid'/'gradient', only the
+ * LABEL is localised. 'solid' here is a solid COLOUR, which in many languages
+ * is a different word from the 'solid' LINE style further down (Swedish:
+ * enfärgad vs heldragen) — so it gets its own catalog key rather than sharing
+ * one that must be wrong in one of the two places.
+ *
+ * A function, not a const: t() in a module-level const freezes the English at
+ * import time.
+ */
+const fillStyles = (): Array<[string, string]> =>
+  [['solid', t('solid colour')], ['gradient', t('gradient')]]
 
 export class PropsPanel {
   private burst = false
@@ -348,14 +364,16 @@ export class PropsPanel {
   }
 
   private buildMultiPanel(els: SlideElement[]) {
-    this.section(`${els.length} elements`)
+    // Separate singular key rather than plural machinery — same shape as the
+    // 'Pasted 1 item' / 'Pasted {n} items' pair in editor.ts.
+    this.section(els.length === 1 ? t('1 element') : t('{n} elements', { n: els.length }))
     this.opsRow(els)
     this.section(t('Arrange'))
     this.arrangeRows(els)
   }
 
   private buildElementPanel(el: SlideElement) {
-    this.section({ text: 'Text', shape: 'Shape', image: 'Image', svg: 'Diagram', chart: 'Chart', table: 'Table', media: el.type === 'media' && el.kind === 'audio' ? 'Audio' : 'Video' }[el.type])
+    this.section(t({ text: 'Text', shape: 'Shape', image: 'Image', svg: 'Diagram', chart: 'Chart', table: 'Table', media: el.type === 'media' && el.kind === 'audio' ? 'Audio' : 'Video' }[el.type]))
     this.opsRow([el])
 
     // Lead with the element's OWN controls — the reason it was selected —
@@ -623,7 +641,7 @@ export class PropsPanel {
 
     // continuous loop animation
     const loop = el.fx?.loop
-    this.row('Loop', this.select(
+    this.row('Loop animation', this.select(
       ['none', 'dash-march', 'motion-path'],
       loop?.type ?? 'none',
       (v) => setFx({
@@ -827,7 +845,7 @@ export class PropsPanel {
     this.row('Weight', this.weightSelect(el))
     // Text fill: a solid colour, or a multi-stop gradient painted into the glyphs.
     const tgrad = el.colorGradient
-    this.row('Fill style', this.select(['solid', 'gradient'], tgrad ? 'gradient' : 'solid', (v) =>
+    this.row('Fill style', this.labeledSelect(fillStyles(), tgrad ? 'gradient' : 'solid', (v) =>
       this.mutate(el.id, (e) => {
         const tx = e as TextElement
         if (v === 'gradient') {
@@ -997,7 +1015,7 @@ export class PropsPanel {
   private buildShapeProps(el: ShapeElement) {
     this.section(t('Fill & stroke'))
     const grad = el.fillGradient
-    this.row('Fill style', this.select(['solid', 'gradient'], grad ? 'gradient' : 'solid', (v) =>
+    this.row('Fill style', this.labeledSelect(fillStyles(), grad ? 'gradient' : 'solid', (v) =>
       this.mutate(el.id, (e) => {
         const s = e as ShapeElement
         if (v === 'gradient') {
@@ -1599,12 +1617,15 @@ export class PropsPanel {
     this.row('URL', url)
 
     // playback
+    // Labels stay RAW English — row() translates them, and looks its tooltip up
+    // by the English label. Passing t(…) here would translate twice and miss
+    // ROW_TIPS in every locale but English.
     const toggle = (label: string, on: boolean, set: (v: boolean) => void) =>
       this.row(label, this.select(['off', 'on'], on ? 'on' : 'off', (v) => set(v === 'on')))
-    toggle(t('Controls'), el.controls !== false, (v) => this.mutate(el.id, (e) => { (e as MediaElement).controls = v ? undefined : false }, true))
-    toggle(t('Autoplay'), !!el.autoplay, (v) => this.mutate(el.id, (e) => { (e as MediaElement).autoplay = v || undefined }, true))
-    toggle(t('Loop'), !!el.loop, (v) => this.mutate(el.id, (e) => { (e as MediaElement).loop = v || undefined }, true))
-    toggle(t('Muted'), !!el.muted, (v) => this.mutate(el.id, (e) => { (e as MediaElement).muted = v || undefined }, true))
+    toggle('Controls', el.controls !== false, (v) => this.mutate(el.id, (e) => { (e as MediaElement).controls = v ? undefined : false }, true))
+    toggle('Autoplay', !!el.autoplay, (v) => this.mutate(el.id, (e) => { (e as MediaElement).autoplay = v || undefined }, true))
+    toggle('Loop', !!el.loop, (v) => this.mutate(el.id, (e) => { (e as MediaElement).loop = v || undefined }, true))
+    toggle('Muted', !!el.muted, (v) => this.mutate(el.id, (e) => { (e as MediaElement).muted = v || undefined }, true))
     const note = document.createElement('p')
     note.className = 'ed-hint'
     note.textContent = t('Autoplay runs only while presenting; browsers require “muted” for video to autoplay.')

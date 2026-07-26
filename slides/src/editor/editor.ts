@@ -1576,7 +1576,9 @@ export class Editor {
 
   /** Insert a media element that REFERENCES a URL (not embedded). */
   private promptMediaUrl(kind: 'video' | 'audio') {
-    const url = window.prompt(t('Paste the {kind} URL — it stays a link, the file is not embedded:', { kind }))?.trim()
+    // t(kind), not kind: 'video'/'audio' are model words here, and dropping
+    // them raw into a translated sentence leaves one English noun in it.
+    const url = window.prompt(t('Paste the {kind} URL — it stays a link, the file is not embedded:', { kind: t(kind) }))?.trim()
     if (!url) return
     this.insertMedia(kind, url)
   }
@@ -1593,7 +1595,7 @@ export class Editor {
         const mb = Math.round(file.size / (1024 * 1024))
         const ok = confirm(t(
           'This {kind} is {mb} MB. Embedding keeps it inside the .bento.html but makes the file large and slow to open and save.\n\nEmbed anyway? (Cancel, then paste a hosted URL in the panel to keep the deck small.)',
-          { kind, mb },
+          { kind: t(kind), mb }, // localise the noun — see promptMediaUrl
         ))
         if (!ok) { this.insertMedia(kind, ''); return } // empty element → panel URL field
       }
