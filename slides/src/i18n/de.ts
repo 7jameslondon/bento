@@ -675,6 +675,7 @@ export const de: Catalog = {
   "Available to add": "Zum Hinzufügen verfügbar",
   "Adding…": "Wird hinzugefügt…",
   "That language pack couldn’t be read.": "Dieses Sprachpaket konnte nicht gelesen werden.",
+  "That language pack failed its security check, so it wasn’t added.": "Dieses Sprachpaket hat die Sicherheitsprüfung nicht bestanden und wurde daher nicht hinzugefügt.",
   "That language pack was built for a different Bento app.": "Dieses Sprachpaket wurde für eine andere Bento-App erstellt.",
   "Manage languages…": "Sprachen verwalten…",
   "In this file": "In dieser Datei",

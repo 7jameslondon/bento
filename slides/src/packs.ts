@@ -20,7 +20,10 @@
 
 import { addPack, removePack, type LanguagePack } from '../../kernel/src/i18n.ts'
 import { readShellBlocks, type ShellBlock } from '../../kernel/src/save.ts'
-import { PACKED } from './i18n/packed'
+import { fetchPinned, verifySigned } from '../../kernel/src/update.ts'
+// Extension-explicit like the kernel imports above, so this module also loads
+// under plain node — scripts/test-packs.ts exercises the real thing.
+import { PACKED } from './i18n/packed.ts'
 
 /**
  * Where the release channel publishes the pack index and the packs.
@@ -38,9 +41,11 @@ export interface PackListing {
   url: string
   /** app version the pack was built against, for display */
   version?: string
+  /** hex sha256 of the pack's bytes, PINNED by the signed index */
+  sha256: string
 }
 
-export type PackError = 'offline' | 'bad-pack' | 'wrong-app'
+export type PackError = 'offline' | 'bad-pack' | 'wrong-app' | 'unverified'
 
 /** The block type carrying a pack inside a saved shell. */
 const BLOCK_TYPE = 'application/bento+lang'
@@ -55,6 +60,14 @@ const pending = new Set<string>()
  * Read packs already embedded in this file and register them. Runs at boot
  * from the i18n facade, before the first t(): a deck that arrives carrying
  * Japanese must show Japanese immediately, offline, with nothing fetched.
+ *
+ * DELIBERATELY NOT RE-VERIFIED. A pack was verified when it was added
+ * (signed index, pinned hash — fetchIndex/fetchPack below); once spliced it
+ * is part of the file, carrying exactly the trust the document itself does.
+ * Anyone who can rewrite this block can rewrite the whole shell — including
+ * the code doing the checking — so a check here would buy nothing, while
+ * requiring the network at boot would break offline use, which is the
+ * product's core promise. Verification belongs at the door, not in the room.
  */
 export function readPacksFromShell(): number {
   let n = 0
@@ -94,16 +107,44 @@ export function packsInFile(): Array<LanguagePack & { pending: boolean }> {
   return [...inFile.values()].map((p) => ({ ...p, pending: pending.has(p.lang) }))
 }
 
-/** Download and validate a pack. Does not decide where it goes. */
+/**
+ * Download and validate a pack. Does not decide where it goes.
+ *
+ * The bytes are accepted only if they hash to the sha256 the SIGNED index
+ * pinned for this listing (kernel fetchPinned). So the chain is: our embedded
+ * release key signed the index, the index pins this pack — substituting a
+ * pack means breaking the hash, and fixing the hash means breaking the
+ * signature. A hash we cannot match is 'unverified' and the pack is refused
+ * outright; there is no path where unverified strings reach the UI.
+ *
+ * A network failure and a failed check are told apart on purpose: one is
+ * "try again later", the other is "something is wrong with that download",
+ * and telling a user to check their connection when they are being served a
+ * forged pack would be a lie.
+ */
 export async function fetchPack(listing: PackListing): Promise<LanguagePack | PackError> {
   const url = /^https?:/.test(listing.url) ? listing.url : `${channel()}/${listing.url}`
+  if (!/^[0-9a-f]{64}$/i.test(listing.sha256 ?? '')) return 'unverified'
+
+  const bytes = await fetchPinned(url, listing.sha256)
+  if (!bytes) {
+    // fetchPinned refuses unreachable and unmatched alike — correct for it,
+    // useless for the sentence we have to show. One cheap HEAD on the FAILURE
+    // path only (the happy path stays a single download) separates "you are
+    // offline / it isn't published" from "those bytes are not the pack we
+    // were promised". Either way nothing unverified is returned.
+    try {
+      return (await fetch(url, { cache: 'no-store', method: 'HEAD' })).ok ? 'unverified' : 'offline'
+    } catch {
+      return 'offline'
+    }
+  }
+
   let pack: LanguagePack
   try {
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) return 'offline'
-    pack = (await res.json()) as LanguagePack
+    pack = JSON.parse(new TextDecoder().decode(bytes)) as LanguagePack
   } catch {
-    return 'offline' // no network, blocked, or not JSON
+    return 'bad-pack'
   }
   if (!pack?.lang || !pack.strings || typeof pack.strings !== 'object') return 'bad-pack'
   if (pack.app && pack.app !== 'slides') return 'wrong-app'
@@ -150,13 +191,41 @@ export function shellBlocksForPacks(): ShellBlock[] {
   }))
 }
 
-/** The channel's whole index, unfiltered. [] if unpublished or unreachable. */
+/**
+ * The channel's whole index, unfiltered. [] if unpublished, unreachable, or
+ * NOT PROPERLY SIGNED.
+ *
+ * The index is a signed envelope — `{payload, sig}`, ECDSA P-256 over the
+ * payload's bytes, verified against the release key already embedded in this
+ * shell (kernel verifySigned). It is the whole trust anchor for packs: every
+ * listing pins its pack's sha256, so signing the index signs the hashes, and
+ * a fetched pack is checked against its pinned hash. Same shape as the update
+ * manifest, same key, no second trust root.
+ *
+ * FAIL CLOSED, no legacy path. An unsigned or badly signed index yields NO
+ * listings — the Languages dialog then says there is nothing to add, which is
+ * exactly right: an index we cannot authenticate is an index we know nothing
+ * about. Nothing is published yet, so there is no old plain-array index in the
+ * world to be compatible with, and adding a permissive fallback would mean
+ * anyone who can answer for the channel picks the strings in your UI.
+ *
+ * The payload is a listing array, or an object carrying one under `packs` —
+ * which is the shape of the signed release manifest itself (sign-release.mjs
+ * puts pack hashes in the manifest payload), so one signed file can serve as
+ * both if the channel prefers that. Same envelope either way.
+ */
 async function fetchIndex(): Promise<PackListing[]> {
   try {
     const res = await fetch(`${channel()}/packs.json`, { cache: 'no-store' })
     if (!res.ok) return []
-    const list = (await res.json()) as PackListing[]
-    return Array.isArray(list) ? list.filter((p) => p?.lang && p?.url) : []
+    const payload = await verifySigned(await res.text(), 'language pack index')
+    const list = Array.isArray(payload) ? payload : (payload as { packs?: unknown })?.packs
+    if (!Array.isArray(list)) return []
+    // A listing with no usable pin can never be verified, so it can never be
+    // offered — drop it here rather than let it fail later at the Add button.
+    return (list as PackListing[]).filter(
+      (p) => p?.lang && p?.url && /^[0-9a-f]{64}$/i.test(p?.sha256 ?? ''),
+    )
   } catch {
     return []
   }
@@ -185,6 +254,13 @@ export async function availablePacks(): Promise<PackListing[]> {
  *
  * Refusing to fail is the whole point: any pack we cannot re-fetch is simply
  * KEPT at its current version. Degraded beats absent.
+ *
+ * That includes a pack that fails VERIFICATION — an unsigned index, or bytes
+ * that don't match their pinned hash. Keeping is not laxity: the pack already
+ * in the file was verified when it was added and has been travelling with the
+ * document ever since, so it is strictly the more trustworthy of the two. The
+ * new bytes are refused; the old ones stay. What must never happen — and does
+ * not — is an unverified pack being written into the file by the update flow.
  */
 export async function refreshPacksForVersion(version: string): Promise<{ refreshed: string[]; kept: string[] }> {
   const refreshed: string[] = []

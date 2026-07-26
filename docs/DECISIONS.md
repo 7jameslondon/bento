@@ -14,6 +14,35 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-26 — Side-loaded artifacts: sign the index, pin the bytes, fail closed
+
+Language packs are fetched over the network, so they get the **same two-step
+the app shell's own update already gets**: an envelope signed with the release
+key (`{payload, sig}`, ECDSA P-256 / SHA-256) whose payload pins each
+artifact's `sha256`, and a download that is accepted only if its bytes hash to
+that pin. Signature over the pin, pin over the bytes. **No second key and no
+second trust root** — `PUBLIC_KEY_JWK` in `kernel/src/update.ts` is it.
+
+The mechanism lives in the kernel (`verifySigned`, `fetchPinned`) because it is
+the same for anything side-loaded; the *policy* stays in the app
+(`slides/src/packs.ts`). Keep that boundary: the kernel helpers verify BYTES,
+they do not decide what is safe to use. Packs are DATA with a bounded failure
+mode (wrong words on screen), which is why a pack that fails a refresh is kept
+at its existing version rather than dropped. Anything side-loaded that ever
+carries CODE needs stricter policy — pinned at install, never auto-refreshed —
+and must not inherit the pack rules by reusing the same fetch.
+
+**Fail closed, no legacy path.** An unsigned or unpinned index yields no
+listings at all. Nothing is published yet, so there is no permissive fallback
+to keep — and one added later would mean whoever answers for the channel picks
+the strings in the UI.
+
+**A pack already inside a file is NOT re-verified** (`readPacksFromShell`). It
+was verified at the door, and once spliced it carries exactly the trust the
+document does — anyone who can rewrite that block can rewrite the checking
+code too. Re-verifying would need the network at boot, which breaks offline
+use. Proof rig: `node scripts/test-packs.ts` (throwaway key, real crypto).
+
 ## 2026-07-25 — i18n: a bundled core of 9 languages, everything else a signed pack
 
 The 7 non-English catalogs cost **115,572 B** of the shell even after key-once

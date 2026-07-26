@@ -84,6 +84,12 @@ jobs:
       - name: Splice conformance gate (spaces)
         run: node scripts/shell-gate.mjs spaces/dist-single/Bento_Spaces.bento.html
 
+      - name: Language pack verification rig
+        # Packs come off the network, so the signature + hash-pin chain is the
+        # only thing between a hostile channel and the strings in the UI.
+        # Tampered pack, tampered index, unsigned index — each must be refused.
+        run: node scripts/test-packs.ts
+
       - name: CRDT convergence rig
         # 40 seeds locally; deeper on CI where the seconds are free.
         run: SEEDS=300 node scripts/test-sync.ts

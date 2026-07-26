@@ -109,6 +109,51 @@ sha256, verified against the `PUBLIC_KEY_JWK` already embedded in every shell
 signs packs beside the shell, and the manifest gains a `packs` array listing
 `{lang, version, sha256, url}`. No new trust root, no second key.
 
+### What the client checks (implemented)
+
+The INDEX is signed; individual packs are not separately signed. The index is
+a signed envelope — `{payload: "<json string>", sig: "<base64>"}`, the exact
+shape `sign-release.mjs` already emits for the update manifest — and every
+listing in it pins its pack's `sha256`. So:
+
+```
+embedded release key  ->  signs the index
+index                 ->  pins each pack's sha256
+pinned sha256         ->  the bytes we accept
+```
+
+You cannot substitute a pack without breaking its hash, and you cannot fix the
+hash without breaking the signature. Two kernel helpers do it, and nothing
+else in the codebase does release-channel crypto:
+
+- `verifySigned(raw, what?)` — envelope + signature, returns the payload.
+- `fetchPinned(url, sha256)` — fetch, hash, compare; `null` on any mismatch.
+
+They verify BYTES. They do not decide what is safe to use — that policy is the
+caller's, and packs are DATA (see the decision log entry, 2026-07-26).
+
+`slides/src/packs.ts` composes them and **fails closed**: an unsigned index, a
+listing with no pin, or bytes that don't match yield nothing to add and a
+`'unverified'` error in the UI. There is no permissive fallback for an
+unsigned index — nothing is published yet, so there is nothing to be
+compatible with. The index payload may be a listing array or an object with a
+`packs` array, which is the manifest's own shape, so one signed file can serve
+as both.
+
+Two things deliberately NOT checked:
+
+- **Packs already inside a file** (`readPacksFromShell`). Verified at the
+  door; once spliced, a pack carries the trust the document does, and
+  re-verifying would require the network at boot — the opposite of the
+  product's promise.
+- **A refresh that fails.** `refreshPacksForVersion` keeps the pack the file
+  already holds rather than dropping it. The unverified bytes are refused; the
+  previously verified ones stay. Degraded beats absent.
+
+Rig: `node scripts/test-packs.ts` — tampered pack, tampered index, unsigned
+index, missing pin, and the good path, against real WebCrypto with a
+throwaway key standing in for the release key.
+
 ### Loading
 
 `registerI18n` already accepts a packed table (kernel). Pack loading adds a
