@@ -65,6 +65,24 @@ pre-1.0.
   legends, respects legend spacing and placement, and measures CJK legend text
   correctly so localized series names no longer overlap.
 
+- **Your decks look like themselves in Finder, Files and the Bento Tray app.**
+  Every Bento file used to thumbnail as the same dark box, because thumbnails
+  are drawn without running a page's JavaScript and, until Bento boots, every
+  deck genuinely is the same bytes plus the same boot splash. Saving now writes
+  a still picture of page one into the file, which is what those previews draw
+  instead — so a folder of decks is finally something you can read. It costs
+  about 14 KB on a typical deck (under 2% of the file), never more than 64 KB: a
+  page with a big photograph keeps its layout and its words and drops the
+  photograph rather than carrying it twice. Nothing changes when you open a
+  deck normally — the picture is written for software that can't run the file,
+  and is never shown to a reader.
+
+  **A password-protected deck gets no preview at all.** A readable picture of
+  the title page sitting next to the encrypted document would give away exactly
+  what the password is there to protect, so encrypted decks keep the plain dark
+  thumbnail — and a deck that had a preview loses it the moment you set a
+  password.
+
 - **Updating a file now suggests that file's own name.** When an update asks
   where to save, the dialog is pre-filled with the name of the deck you have
   open rather than one derived from its title — so a file called

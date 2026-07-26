@@ -32,6 +32,32 @@ names provisional.
 - `src/save.ts` — the self-save trick: clone the document at boot (`capturePristine`),
   swap the `#bento-doc` data block, re-serialize. JSON is `<`-escaped (`\u003c`) so it can
   never contain `</script>`. File System Access API first, download fallback.
+- `src/preview.ts` + kernel `registerPreview` — **static first-page preview for
+  file-manager thumbnails**. Thumbnailers (iOS Files, macOS QuickLook/Finder,
+  Bento Tray) render HTML with JS OFF, so every deck used to thumbnail as the
+  same boot splash. Every save now writes a still render of page one into the
+  shell, parked in `<noscript data-bento-preview>` — rendered only when
+  scripting is off, so with JS on the host node has ZERO element children (raw
+  text) and a 0×0 box: no flash, no layout, nothing for print/present to
+  exclude. Reuses `renderSlide` with `svgAsImage:true` (svg → one `<img>`,
+  media → poster/icon still) + `hidePlaceholders`; `staticize()` strips active
+  elements, runtime data-attrs and `on*`, and INLINES the few `.bento-*` rules
+  from styles.css (the runtime CSS ships deflated and is never inflated in
+  this mode). Fits an unknown viewport with
+  `transform:scale(calc(min(100vw,<aspect>vh)/<w>px))` — `<svg><foreignObject>`
+  was tried and is MANGLED by QuickLook's WebKit; verify with `qlmanage -t`,
+  not Chrome alone (Chrome 150's `--blink-settings=scriptEnabled=false` kills
+  `--screenshot`; use CDP `Emulation.setScriptExecutionDisabled`). GOTCHAS:
+  never strip `id` from the render — svg gradients/markers paint through
+  document-global `url(#…)`; the removal of an existing preview is
+  UNCONDITIONAL (replace-never-append: `capturePristine` already holds the last
+  save's copy, and a newly-encrypted deck must LOSE its preview).
+  **Encrypted decks NEVER get a preview** (`previewAllowed` = no password flag
+  AND body is not a `bento/enc` envelope) — a plaintext title slide beside the
+  ciphertext is the leak the password exists to prevent. `PREVIEW_BUDGET`
+  (64KB, model.ts) tiers the output: full → images dropped for tinted boxes →
+  title card. Guards: `scripts/test-preview.ts` + shell-gate's
+  preview-carrying-shell invariant. Full rationale in docs/DECISIONS.md.
 - `src/autosave.ts` (v0.9.8) — auto-save + local version history, IndexedDB
   (`bento-autosave`, two stores: `recovery` single-latest-per-docId, `versions`
   capped timeline). Editor debounces (2.5s) on `doc` events: writes a recovery

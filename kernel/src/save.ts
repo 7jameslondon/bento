@@ -90,7 +90,7 @@ export function readShellBlocks(type: string): Array<{ id: string; body: string;
 }
 
 /** Serialize a raw data-block body into an app shell. */
-function serializeBody(shell: Document, body: string, title: string): string {
+function serializeBody(shell: Document, body: string, doc: KernelDoc): string {
   const clone = shell.cloneNode(true) as Document
 
   // Runtime-injected DOM is not part of the shell (see TRANSIENT_SELECTOR).
@@ -126,8 +126,10 @@ function serializeBody(shell: Document, body: string, title: string): string {
   // <-escape so the JSON can never contain "</script>" and break the file.
   block.textContent = '\n' + body.replace(/</g, '\\u003c') + '\n'
 
+  writePreview(clone, body, doc)
+
   const titleEl = clone.querySelector('title')
-  if (titleEl) titleEl.textContent = title + ' — ' + appConfig().appName
+  if (titleEl) titleEl.textContent = doc.title + ' — ' + appConfig().appName
 
   const html = '<!DOCTYPE html>\n' + clone.documentElement.outerHTML
   // Belt-and-braces: an unescaped close tag anywhere in generated output would
@@ -138,6 +140,130 @@ function serializeBody(shell: Document, body: string, title: string): string {
   return html
 }
 
+// --- static first-page preview (file-manager thumbnails) ---------------------
+//
+// THE PROBLEM. A Bento file is one HTML document, and thumbnailers — iOS
+// Files, macOS QuickLook/Finder, the Bento Tray app — render HTML with
+// JavaScript DISABLED (verified: `qlmanage -t` renders <noscript> content).
+// Until our runtime boots, every deck genuinely IS the same bytes plus the
+// boot splash, so every deck thumbnailed as the same dark box.
+//
+// THE FIX. At save time we write a STATIC rendering of page one into the file
+// and park it inside a `<noscript>`. That element's contents are rendered only
+// when scripting is off, which is exactly the population we are addressing:
+// a real reader never sees it — not for a frame — so there is no flash to
+// suppress, no interaction with the splash's `.done`/`bsAuto` dismissal, and
+// nothing for print or present to exclude. When a thumbnailer runs scripts
+// after all, the preview is simply never rendered and we are back to today's
+// behaviour: a regression is not possible, only an improvement.
+//
+// It is shell FURNITURE, not document data: nothing here enters `#bento-doc`,
+// no format field is added, and a file saved by an older build (which has no
+// preview) opens identically.
+//
+// The kernel knows nothing about how any app draws a page. It owns the
+// placement, the replace-don't-append rule, the encryption veto and the
+// output-safety check; the app hands back a ready-made element.
+
+const PREVIEW_ATTR = 'data-bento-preview'
+
+/** Builds the app's static first-page rendering. Return null for "no preview". */
+export type PreviewProvider = (doc: KernelDoc) => HTMLElement | null
+
+let previewProvider: PreviewProvider | null = null
+
+/** Register the app's first-page renderer. Call once, at boot. Optional — an
+ *  app that registers nothing simply saves files without a preview. */
+export function registerPreview(fn: PreviewProvider): void {
+  previewProvider = fn
+}
+
+/**
+ * May this saved file carry a plaintext preview of its first page?
+ *
+ * NO for an encrypted deck, and this is the single most important rule here.
+ * The whole point of the `bento/enc` envelope is that the content is
+ * unreadable on disk without the password; rendering page one in plaintext
+ * beside the ciphertext would hand an attacker the title slide — usually the
+ * most disclosive page in the deck — and would do it silently, because the
+ * owner would never see the markup they were shipping. A missing thumbnail is
+ * the correct, expected cost of encrypting a file.
+ *
+ * Two independent tests, because they fail independently: the in-memory
+ * password flag covers the live session, and re-parsing the body covers any
+ * path that hands us an already-encrypted block without the flag set.
+ *
+ * Pure and exported so `scripts/test-preview.ts` can exercise it directly —
+ * the surrounding DOM work is not unit-testable in node, this decision is.
+ */
+export function previewAllowed(body: string, encrypted = isEncryptionActive()): boolean {
+  return !encrypted && parseEnvelope(body) === null
+}
+
+// Built by concatenation for the usual reason (AGENTS.md #1): these literals
+// must never appear in a Bento bundle, which is itself inline script.
+// Note the close forms carry no ">": an HTML parser ends a script element at
+// `</script` followed by whitespace, `/` or `>`, so `</script foo>` closes it
+// just as surely as the tidy form does.
+const SCRIPT_OPEN = '<scr' + 'ipt'
+const SCRIPT_CLOSE_START = '</scr' + 'ipt'
+const NOSCRIPT_CLOSE = '</nosc' + 'ript'
+
+/**
+ * Refuse any preview markup that could unbalance the file.
+ *
+ * The preview is generated from user content, so it is not shaped by us. Two
+ * ways it could corrupt the document: a `<script>`/`</script>` would break the
+ * open/close balance the frozen splice contract (and `scripts/shell-gate.mjs`)
+ * depends on, and a `</noscript>` would end the host element early, spilling
+ * the rest of the preview into the visible page. The app sanitizes its own
+ * output; this is the kernel refusing to take its word for it. Dropping the
+ * preview costs a thumbnail. Emitting it anyway could brick the file.
+ *
+ * Exported for `scripts/test-preview.ts`, like previewAllowed.
+ */
+export function previewIsSafe(html: string): boolean {
+  const lower = html.toLowerCase()
+  return !lower.includes(SCRIPT_OPEN) && !lower.includes(SCRIPT_CLOSE_START) && !lower.includes(NOSCRIPT_CLOSE)
+}
+
+function writePreview(clone: Document, body: string, doc: KernelDoc): void {
+  // REPLACE, NEVER APPEND. `capturePristine()` snapshots the document as it
+  // was loaded, so the shell we are cloning already carries the preview the
+  // PREVIOUS save wrote; appending would stack a new one on every ⌘S until the
+  // file was mostly stale previews. Removing unconditionally — before deciding
+  // whether to write a new one — is also how a preview correctly DISAPPEARS
+  // when a plaintext deck gains a password, or when an app stops providing
+  // one. Both of those are silent leaks if the removal is conditional.
+  for (const stale of Array.from(clone.querySelectorAll(`noscript[${PREVIEW_ATTR}]`))) stale.remove()
+
+  if (!previewProvider || !previewAllowed(body)) return
+
+  let el: HTMLElement | null = null
+  try {
+    el = previewProvider(doc)
+  } catch (err) {
+    // A preview is a nicety; a failed save is not. Never let rendering page
+    // one take the file down with it.
+    console.warn('bento: first-page preview failed, saving without one', err)
+    return
+  }
+  if (!el) return
+
+  const host = clone.createElement('noscript')
+  host.setAttribute(PREVIEW_ATTR, '1')
+  host.appendChild(clone.importNode(el, true))
+  if (!previewIsSafe(host.innerHTML)) {
+    console.warn('bento: first-page preview rejected as unsafe, saving without one')
+    return
+  }
+  // Straight after the splash it replaces, so a thumbnailer reaches it before
+  // the ~550KB of compressed payload at the end of the body.
+  const splash = clone.getElementById('bento-splash')
+  if (splash?.parentNode) splash.parentNode.insertBefore(host, splash.nextSibling)
+  else (clone.body ?? clone.documentElement).appendChild(host)
+}
+
 /**
  * Serialize `doc` into an arbitrary app shell (a parsed Bento HTML document).
  * Used with the boot-time pristine copy on every save, and by the self-update
@@ -145,7 +271,7 @@ function serializeBody(shell: Document, body: string, title: string): string {
  * PLAIN output — encryption-aware callers use serializeDocInto/serializeAuto.
  */
 export function serializeWith(shell: Document, doc: KernelDoc): string {
-  return serializeBody(shell, JSON.stringify(doc), doc.title)
+  return serializeBody(shell, JSON.stringify(doc), doc)
 }
 
 /** The full .bento.html file content with `doc` embedded (plain). */
@@ -252,7 +378,7 @@ export async function serializeDocInto(shell: Document, doc: KernelDoc): Promise
   const body = encPassword
     ? await encryptBody(JSON.stringify(doc), encPassword)
     : JSON.stringify(doc)
-  return serializeBody(shell, body, doc.title)
+  return serializeBody(shell, body, doc)
 }
 
 /** Encryption-aware serializeFile. */

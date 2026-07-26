@@ -14,6 +14,74 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-26 — File-manager thumbnails: a `<noscript>` render of page one, written at save time
+
+**Decided:** 2026-07-26. Kernel zone (`kernel/src/save.ts`), so it binds every
+Bento app; the drawing is per-app (`slides/src/preview.ts`).
+
+**The problem.** Thumbnailers render a document's HTML but do not run its
+JavaScript, so every Bento file thumbnailed as the same dark box — correctly,
+because before the runtime boots every deck *is* the same bytes plus the boot
+splash. Confirmed on iOS, and confirmed that the iOS-side escape hatch does not
+exist: an image attached via `UIDocument.fileAttributesToWrite` under
+`NSURLThumbnailDictionaryKey` is accepted and then silently dropped for local
+files (only `com.apple.lastuseddate` survives on disk). **The fix has to live
+in the file.** So `serializeBody` now writes a static rendering of page one
+into the shell on every save, and it fixes every platform at once with no
+native extension anywhere.
+
+**`<noscript>`, not "render it and let JS remove it".** The obvious design —
+always paint the preview, have the runtime delete it at boot — flashes page one
+in front of every reader on every open, for as long as the 600 KB payload takes
+to inflate. `<noscript>` has exactly the semantics wanted: its contents are
+rendered only when scripting is off, which is precisely the audience.
+Empirically the DOM proves it, not just the spec — with scripting on the host
+node has **zero element children** (its content is one raw text node) and a
+bounding box of 0×0, so there is nothing to flash, nothing in layout, nothing
+for print or present to exclude. The cost is that a thumbnailer which *does*
+run scripts sees no preview — i.e. today's behaviour. A regression is not
+possible, only an improvement.
+
+**Scaling: `transform: scale(calc(min(100vw, <aspect>vh) / <width>px))`.**
+CSS Values 4 length-over-length division yields the plain `<number>` `scale()`
+needs, so the whole page scales as one unit and every inline px the renderer
+emitted is left alone. **`<svg viewBox><foreignObject>` was tried first and does
+not work**: Chrome renders it correctly, QuickLook's WebKit does not
+(absolutely-positioned children disappeared, content scaled non-uniformly), and
+QuickLook is the renderer this feature exists to serve. Verify changes here
+against `qlmanage -t -s 640 -o <dir> <file>` — the real macOS thumbnailer, and
+the only honest test. Chrome's `--blink-settings=scriptEnabled=false` suppresses
+`--screenshot` entirely in Chrome 150; drive `Emulation.setScriptExecutionDisabled`
+over CDP instead.
+
+**Encrypted decks get NO preview — the load-bearing rule.** A plaintext
+rendering of page one beside a `bento/enc` envelope hands over the title slide,
+usually the most disclosive page, and does it invisibly. `previewAllowed()`
+checks the in-memory password flag AND re-parses the body as an envelope,
+because those fail independently. Removal of any existing preview is
+UNCONDITIONAL and happens before that decision, so a deck that gains a password
+loses its preview on the next save.
+
+**Shell furniture, not format.** Nothing enters `#bento-doc`; no format field
+is added; old files open unchanged; an app that registers no provider (spaces)
+saves as before. The preview is replaced, never appended — `capturePristine()`
+snapshots the file as loaded, so the clone already carries the previous save's
+copy.
+
+**Budget: 64 KB** (`PREVIEW_BUDGET`, slides/src/model.ts), ~10% of the shipped
+shell. Measured: starter deck 25 KB (2.6% of the file); a page-one chart 11 KB;
+a table 16 KB; a page with a 2.5 MB photograph degrades to 1.7 KB. Over budget,
+page one re-renders with raster payloads replaced by tinted boxes; over it
+again, a title card. Downscaling a hero photo instead would be
+better and was NOT done: image decode is async and `serializeWith`/
+`serializeFile` are synchronous (update.ts, `window.bento.serialize()`), so an
+async provider is a kernel API change of its own.
+
+Guards: `scripts/test-preview.ts` (encryption veto + the refusal to emit markup
+carrying a script tag or `</noscript>`), and `scripts/shell-gate.mjs`, which
+now also proves a preview-carrying file satisfies the splice contract and
+asserts both rules are still wired into the save path.
+
 ## 2026-07-26 — A language pack lives in the FILE and nowhere else
 
 No browser-local install. A "keep it on this computer" option (localStorage)

@@ -109,6 +109,13 @@ jobs:
         # Tampered pack, tampered index, unsigned index — each must be refused.
         run: node scripts/test-packs.ts
 
+      - name: First-page preview rig
+        # Every save writes a static render of page one for file-manager
+        # thumbnails. Two decisions in that path fail silently: an encrypted
+        # deck must never carry one, and author content must never reach the
+        # file carrying a script tag.
+        run: node scripts/test-preview.ts
+
       - name: CRDT convergence rig
         # 40 seeds locally; deeper on CI where the seconds are free.
         run: SEEDS=300 node scripts/test-sync.ts
