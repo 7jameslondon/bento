@@ -20,8 +20,14 @@ import { addPack, removePack, type LanguagePack } from '../../kernel/src/i18n.ts
 
 /** Installed packs, keyed by language. */
 const KEY = 'bento-packs'
-/** Where the release channel publishes the pack index and the packs. */
-const CHANNEL = 'https://bento.page/releases/slides'
+/**
+ * Where the release channel publishes the pack index and the packs.
+ * Dev override: localStorage 'bento-packs-url' — the same convention the
+ * updater uses for 'bento-update-url', so a local channel can be pointed at
+ * without a rebuild.
+ */
+const channel = (): string =>
+  localStorage.getItem('bento-packs-url') ?? 'https://bento.page/releases/slides'
 
 export interface PackListing {
   lang: string
@@ -77,7 +83,7 @@ export function installedPacks(): LanguagePack[] {
  * this boundary — same contract as SyncNotice).
  */
 export async function installPack(listing: PackListing): Promise<null | 'offline' | 'bad-pack' | 'wrong-app' | 'no-space'> {
-  const url = /^https?:/.test(listing.url) ? listing.url : `${CHANNEL}/${listing.url}`
+  const url = /^https?:/.test(listing.url) ? listing.url : `${channel()}/${listing.url}`
   let pack: LanguagePack
   try {
     const res = await fetch(url, { cache: 'no-store' })
@@ -118,7 +124,7 @@ export function uninstallPack(lang: string): boolean {
  */
 export async function availablePacks(): Promise<PackListing[]> {
   try {
-    const res = await fetch(`${CHANNEL}/packs.json`, { cache: 'no-store' })
+    const res = await fetch(`${channel()}/packs.json`, { cache: 'no-store' })
     if (!res.ok) return []
     const list = (await res.json()) as PackListing[]
     if (!Array.isArray(list)) return []
