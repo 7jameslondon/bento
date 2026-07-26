@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 The Bento authors
+// Thai — a LANGUAGE PACK, not bundled: nothing imports this file, so it
+// never enters the module graph. scripts/build-i18n.mjs --packs emits it as
+// downloadable JSON. See docs/i18n-packs.md.
+//
+// Machine-drafted and NOT reviewed by a native speaker. Terminology follows
+// what Thai speakers see in Google Slides and Canva (สไลด์, งานนำเสนอ,
+// เลย์เอาต์, องค์ประกอบ) rather than Microsoft's purist coinages (ภาพนิ่ง).
+//
+// Thai has NO grammatical plural, so counted strings need no plural
+// machinery — but a numeral must be followed by a CLASSIFIER, so counts are
+// phrased with the right one per noun (สไลด์ for slides, คน for people,
+// รายการ for pasted items, วลี for phrases).
+//
+// Thai is written without spaces between words, so a long unbroken run wraps
+// badly in the narrow side panels: strings are kept SHORT, and spaces are
+// used only to separate clauses. Sentence-final periods are dropped per
+// normal Thai UI convention. Digits stay Western (0-9) — page and slide
+// numbers are document content and must read the same for every viewer.
+import type { Catalog } from '../../i18n'
+
+export const label = 'ไทย'
+
+export const strings: Catalog = {
+  "Backed up in this browser": "สำรองไว้ในเบราว์เซอร์นี้แล้ว",
+  "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "มีการแก้ไขที่ยังไม่บันทึก — เก็บไว้ในเบราว์เซอร์นี้เมื่อ {when} และจะเสนอให้กู้คืนเมื่อเปิดใหม่ ⌘S ดาวน์โหลดสำเนาที่อัปเดตแล้ว",
+  "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "มีการแก้ไขที่ยังไม่บันทึก — ⌘S ดาวน์โหลดสำเนาที่อัปเดตแล้ว (เบราว์เซอร์นี้เขียนทับไฟล์ไม่ได้)",
+  "Save — download an updated copy (⌘S). This browser can’t rewrite the open file.": "บันทึก — ดาวน์โหลดสำเนาที่อัปเดตแล้ว (⌘S) เบราว์เซอร์นี้เขียนทับไฟล์ที่เปิดอยู่ไม่ได้",
+  "This browser can’t rewrite files in place. ⌘S will download an updated copy instead — your work is also kept in this browser and offered back if you reopen.": "เบราว์เซอร์นี้เขียนทับไฟล์ในที่เดิมไม่ได้ ⌘S จะดาวน์โหลดสำเนาที่อัปเดตแล้วแทน — งานของคุณยังถูกเก็บไว้ในเบราว์เซอร์นี้และจะเสนอให้กู้คืนเมื่อเปิดใหม่",
+  "Got it": "รับทราบ",
+  "What’s new →": "มีอะไรใหม่ →",
+  "Read the release notes for v{v} (opens in a new tab)": "อ่านบันทึกรุ่น v{v} (เปิดในแท็บใหม่)",
+  "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "รูปภาพนี้ใหญ่เกินกว่าจะแชร์แบบสดได้ (สูงสุดราว 1 MB) ระบบบันทึกไว้ในสำเนาของคุณ แต่ผู้ร่วมงานจะไม่เห็น",
+  "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "การแก้ไขนี้ใหญ่เกินกว่าจะแชร์แบบสดได้ (สูงสุดราว 1 MB) ระบบบันทึกไว้ในสำเนาของคุณ แต่ผู้ร่วมงานจะไม่เห็น",
+  "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "เซสชันสดนี้เต็มแล้ว การแก้ไขของคุณถูกบันทึกไว้ในสำเนาของคุณ แต่ผู้ร่วมงานจะไม่เห็น",
+  "The live session couldn’t store that change. It’s saved in your copy, but collaborators won’t see it.": "เซสชันสดเก็บการแก้ไขนั้นไม่ได้ ระบบบันทึกไว้ในสำเนาของคุณ แต่ผู้ร่วมงานจะไม่เห็น",
+  "Too many changes at once — live sync is catching up.": "แก้ไขพร้อมกันมากเกินไป — การซิงค์สดกำลังตามให้ทัน",
+  "Backdrop": "เบลอฉากหลัง",
+  "Blend": "โหมดผสม",
+  "Outline": "เส้นขอบ",
+  "Outline color": "สีเส้นขอบ",
+  "Interior": "ภายใน",
+  "filled": "ทึบ",
+  "hollow": "โปร่ง",
+  "Reduced motion: on": "ลดการเคลื่อนไหว: เปิด",
+  "Reduced motion: off": "ลดการเคลื่อนไหว: ปิด",
+  "Reduce motion — pause animations (also honours your OS setting)": "ลดการเคลื่อนไหว — หยุดแอนิเมชัน (ตามการตั้งค่าระบบด้วย)",
+  "Reduce motion (M)": "ลดการเคลื่อนไหว (M)",
+  "Visit bento.page (opens in a new tab)": "ไปที่ bento.page (เปิดในแท็บใหม่)",
+  "New to Bento? Find templates, the gallery and the AI editing guide at {home} — or ⭐ it on {gh}.": "เพิ่งเริ่มใช้ Bento? ดูเทมเพลต แกลเลอรี และคู่มือแก้ไขด้วย AI ได้ที่ {home} — หรือกด ⭐ ที่ {gh}",
+  "Morph": "มอร์ฟ",
+  "Morph id": "id มอร์ฟ",
+  "Pair with": "จับคู่กับ",
+  "(pick an element)": "(เลือกองค์ประกอบ)",
+  "Morphs as <code>{id}</code>, overriding its own id. Set it back to <code>{own}</code> to clear.": "มอร์ฟในชื่อ <code>{id}</code> แทน id ของตัวเอง ตั้งกลับเป็น <code>{own}</code> เพื่อล้างค่า",
+  "Elements sharing a morph id morph into each other across slides. Change this (or pick below) to pair with an element on another slide.": "องค์ประกอบที่ใช้ id มอร์ฟเดียวกันจะมอร์ฟหากันข้ามสไลด์ เปลี่ยนค่านี้ (หรือเลือกด้านล่าง) เพื่อจับคู่กับองค์ประกอบบนสไลด์อื่น",
+  "Morph id can’t be empty.": "id มอร์ฟว่างไม่ได้",
+  "Another element on this slide already uses that morph id.": "มีองค์ประกอบอื่นบนสไลด์นี้ใช้ id มอร์ฟนั้นอยู่แล้ว",
+  "<b>Morph</b> animates elements that appear on both this slide and the previous one (copy a slide, then move things around).": "<b>มอร์ฟ</b> จะทำแอนิเมชันให้องค์ประกอบที่มีอยู่ทั้งบนสไลด์นี้และสไลด์ก่อนหน้า (ลองทำสำเนาสไลด์แล้วย้ายตำแหน่งดู)",
+  "A <b>state</b> is hidden from arrow-key flow — viewers reach it by clicking a linked element. Shared element ids morph between states.": "<b>สถานะ</b> จะไม่อยู่ในลำดับการกดปุ่มลูกศร — ผู้ชมเข้าถึงได้ด้วยการคลิกองค์ประกอบที่ลิงก์ไว้ องค์ประกอบที่ใช้ id ร่วมกันจะมอร์ฟระหว่างสถานะ",
+  "A deck needs at least one slide": "งานนำเสนอต้องมีอย่างน้อยหนึ่งสไลด์",
+  "About bento/slides — version, updates, licenses": "เกี่ยวกับ bento/slides — เวอร์ชัน อัปเดต สัญญาอนุญาต",
+  "Align": "จัดแนว",
+  "Ambient": "ต่อเนื่อง",
+  "Angle": "มุม",
+  "Apply": "นำไปใช้",
+  "Arrange": "จัดเรียง",
+  "Arrow": "ลูกศร",
+  "Background": "พื้นหลัง",
+  "Black": "ดำ",
+  "Blur": "เบลอ",
+  "Bold": "ตัวหนา",
+  "Built-in": "ในตัว",
+  "Bundle a .woff2/.woff/.ttf/.otf into this file and use it here": "ฝังไฟล์ .woff2/.woff/.ttf/.otf ไว้ในไฟล์นี้แล้วใช้ที่นี่",
+  "Change the name used for your new comments and replies": "เปลี่ยนชื่อที่ใช้กับความคิดเห็นและการตอบกลับใหม่ของคุณ",
+  "Chart": "แผนภูมิ",
+  "Check for updates": "ตรวจหาอัปเดต",
+  "Check for updates automatically at launch": "ตรวจหาอัปเดตอัตโนมัติเมื่อเปิดใช้งาน",
+  "Checked automatically at launch — you're on the latest version (v{v}).": "ตรวจอัตโนมัติเมื่อเปิดแล้ว — คุณใช้เวอร์ชันล่าสุดอยู่ (v{v})",
+  "Checking…": "กำลังตรวจ…",
+  "Checks contact the release server and send nothing about you or this document — no ids, no telemetry.": "การตรวจสอบจะติดต่อเซิร์ฟเวอร์รุ่นและไม่ส่งข้อมูลใดๆ เกี่ยวกับคุณหรือเอกสารนี้ — ไม่มี id ไม่มีการเก็บสถิติ",
+  "Click to reset": "คลิกเพื่อรีเซ็ต",
+  "Color": "สี",
+  "Comment": "ความคิดเห็น",
+  "Comment (C) — click an element or a spot on the slide": "ความคิดเห็น (C) — คลิกองค์ประกอบหรือจุดบนสไลด์",
+  "Comment · element": "ความคิดเห็น · องค์ประกอบ",
+  "Comment · point ({x}, {y})": "ความคิดเห็น · จุด ({x}, {y})",
+  "Comment · slide": "ความคิดเห็น · สไลด์",
+  "Comment:": "ความคิดเห็น:",
+  "Copied ✓": "คัดลอกแล้ว ✓",
+  "Copies this deck as plain JSON — paste it into an AI chat or any tool, then bring the edited JSON back here.": "คัดลอกงานนำเสนอนี้เป็น JSON ธรรมดา — วางลงในแชต AI หรือเครื่องมือใดก็ได้ แล้วนำ JSON ที่แก้ไขแล้วกลับมาที่นี่",
+  "Copy document JSON": "คัดลอก JSON ของเอกสาร",
+  "Corner radius": "ความโค้งมุม",
+  "Couldn't check: {m}": "ตรวจสอบไม่สำเร็จ: {m}",
+  "Couldn’t access the clipboard": "เข้าถึงคลิปบอร์ดไม่ได้",
+  "Count up": "นับเลขขึ้น",
+  "Custom ({n})": "กำหนดเอง ({n})",
+  "Data": "ข้อมูล",
+  "Default set": "ชุดเริ่มต้น",
+  "Delete": "ลบ",
+  "Delete slide": "ลบสไลด์",
+  "Delete this layout": "ลบเลย์เอาต์นี้",
+  "Delete this slide? {parts}.": "ลบสไลด์นี้ไหม {parts}",
+  "Dissolve the group (⇧⌘G)": "ยกเลิกการจัดกลุ่ม (⇧⌘G)",
+  "Document replaced — ⌘Z undoes": "แทนที่เอกสารแล้ว — ⌘Z เพื่อเลิกทำ",
+  "Download updated copy": "ดาวน์โหลดสำเนาที่อัปเดต",
+  "Downloaded ✓": "ดาวน์โหลดแล้ว ✓",
+  "Downloads a backup of the current version, then rewrites this file on disk as the new version — document untouched.": "ดาวน์โหลดสำรองของเวอร์ชันปัจจุบัน แล้วเขียนทับไฟล์นี้บนดิสก์เป็นเวอร์ชันใหม่ — ตัวเอกสารไม่ถูกแตะต้อง",
+  "Downloads the new version with this document inside. The file you have now is not touched.": "ดาวน์โหลดเวอร์ชันใหม่พร้อมเอกสารนี้อยู่ข้างใน ไฟล์ที่คุณมีอยู่ตอนนี้จะไม่ถูกแตะต้อง",
+  "Drag anchor points on the slide; double-click adds and removes points": "ลากจุดยึดบนสไลด์ ดับเบิลคลิกเพื่อเพิ่มหรือลบจุด",
+  "Drag to resize · double-click to reset": "ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต",
+  "Duplicate": "ทำสำเนา",
+  "Duplicate slide": "ทำสำเนาสไลด์",
+  "Duplicates this slide as a hidden interactive state and links the selected element to it": "ทำสำเนาสไลด์นี้เป็นสถานะโต้ตอบที่ซ่อนอยู่ และลิงก์องค์ประกอบที่เลือกไปยังสถานะนั้น",
+}
