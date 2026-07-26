@@ -10,7 +10,7 @@
 //
 // Thai has NO grammatical plural, so counted strings need no plural
 // machinery — but a numeral must be followed by a CLASSIFIER, so counts are
-// phrased with the right one per noun (สไลด์ for slides, คน for people,
+// phrased with the right one per noun (แผ่น for slides, คน for people,
 // รายการ for pasted items, วลี for phrases).
 //
 // Thai is written without spaces between words, so a long unbroken run wraps
