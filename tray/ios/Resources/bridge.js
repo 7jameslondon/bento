@@ -91,8 +91,19 @@
         }
         return {
           async write(data) {
-            // the params form: {type:'write'|'seek'|'truncate', data, position, size}
-            if (data && typeof data === 'object' && typeof data.type === 'string') {
+            // The params form is {type:'write'|'seek'|'truncate', data, position, size}.
+            //
+            // A BLOB IS ALSO AN OBJECT WITH A STRING `type` — its MIME type —
+            // so it must be excluded explicitly and the three type values
+            // matched exactly. Testing only `typeof data.type === 'string'`
+            // made `new Blob([html], {type: 'text/html'})` parse as params
+            // whose `.data` is undefined, so asText() returned '' and the
+            // document was written EMPTY. That is precisely the blob
+            // kernel/src/save.ts writes, so every real save through this
+            // polyfill truncated the user's file to zero bytes.
+            const params = data && typeof data === 'object' && !(data instanceof Blob) &&
+              (data.type === 'write' || data.type === 'seek' || data.type === 'truncate')
+            if (params) {
               if (data.type === 'seek') { pos = data.position || 0; return }
               if (data.type === 'truncate') { buf = buf.slice(0, data.size || 0); if (pos > buf.length) pos = buf.length; return }
               if (typeof data.position === 'number') pos = data.position
