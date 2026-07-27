@@ -352,31 +352,37 @@ function checkEscapeIsImplemented() {
 // --- invariant 5: a preview-carrying shell ---------------------------------
 //
 // The THIRD class of plaintext content a saved file carries: the static
-// first-page preview `kernel/src/save.ts` writes into a
-// `<noscript data-bento-preview>` so file managers can thumbnail the deck
-// (docs/DECISIONS.md). Like a language pack it is not shaped by us — it is
-// rendered from whatever the author typed on page one — but unlike a pack it
-// is HTML, not JSON in a script block, so the `<` escape does not and
-// cannot apply to it. Its safety rests on the kernel REFUSING to emit markup
-// containing a script tag or a `</noscript>`, which is what this checks.
+// first-page preview `kernel/src/save.ts` writes as a `[data-bento-preview]`
+// element, followed by a parser-blocking remover script that deletes it before
+// the page is ever painted (docs/DECISIONS.md). Like a language pack it is not
+// shaped by us — it is rendered from whatever the author typed on page one —
+// but unlike a pack it is HTML, not JSON in a script block, so the `<`
+// escape does not and cannot apply to it. Its safety rests on the kernel
+// REFUSING to emit markup containing a script tag, which is what this checks —
+// and that refusal carries MORE weight now the preview lands in the live DOM
+// instead of sitting inert inside a `<noscript>`.
 
 const NOSCRIPT_CLOSE = '</nosc' + 'ript>'
+const SCRIPT_OPEN_TAG = '<scr' + 'ipt'
 
 /** A preview whose content came from a hostile deck: entity-escaped exactly as
  *  a DOM serializer escapes text, plus quotes, RTL, emoji and separators. */
 const ADVERSARIAL_PREVIEW =
-  `<noscript data-bento-preview="1"><div style="position:fixed;left:0;top:0;background:#0D1B2E">` +
+  `<div data-bento-preview="1"><div style="position:fixed;left:0;top:0;background:#0D1B2E">` +
   `<div>&lt;/script&gt; &lt;script&gt;alert(1)&lt;/script&gt; ` +
   `&lt;script type="application/bento+json" id="bento-doc"&gt;{"hijacked":true}&lt;/script&gt;` +
   `&lt;/noscript&gt; &lt;!-- --&gt; &lt;![CDATA[ &amp; &quot; ' \` \\ ` +
   `مرحبا שלום 🎌 a b c</div>` +
-  `</div>${NOSCRIPT_CLOSE}`
+  `</div></div>` +
+  // the remover that now ships beside every preview: a REAL script element,
+  // so the shell's open/close balance has to survive one more of them
+  `${SCRIPT_OPEN_TAG} data-bento-preview="1">/* remover */${SCRIPT_CLOSE}`
 
 /** …and the same content with the escapes NOT applied — what the kernel's
  *  `previewIsSafe` refusal exists to keep out of a file. */
 const UNSAFE_PREVIEW =
-  `<noscript data-bento-preview="1"><div>${SCRIPT_CLOSE} ` +
-  `${DOC_BLOCK_OPEN}{"hijacked":true}${SCRIPT_CLOSE}</div>${NOSCRIPT_CLOSE}`
+  `<div data-bento-preview="1"><div>${SCRIPT_CLOSE} ` +
+  `${DOC_BLOCK_OPEN}{"hijacked":true}${SCRIPT_CLOSE}</div></div>`
 
 /** Insert a preview where `writePreview` does — straight after the splash. */
 const withPreview = (html, preview) =>
@@ -429,6 +435,12 @@ function checkPreviewRulesAreImplemented() {
     fail('kernel/src/save.ts previewAllowed no longer checks BOTH the password flag and the body envelope')
   if (!/previewIsSafe\(host\.innerHTML\)/.test(text))
     fail('kernel/src/save.ts no longer refuses unsafe first-page preview markup')
+  // The preview is a full-bleed overlay. Since it left <noscript> it is live
+  // markup, and the remover is the ONLY thing keeping it off a reader's screen.
+  if (!/PREVIEW_REMOVER/.test(text) || !/removeChild/.test(text))
+    fail('kernel/src/save.ts no longer emits the preview remover — every reader would stare at page one')
+  if (!/insertBefore\(remover, host\.nextSibling\)/.test(text))
+    fail('kernel/src/save.ts no longer places the remover immediately after the preview — a frame could paint between the two')
 }
 
 /** Throws with a GATE: message on the first violated invariant. */

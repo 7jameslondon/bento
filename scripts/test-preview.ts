@@ -16,8 +16,9 @@
 //      every password-protected deck ever saved, and the owner would have no
 //      way to notice.
 //   2. THE OUTPUT REFUSAL. The preview is generated from author content. A
-//      script tag or a `</noscript>` reaching the file unbalances it and
-//      breaks the frozen splice contract every shipped updater relies on.
+//      script tag reaching the file unbalances it and breaks the frozen
+//      splice contract every shipped updater relies on. `</noscript>` is
+//      still refused: it costs nothing and older files carry one.
 //
 // The rest of the feature — laying the page out, fitting it to a viewport,
 // staying inside the byte budget — needs a DOM and is verified in a browser
@@ -95,7 +96,7 @@ ok(previewIsSafe('<div>مرحبا שלום 🎌 a b c</div>') === true, 'RTL
 ok(previewIsSafe(`<div>${SCRIPT_CLOSE}</div>`) === false, 'a bare script close is refused')
 ok(previewIsSafe(`<div>${SCRIPT_OPEN}alert(1)${SCRIPT_CLOSE}</div>`) === false, 'a script element is refused')
 ok(previewIsSafe(`<div>${NOSCRIPT_CLOSE}<h1>escaped</h1></div>`) === false,
-  'a noscript close is refused — it would end the host and spill into the page')
+  'a noscript close is refused — older files park the preview in one')
 
 // Case and attribute variants: an HTML parser ends a script element at
 // `</script` regardless of case or what follows, so the check must too.

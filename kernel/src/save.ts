@@ -212,13 +212,19 @@ const NOSCRIPT_CLOSE = '</nosc' + 'ript'
 /**
  * Refuse any preview markup that could unbalance the file.
  *
- * The preview is generated from user content, so it is not shaped by us. Two
- * ways it could corrupt the document: a `<script>`/`</script>` would break the
- * open/close balance the frozen splice contract (and `scripts/shell-gate.mjs`)
- * depends on, and a `</noscript>` would end the host element early, spilling
- * the rest of the preview into the visible page. The app sanitizes its own
- * output; this is the kernel refusing to take its word for it. Dropping the
- * preview costs a thumbnail. Emitting it anyway could brick the file.
+ * The preview is generated from user content, so it is not shaped by us. A
+ * `<script>`/`</script>` in it would break the open/close balance the frozen
+ * splice contract (and `scripts/shell-gate.mjs`) depends on. `</noscript>` is
+ * still refused although the preview no longer lives in a `<noscript>`: it
+ * costs nothing, and a document written by an older Bento may still carry one.
+ *
+ * This check got MORE load-bearing when the preview left `<noscript>`. It is no
+ * longer inert markup that only a scripting-less renderer ever parses — it now
+ * lands in the live DOM of every reader's page until the remover runs.
+ *
+ * The app sanitizes its own output; this is the kernel refusing to take its
+ * word for it. Dropping the preview costs a thumbnail. Emitting it anyway could
+ * brick the file.
  *
  * Exported for `scripts/test-preview.ts`, like previewAllowed.
  */
@@ -226,6 +232,20 @@ export function previewIsSafe(html: string): boolean {
   const lower = html.toLowerCase()
   return !lower.includes(SCRIPT_OPEN) && !lower.includes(SCRIPT_CLOSE_START) && !lower.includes(NOSCRIPT_CLOSE)
 }
+
+/**
+ * Deletes the preview, and itself, the instant the parser reaches it.
+ *
+ * Parser-BLOCKING on purpose: a classic inline script placed immediately after
+ * the preview runs before the parser continues, so the browser never paints a
+ * frame containing it. That is what makes this free for readers.
+ *
+ * It is written as a string rather than built from a template because it must
+ * stay one line and contain no `</script>`.
+ */
+const PREVIEW_REMOVER =
+  `(function(){var a=document.querySelectorAll('[${PREVIEW_ATTR}]');` +
+  `for(var i=a.length;i--;){var n=a[i];if(n.parentNode)n.parentNode.removeChild(n)}})()`
 
 function writePreview(clone: Document, body: string, doc: KernelDoc): void {
   // REPLACE, NEVER APPEND. `capturePristine()` snapshots the document as it
@@ -235,7 +255,10 @@ function writePreview(clone: Document, body: string, doc: KernelDoc): void {
   // whether to write a new one — is also how a preview correctly DISAPPEARS
   // when a plaintext deck gains a password, or when an app stops providing
   // one. Both of those are silent leaks if the removal is conditional.
-  for (const stale of Array.from(clone.querySelectorAll(`noscript[${PREVIEW_ATTR}]`))) stale.remove()
+  // The selector is deliberately attribute-only: it must sweep the host AND the
+  // remover script beside it, and it must still find previews written by an
+  // older Bento, which parked them in a <noscript>.
+  for (const stale of Array.from(clone.querySelectorAll(`[${PREVIEW_ATTR}]`))) stale.remove()
 
   if (!previewProvider || !previewAllowed(body)) return
 
@@ -250,18 +273,44 @@ function writePreview(clone: Document, body: string, doc: KernelDoc): void {
   }
   if (!el) return
 
-  const host = clone.createElement('noscript')
+  // ORDINARY MARKUP, NOT <noscript>, AND A PARSER-BLOCKING REMOVER.
+  //
+  // `<noscript>` was the obvious home and it is wrong here. It renders only
+  // where scripting is DISABLED, and iOS — the platform this feature exists for
+  // — satisfies neither half of that: probed with a page whose inline script
+  // repaints it, the iOS thumbnailer renders neither the script's result nor
+  // the <noscript>, so a deck thumbnailed as its boot splash no matter what we
+  // put in the noscript.
+  //
+  // Since that thumbnailer runs no script, plain markup survives for it. And
+  // since every real reader DOES run script, a parser-blocking inline remover
+  // placed immediately after deletes the preview before the browser paints a
+  // frame containing it. Both audiences get the right answer with no flash and
+  // no compromise — which the <noscript> version could not manage.
+  //
+  // A reader with scripting genuinely off keeps the preview on screen, exactly
+  // as before: without scripts the deck cannot render at all, so a still of
+  // page one is the best available answer rather than a regression.
+  const host = clone.createElement('div')
   host.setAttribute(PREVIEW_ATTR, '1')
   host.appendChild(clone.importNode(el, true))
   if (!previewIsSafe(host.innerHTML)) {
     console.warn('bento: first-page preview rejected as unsafe, saving without one')
     return
   }
+  const remover = clone.createElement('script')
+  remover.setAttribute(PREVIEW_ATTR, '1')
+  remover.textContent = PREVIEW_REMOVER
+
   // Straight after the splash it replaces, so a thumbnailer reaches it before
-  // the ~550KB of compressed payload at the end of the body.
+  // the ~550KB of compressed payload at the end of the body. The remover goes
+  // immediately after the host: any markup between them is markup the parser
+  // could paint first.
   const splash = clone.getElementById('bento-splash')
-  if (splash?.parentNode) splash.parentNode.insertBefore(host, splash.nextSibling)
-  else (clone.body ?? clone.documentElement).appendChild(host)
+  const parent = splash?.parentNode ?? clone.body ?? clone.documentElement
+  const after = splash?.parentNode ? splash.nextSibling : null
+  parent.insertBefore(host, after)
+  parent.insertBefore(remover, host.nextSibling)
 }
 
 /**

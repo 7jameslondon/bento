@@ -46,8 +46,10 @@ pre-1.0.
   slide over the canvas instead of squeezing it, so the slide you're editing
   is no longer the smallest thing on screen. Nothing changes on a laptop.
 
-  Known gap: the save-as menu (copy, new deck, template, password) doesn't fit
-  on a phone yet and is unreachable there for now.
+  The save-as list — save a copy, duplicate as a new deck, the password
+  actions, version history and the JSON round-trip — sits at the bottom of ⋯ on
+  a phone, because the caret that opens it on a laptop doesn't fit beside a
+  touch-sized Save button.
 
 - **Decks carry a page-one preview, so Finder and Files thumbnail them
   properly.** Every Bento file used to thumbnail as the same dark box, because
