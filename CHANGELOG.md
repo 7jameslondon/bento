@@ -11,6 +11,11 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Fix: presenting on a phone shows the deck, not a scrollable page.** Below
+  about 435px wide, the presentation was quietly switching to a scrolling
+  reading layout instead of a slideshow — so swipe navigation stopped working
+  and hidden interactive slides became scrollable content.
+
 - **Fix: presenting was broken.** Slides showed at a fraction of the screen
   with speaker notes spilling underneath. A stray missing bracket in the
   stylesheet swallowed all of the presentation layout rules. Nothing was wrong
