@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const fr: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Insérer — texte, formes, images, médias, tableaux, graphiques",
+  "More actions": "Plus d’actions",
+  "Slides — show or hide the slide list": "Diapos — afficher ou masquer la liste",
+  "Format — show or hide the properties panel": "Format — afficher ou masquer le panneau de propriétés",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Trajectoire — faites glisser les points · cliquez sur un point pour les poignées de Bézier · double-clic sur le tracé pour insérer · double-clic sur un point pour le retirer · faites défiler pour changer sa vitesse",
   "Slide number": "Numéro de diapo",
   "Progress bar": "Barre de progression",
   "Corner arrows": "Flèches d’angle",

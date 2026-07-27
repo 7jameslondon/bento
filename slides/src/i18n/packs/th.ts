@@ -23,6 +23,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'ไทย'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "แทรก — ข้อความ รูปทรง รูปภาพ สื่อ ตาราง แผนภูมิ",
+  "More actions": "การกระทำเพิ่มเติม",
+  "Slides — show or hide the slide list": "สไลด์ — แสดงหรือซ่อนรายการสไลด์",
+  "Format — show or hide the properties panel": "รูปแบบ — แสดงหรือซ่อนแผงคุณสมบัติ",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "เส้นทางการเคลื่อนไหว — ลากจุด · คลิกจุดเพื่อแสดงมือจับเบซิเยร์ · ดับเบิลคลิกเส้นทางเพื่อเพิ่ม · ดับเบิลคลิกจุดเพื่อลบ · เลื่อนเพื่อเปลี่ยนความเร็ว",
+  "Insert": "แทรก",
+  "More": "เพิ่มเติม",
+  "Slides": "สไลด์",
+  "Format": "รูปแบบ",
+  "Updated to v{v}.": "อัปเดตเป็น v{v} แล้ว",
   "Backed up in this browser": "สำรองไว้ในเบราว์เซอร์นี้แล้ว",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "มีการแก้ไขที่ยังไม่บันทึก — เก็บไว้ในเบราว์เซอร์นี้เมื่อ {when} และจะเสนอให้กู้คืนเมื่อเปิดใหม่ ⌘S ดาวน์โหลดสำเนาที่อัปเดตแล้ว",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "มีการแก้ไขที่ยังไม่บันทึก — ⌘S ดาวน์โหลดสำเนาที่อัปเดตแล้ว (เบราว์เซอร์นี้เขียนทับไฟล์ไม่ได้)",

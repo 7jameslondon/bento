@@ -13,6 +13,16 @@ import type { Catalog } from '../../i18n'
 export const label = '한국어'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "삽입 — 텍스트, 도형, 이미지, 미디어, 표, 차트",
+  "More actions": "추가 작업",
+  "Slides — show or hide the slide list": "슬라이드 — 슬라이드 목록 표시 또는 숨기기",
+  "Format — show or hide the properties panel": "서식 — 속성 패널 표시 또는 숨기기",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "모션 경로 — 점 드래그 · 점 클릭 시 베지어 핸들 · 경로 더블클릭으로 추가 · 점 더블클릭으로 삭제 · 스크롤로 속도 변경",
+  "Insert": "삽입",
+  "More": "더 보기",
+  "Slides": "슬라이드",
+  "Format": "서식",
+  "Updated to v{v}.": "v{v}(으)로 업데이트되었습니다.",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "이 이미지는 실시간 공유에 너무 큽니다(최대 약 1 MB). 내 사본에는 저장되지만 공동 작업자에게는 표시되지 않습니다.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "이 변경 사항은 실시간 공유에 너무 큽니다(최대 약 1 MB). 내 사본에는 저장되지만 공동 작업자에게는 표시되지 않습니다.",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "이 실시간 세션의 공간이 부족합니다. 변경 사항은 내 사본에 저장되지만 공동 작업자에게는 표시되지 않습니다.",

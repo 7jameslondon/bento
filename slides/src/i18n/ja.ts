@@ -4,6 +4,11 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "挿入 — テキスト、図形、画像、メディア、表、グラフ",
+  "More actions": "その他の操作",
+  "Slides — show or hide the slide list": "スライド — スライド一覧の表示/非表示",
+  "Format — show or hide the properties panel": "書式 — プロパティパネルの表示/非表示",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "モーションパス — 点をドラッグ · 点をクリックでベジェハンドル · パスをダブルクリックで追加 · 点をダブルクリックで削除 · 点をスクロールで速度変更",
   "Slide number": "スライド番号",
   "Progress bar": "進行状況バー",
   "Corner arrows": "隅の矢印",

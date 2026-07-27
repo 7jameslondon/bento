@@ -17,6 +17,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Nederlands'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Invoegen — tekst, vormen, afbeeldingen, media, tabellen, grafieken",
+  "More actions": "Meer acties",
+  "Slides — show or hide the slide list": "Dia's — dialijst tonen of verbergen",
+  "Format — show or hide the properties panel": "Opmaak — eigenschappenpaneel tonen of verbergen",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Bewegingspad — sleep punten · klik een punt voor bezier-grepen · dubbelklik het pad om in te voegen · dubbelklik een punt om te verwijderen · scroll om de snelheid te wijzigen",
+  "Insert": "Invoegen",
+  "More": "Meer",
+  "Slides": "Dia's",
+  "Format": "Opmaak",
+  "Updated to v{v}.": "Bijgewerkt naar v{v}.",
   "Backed up in this browser": "Back-up in deze browser",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Niet-opgeslagen wijzigingen — om {when} bewaard in deze browser en aangeboden zodra je opnieuw opent. ⌘S downloadt een bijgewerkte kopie.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Niet-opgeslagen wijzigingen — ⌘S downloadt een bijgewerkte kopie (deze browser kan het bestand niet overschrijven)",

@@ -22,6 +22,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'עברית'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "הוספה — טקסט, צורות, תמונות, מדיה, טבלאות, תרשימים",
+  "More actions": "פעולות נוספות",
+  "Slides — show or hide the slide list": "שקופיות — הצג או הסתר את רשימת השקופיות",
+  "Format — show or hide the properties panel": "עיצוב — הצג או הסתר את חלונית המאפיינים",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "מסלול תנועה — גרור נקודות · לחץ על נקודה לידיות בזייה · לחיצה כפולה על המסלול להוספה · לחיצה כפולה על נקודה להסרה · גלול לשינוי המהירות",
+  "Insert": "הוספה",
+  "More": "עוד",
+  "Slides": "שקופיות",
+  "Format": "עיצוב",
+  "Updated to v{v}.": "עודכן לגרסה {v}.",
   "Backed up in this browser": "גובה בדפדפן הזה",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "שינויים שלא נשמרו — נשמרו בדפדפן הזה ב־{when} ויוצעו לשחזור בפתיחה הבאה. ⌘S מוריד עותק מעודכן.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "שינויים שלא נשמרו — ⌘S מוריד עותק מעודכן (הדפדפן הזה אינו יכול לשכתב את הקובץ)",

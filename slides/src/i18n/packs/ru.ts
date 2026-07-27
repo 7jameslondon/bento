@@ -21,6 +21,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Русский'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Вставка — текст, фигуры, изображения, медиа, таблицы, диаграммы",
+  "More actions": "Другие действия",
+  "Slides — show or hide the slide list": "Слайды — показать или скрыть список слайдов",
+  "Format — show or hide the properties panel": "Формат — показать или скрыть панель свойств",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Траектория — перетаскивайте точки · щёлкните точку для кривых Безье · двойной щелчок по траектории добавляет · двойной щелчок по точке удаляет · прокрутка меняет скорость",
+  "Insert": "Вставка",
+  "More": "Ещё",
+  "Slides": "Слайды",
+  "Format": "Формат",
+  "Updated to v{v}.": "Обновлено до v{v}.",
   "Backed up in this browser": "Резервная копия сохранена в этом браузере",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Несохранённые изменения — сохранены в этом браузере в {when} и будут предложены при повторном открытии. ⌘S скачивает обновлённую копию.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Несохранённые изменения — ⌘S скачивает обновлённую копию (этот браузер не может перезаписать файл)",

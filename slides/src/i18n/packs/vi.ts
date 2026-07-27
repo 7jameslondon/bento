@@ -19,6 +19,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Tiếng Việt'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Chèn — văn bản, hình khối, hình ảnh, phương tiện, bảng, biểu đồ",
+  "More actions": "Thao tác khác",
+  "Slides — show or hide the slide list": "Trang chiếu — hiện hoặc ẩn danh sách trang chiếu",
+  "Format — show or hide the properties panel": "Định dạng — hiện hoặc ẩn bảng thuộc tính",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Đường chuyển động — kéo các điểm · nhấp vào một điểm để hiện tay cầm bezier · nhấp đúp vào đường để chèn · nhấp đúp vào điểm để xóa · cuộn để đổi tốc độ",
+  "Insert": "Chèn",
+  "More": "Thêm",
+  "Slides": "Trang chiếu",
+  "Format": "Định dạng",
+  "Updated to v{v}.": "Đã cập nhật lên v{v}.",
   "Backed up in this browser": "Đã sao lưu trong trình duyệt này",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Có thay đổi chưa lưu — đã giữ trong trình duyệt này lúc {when} và sẽ được đề nghị khôi phục khi bạn mở lại. ⌘S tải xuống một bản sao đã cập nhật.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Có thay đổi chưa lưu — ⌘S tải xuống một bản sao đã cập nhật (trình duyệt này không ghi đè được tệp)",

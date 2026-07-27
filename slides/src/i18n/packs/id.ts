@@ -19,6 +19,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Bahasa Indonesia'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Sisipkan — teks, bentuk, gambar, media, tabel, bagan",
+  "More actions": "Tindakan lainnya",
+  "Slides — show or hide the slide list": "Slide — tampilkan atau sembunyikan daftar slide",
+  "Format — show or hide the properties panel": "Format — tampilkan atau sembunyikan panel properti",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Jalur gerak — seret titik · klik titik untuk pegangan bezier · klik ganda jalur untuk menyisipkan · klik ganda titik untuk menghapus · gulir untuk mengubah kecepatannya",
+  "Insert": "Sisipkan",
+  "More": "Lainnya",
+  "Slides": "Slide",
+  "Format": "Format",
+  "Updated to v{v}.": "Diperbarui ke v{v}.",
   "Backed up in this browser": "Dicadangkan di browser ini",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Perubahan yang belum disimpan — disimpan di browser ini pada {when} dan ditawarkan kembali jika Anda membukanya lagi. ⌘S mengunduh salinan yang diperbarui.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Perubahan yang belum disimpan — ⌘S mengunduh salinan yang diperbarui (browser ini tidak dapat menulis ulang file)",

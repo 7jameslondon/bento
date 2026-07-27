@@ -25,6 +25,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'فارسی'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "درج — متن، شکل، تصویر، رسانه، جدول، نمودار",
+  "More actions": "اقدامات بیشتر",
+  "Slides — show or hide the slide list": "اسلایدها — نمایش یا پنهان کردن فهرست اسلایدها",
+  "Format — show or hide the properties panel": "قالب — نمایش یا پنهان کردن پنل ویژگی‌ها",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "مسیر حرکت — نقطه‌ها را بکشید · برای دستگیره‌های بزیه روی نقطه کلیک کنید · برای افزودن روی مسیر دوبار کلیک کنید · برای حذف روی نقطه دوبار کلیک کنید · برای تغییر سرعت اسکرول کنید",
+  "Insert": "درج",
+  "More": "بیشتر",
+  "Slides": "اسلایدها",
+  "Format": "قالب",
+  "Updated to v{v}.": "به نسخهٔ {v} به‌روزرسانی شد.",
   "Backed up in this browser": "در همین مرورگر پشتیبان گرفته شد",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "تغییرات ذخیره‌نشده — ساعت {when} در همین مرورگر نگه داشته شد و هنگام باز کردن دوباره به شما پیشنهاد می‌شود. با ⌘S نسخهٔ به‌روز دانلود می‌شود.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "تغییرات ذخیره‌نشده — با ⌘S نسخهٔ به‌روز دانلود می‌شود (این مرورگر نمی‌تواند فایل را بازنویسی کند)",
