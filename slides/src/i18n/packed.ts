@@ -15,6 +15,9 @@ export const PACKED_LOCALES = ["ja","zh-Hans","zh-Hant","es","fr","de","it","pt"
 
 /** English source string -> translations, positional by PACKED_LOCALES. */
 export const PACKED: Record<string, ReadonlyArray<string | 0>> = {
+  "Slide number": ["スライド番号","幻灯片编号","投影片編號","Número de diapositiva","Numéro de diapo","Foliennummer","Numero diapositiva"],
+  "Progress bar": ["進行状況バー","进度条","進度列","Barra de progreso","Barre de progression","Fortschrittsleiste","Barra di avanzamento"],
+  "Corner arrows": ["隅の矢印","角落箭头","角落箭頭","Flechas de esquina","Flèches d’angle","Ecknavigation","Frecce d’angolo"],
   "Updated to v{v}.": ["v{v} に更新しました。","已更新到 v{v}。","已更新到 v{v}。","Actualizado a la v{v}.","Mis à jour vers la v{v}.","Auf v{v} aktualisiert.","Aggiornato alla v{v}."],
   "More": ["その他","更多","更多","Más","Plus","Mehr","Altro"],
   "Insert": ["挿入","插入","插入","Insertar","Insérer","Einfügen","Inserisci"],

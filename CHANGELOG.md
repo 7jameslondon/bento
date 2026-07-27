@@ -11,6 +11,10 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Hide the slide number or progress bar.** The Slide panel now has toggles
+  for both, plus Reveal's corner arrows. They're deck-wide and travel in the
+  file, so a deck you hand to someone else presents the way you designed it.
+
 - **Fix: presenting on a phone shows the deck, not a scrollable page.** Below
   about 435px wide, the presentation was quietly switching to a scrolling
   reading layout instead of a slideshow — so swipe navigation stopped working

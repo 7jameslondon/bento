@@ -4,6 +4,9 @@
 import type { Catalog } from '../i18n'
 
 export const zhHant: Catalog = {
+  "Slide number": "投影片編號",
+  "Progress bar": "進度列",
+  "Corner arrows": "角落箭頭",
   "Updated to v{v}.": "已更新到 v{v}。",
   "More": "更多",
   "Insert": "插入",

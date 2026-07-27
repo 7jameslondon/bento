@@ -4,6 +4,9 @@
 import type { Catalog } from '../i18n'
 
 export const ja: Catalog = {
+  "Slide number": "スライド番号",
+  "Progress bar": "進行状況バー",
+  "Corner arrows": "隅の矢印",
   "Updated to v{v}.": "v{v} に更新しました。",
   "More": "その他",
   "Insert": "挿入",

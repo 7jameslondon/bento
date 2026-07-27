@@ -29,6 +29,9 @@ const ROW_TIPS: Record<string, string> = {
   'Page size': 'Deck-wide slide size. Elements keep their positions — changing size reframes the canvas, never rescales your art.',
   'Width': 'Custom slide width in pixels',
   'Height': 'Custom slide height in pixels',
+  'Slide number': 'Deck-wide. Show the slide counter to the audience while presenting.',
+  'Progress bar': 'Deck-wide. Show the thin progress bar along the bottom while presenting.',
+  'Corner arrows': 'Deck-wide. Reveal’s own navigation arrows. Off by default — links and keys already navigate.',
   'Background': 'This slide’s background colour',
   'Transition': 'How this slide enters. Morph animates elements that share ids with the previous slide.',
   'Name': 'A friendly name for this slide — shown in link pickers and state badges',
@@ -240,6 +243,30 @@ export class PropsPanel {
       this.row('Height', this.number(dh, 10, (v, fin) =>
         this.edit(() => { this.store.doc.size.height = Math.max(320, Math.min(4000, Math.round(v))) }, fin)))
     }
+    // Deck-wide presentation chrome. These live in doc.present because they are
+    // AUDIENCE-facing: what the author designs is what a recipient's audience
+    // sees. Contrast reduce-motion and locale, which are viewer preferences and
+    // deliberately never enter the document.
+    //
+    // Each writes `undefined` at its default rather than the default value, so
+    // a deck that never touches these carries no `present` block at all.
+    const pres = this.store.doc.present ?? {}
+    const setPresent = (k: 'slideNumber' | 'progress' | 'controls', v: boolean, dflt: boolean) =>
+      this.edit(() => {
+        const d = this.store.doc
+        const cur = { ...(d.present ?? {}) }
+        if (v === dflt) delete cur[k]
+        else cur[k] = v
+        if (Object.keys(cur).length) d.present = cur
+        else delete d.present
+      }, true)
+    this.row('Slide number', this.toggle(pres.slideNumber ?? true,
+      (v) => setPresent('slideNumber', v, true)))
+    this.row('Progress bar', this.toggle(pres.progress ?? true,
+      (v) => setPresent('progress', v, true)))
+    this.row('Corner arrows', this.toggle(pres.controls ?? false,
+      (v) => setPresent('controls', v, false)))
+
     this.row('Background', this.color(slide.background, (v, fin) =>
       this.edit(() => { this.store.slide.background = v }, fin)))
     this.row('Transition', this.select(
