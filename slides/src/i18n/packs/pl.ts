@@ -20,6 +20,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Polski'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Wstaw — tekst, kształty, obrazy, multimedia, tabele, wykresy",
+  "More actions": "Więcej działań",
+  "Slides — show or hide the slide list": "Slajdy — pokaż lub ukryj listę slajdów",
+  "Format — show or hide the properties panel": "Format — pokaż lub ukryj panel właściwości",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Ścieżka ruchu — przeciągaj punkty · kliknij punkt, aby uzyskać uchwyty Béziera · kliknij dwukrotnie ścieżkę, aby wstawić · kliknij dwukrotnie punkt, aby usunąć · przewiń, aby zmienić prędkość",
+  "Insert": "Wstaw",
+  "More": "Więcej",
+  "Slides": "Slajdy",
+  "Format": "Format",
+  "Updated to v{v}.": "Zaktualizowano do v{v}.",
   "Backed up in this browser": "Kopia zapasowa w tej przeglądarce",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Niezapisane zmiany — zachowane w tej przeglądarce o {when} i proponowane z powrotem przy ponownym otwarciu. ⌘S pobiera zaktualizowaną kopię.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Niezapisane zmiany — ⌘S pobiera zaktualizowaną kopię (ta przeglądarka nie może nadpisać pliku)",

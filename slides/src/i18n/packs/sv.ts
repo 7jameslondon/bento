@@ -18,6 +18,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Svenska'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Infoga — text, former, bilder, media, tabeller, diagram",
+  "More actions": "Fler åtgärder",
+  "Slides — show or hide the slide list": "Bilder — visa eller dölj bildlistan",
+  "Format — show or hide the properties panel": "Format — visa eller dölj egenskapspanelen",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Rörelsebana — dra punkter · klicka på en punkt för bezier-handtag · dubbelklicka på banan för att infoga · dubbelklicka på en punkt för att ta bort · scrolla för att ändra hastigheten",
+  "Insert": "Infoga",
+  "More": "Mer",
+  "Slides": "Bilder",
+  "Format": "Format",
+  "Updated to v{v}.": "Uppdaterad till v{v}.",
   "Backed up in this browser": "Säkerhetskopierad i den här webbläsaren",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Osparade ändringar — sparade i den här webbläsaren {when} och erbjuds tillbaka om du öppnar filen igen. ⌘S laddar ned en uppdaterad kopia.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Osparade ändringar — ⌘S laddar ned en uppdaterad kopia (den här webbläsaren kan inte skriva om filen)",

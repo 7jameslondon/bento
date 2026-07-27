@@ -32,6 +32,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Filipino'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Ipasok — teksto, hugis, larawan, midya, talahanayan, tsart",
+  "More actions": "Iba pang aksyon",
+  "Slides — show or hide the slide list": "Mga slide — ipakita o itago ang listahan ng slide",
+  "Format — show or hide the properties panel": "Format — ipakita o itago ang panel ng mga katangian",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Landas ng galaw — i-drag ang mga punto · i-click ang punto para sa mga bezier handle · i-double click ang landas para magpasok · i-double click ang punto para alisin · mag-scroll para baguhin ang bilis",
+  "Insert": "Ipasok",
+  "More": "Higit pa",
+  "Slides": "Mga slide",
+  "Format": "Format",
+  "Updated to v{v}.": "Na-update sa v{v}.",
   "Backed up in this browser": "Naka-backup sa browser na ito",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "May mga pagbabagong hindi pa na-save — itinago sa browser na ito noong {when} at ibabalik sa iyo kapag binuksan mo ulit. Nagda-download ang ⌘S ng updated na kopya.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "May mga pagbabagong hindi pa na-save — nagda-download ang ⌘S ng updated na kopya (hindi kayang i-rewrite ng browser na ito ang file)",

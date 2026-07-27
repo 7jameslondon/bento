@@ -390,6 +390,12 @@ export class Editor {
     // be collected along with its listener, and the bar then never unfolds when
     // the window grows — the CSS flips but the JS half silently stops.
     this.phoneQuery = window.matchMedia('(max-width: 700px)')
+    // build() has just re-authored the bar, so whatever folding state a PREVIOUS
+    // bar was in no longer describes this DOM. Without this reset a rebuild on a
+    // phone (switching language, say) would early-return on `true === true` and
+    // leave the freshly authored DESKTOP bar in place — overflowing, with Save
+    // off-screen again.
+    this.phoneChromeOn = null
     this.applyPhoneChrome(this.phoneQuery.matches)
     this.phoneQuery.addEventListener('change', (e) => this.applyPhoneChrome(e.matches))
     // ...and on plain resize as well. matchMedia's change event is the correct
@@ -534,6 +540,15 @@ export class Editor {
   private applyPhoneChrome(on: boolean) {
     const p = this.phoneChrome
     if (!p || this.phoneChromeOn === on) return
+    // A FRESH bar is already in its authored desktop order, so there is nothing
+    // to put back — and running the restore below anyway does not just waste
+    // work, it REORDERS: every demoted button lands before formatB regardless
+    // of where it started, so Comment and Export PDF jumped groups and Save
+    // ended up after Help. Switching language then *fixed* it, because build()
+    // re-authors the bar and this call early-returns second time around, which
+    // is why the bug read as "the order changes when I switch language" when it
+    // was the first load that was wrong.
+    const fresh = this.phoneChromeOn === null
     this.phoneChromeOn = on
     if (on) {
       // the six insert tools + comment go under ＋
@@ -552,7 +567,7 @@ export class Editor {
         }
         p.moreMenu.appendChild(b)
       }
-    } else {
+    } else if (!fresh) {
       while (p.insertMenu.firstChild) p.insert.appendChild(p.insertMenu.firstChild)
       for (const lab of p.moreMenu.querySelectorAll('[data-phone-label]')) lab.remove()
       // back to their original homes, in their original order

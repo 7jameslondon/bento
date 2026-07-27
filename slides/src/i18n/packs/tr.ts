@@ -20,6 +20,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Türkçe'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Ekle — metin, şekiller, görseller, medya, tablolar, grafikler",
+  "More actions": "Diğer eylemler",
+  "Slides — show or hide the slide list": "Slaytlar — slayt listesini göster veya gizle",
+  "Format — show or hide the properties panel": "Biçim — özellikler panelini göster veya gizle",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Hareket yolu — noktaları sürükleyin · bezier tutamaçları için bir noktaya tıklayın · eklemek için yola çift tıklayın · kaldırmak için noktaya çift tıklayın · hızını değiştirmek için kaydırın",
+  "Insert": "Ekle",
+  "More": "Daha fazla",
+  "Slides": "Slaytlar",
+  "Format": "Biçim",
+  "Updated to v{v}.": "v{v} sürümüne güncellendi.",
   "Backed up in this browser": "Bu tarayıcıda yedeklendi",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Kaydedilmemiş değişiklikler — saat {when} itibarıyla bu tarayıcıda tutuldu ve dosyayı yeniden açtığınızda geri sunulur. ⌘S güncel bir kopya indirir.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Kaydedilmemiş değişiklikler — ⌘S güncel bir kopya indirir (bu tarayıcı dosyanın üzerine yazamaz)",

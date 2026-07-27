@@ -21,6 +21,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Dansk'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Indsæt — tekst, former, billeder, medier, tabeller, diagrammer",
+  "More actions": "Flere handlinger",
+  "Slides — show or hide the slide list": "Slides — vis eller skjul slidelisten",
+  "Format — show or hide the properties panel": "Format — vis eller skjul egenskabspanelet",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Bevægelsessti — træk punkter · klik på et punkt for bezier-håndtag · dobbeltklik på stien for at indsætte · dobbeltklik på et punkt for at fjerne · scroll for at ændre hastigheden",
+  "Insert": "Indsæt",
+  "More": "Mere",
+  "Slides": "Slides",
+  "Format": "Format",
+  "Updated to v{v}.": "Opdateret til v{v}.",
   "Backed up in this browser": "Sikkerhedskopieret i denne browser",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Ikke-gemte ændringer — gemt i denne browser kl. {when} og tilbudt igen, næste gang du åbner filen. ⌘S henter en opdateret kopi.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Ikke-gemte ændringer — ⌘S henter en opdateret kopi (denne browser kan ikke overskrive filen)",

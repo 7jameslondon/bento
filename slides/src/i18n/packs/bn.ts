@@ -32,6 +32,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'বাংলা'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "সন্নিবেশ — টেক্সট, আকৃতি, ছবি, মিডিয়া, টেবিল, চার্ট",
+  "More actions": "আরও ক্রিয়া",
+  "Slides — show or hide the slide list": "স্লাইড — স্লাইড তালিকা দেখান বা লুকান",
+  "Format — show or hide the properties panel": "ফরম্যাট — বৈশিষ্ট্য প্যানেল দেখান বা লুকান",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "গতিপথ — বিন্দু টানুন · বেজিয়ার হ্যান্ডেলের জন্য বিন্দুতে ক্লিক করুন · যোগ করতে পথে ডাবল-ক্লিক · সরাতে বিন্দুতে ডাবল-ক্লিক · গতি বদলাতে স্ক্রল করুন",
+  "Insert": "সন্নিবেশ",
+  "More": "আরও",
+  "Slides": "স্লাইড",
+  "Format": "ফরম্যাট",
+  "Updated to v{v}.": "v{v} এ আপডেট হয়েছে।",
   "Backed up in this browser": "এই ব্রাউজারে ব্যাকআপ নেওয়া হয়েছে",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "সেভ না করা পরিবর্তন — {when}-এ এই ব্রাউজারে রাখা হয়েছে, আবার খুললে ফিরিয়ে দেওয়া হবে। ⌘S আপডেট করা কপি ডাউনলোড করে।",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "সেভ না করা পরিবর্তন — ⌘S আপডেট করা কপি ডাউনলোড করে (এই ব্রাউজার ফাইলটি নতুন করে লিখতে পারে না)",

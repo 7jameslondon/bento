@@ -170,7 +170,7 @@ export class PropsPanel {
   }
 
   /** Collapsed by default until the user opens them (persisted per title). */
-  private static CLOSED_BY_DEFAULT = new Set(['Presenting', 'Interactivity', 'Layout', 'Advanced (JSON)'])
+  private static CLOSED_BY_DEFAULT = new Set(['Slideshow', 'Presenting', 'Interactivity', 'Layout', 'Advanced (JSON)'])
 
   /**
    * Retrofit the flat panel into an accordion: every .ed-section header
@@ -243,13 +243,34 @@ export class PropsPanel {
       this.row('Height', this.number(dh, 10, (v, fin) =>
         this.edit(() => { this.store.doc.size.height = Math.max(320, Math.min(4000, Math.round(v))) }, fin)))
     }
-    // Deck-wide presentation chrome. These live in doc.present because they are
-    // AUDIENCE-facing: what the author designs is what a recipient's audience
-    // sees. Contrast reduce-motion and locale, which are viewer preferences and
-    // deliberately never enter the document.
+    this.row('Background', this.color(slide.background, (v, fin) =>
+      this.edit(() => { this.store.slide.background = v }, fin)))
+    this.row('Transition', this.select(
+      ['none', 'fade', 'slide', 'zoom', 'morph'],
+      slide.transition,
+      (v) => this.edit(() => { this.store.slide.transition = v as TransitionKind }, true),
+    ))
+    if (slide.transition === 'morph') {
+      const hint = document.createElement('p')
+      hint.className = 'ed-hint'
+      hint.innerHTML = t('<b>Morph</b> animates elements that appear on both this slide and the previous one (copy a slide, then move things around).')
+      this.host.appendChild(hint)
+    }
+
+    // Deck-wide slideshow chrome, in its own section: these are not properties
+    // of THIS slide (the section above) but of how the whole deck presents, and
+    // mixing them in beside Background and Transition read as per-slide.
     //
-    // Each writes `undefined` at its default rather than the default value, so
-    // a deck that never touches these carries no `present` block at all.
+    // "Slideshow" is what the UI already calls present mode on the button, and
+    // it avoids colliding with the element panel's own "Presenting" section.
+    this.section(t('Slideshow'))
+    // These live in doc.present because they are AUDIENCE-facing: what the
+    // author designs is what a recipient's audience sees. Contrast reduce-motion
+    // and locale, which are viewer preferences and deliberately never enter the
+    // document.
+    //
+    // Each writes `undefined` at its default rather than the default value, so a
+    // deck that never touches these carries no `present` block at all.
     const pres = this.store.doc.present ?? {}
     const setPresent = (k: 'slideNumber' | 'progress' | 'controls', v: boolean, dflt: boolean) =>
       this.edit(() => {
@@ -267,19 +288,6 @@ export class PropsPanel {
     this.row('Corner arrows', this.toggle(pres.controls ?? false,
       (v) => setPresent('controls', v, false)))
 
-    this.row('Background', this.color(slide.background, (v, fin) =>
-      this.edit(() => { this.store.slide.background = v }, fin)))
-    this.row('Transition', this.select(
-      ['none', 'fade', 'slide', 'zoom', 'morph'],
-      slide.transition,
-      (v) => this.edit(() => { this.store.slide.transition = v as TransitionKind }, true),
-    ))
-    if (slide.transition === 'morph') {
-      const hint = document.createElement('p')
-      hint.className = 'ed-hint'
-      hint.innerHTML = t('<b>Morph</b> animates elements that appear on both this slide and the previous one (copy a slide, then move things around).')
-      this.host.appendChild(hint)
-    }
 
     // interactivity: naming, state-of, hover focus
     this.section(t('Interactivity'))

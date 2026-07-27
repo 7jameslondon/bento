@@ -7,6 +7,16 @@
 import type { Catalog } from '../i18n'
 
 export const pt: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Inserir — texto, formas, imagens, mídia, tabelas, gráficos",
+  "More actions": "Mais ações",
+  "Slides — show or hide the slide list": "Slides — mostrar ou ocultar a lista",
+  "Format — show or hide the properties panel": "Formato — mostrar ou ocultar o painel de propriedades",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Trajetória — arraste os pontos · clique num ponto para as alças bézier · duplo clique na trajetória para inserir · duplo clique num ponto para remover · role para mudar a velocidade",
+  "Insert": "Inserir",
+  "More": "Mais",
+  "Slides": "Slides",
+  "Format": "Formato",
+  "Updated to v{v}.": "Atualizado para a v{v}.",
   "That image is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Essa imagem é grande demais para compartilhar ao vivo (máx. cerca de 1 MB). Ela fica salva na sua cópia, mas os colaboradores não a verão.",
   "That change is too large to share live (about 1 MB max). It’s saved in your copy, but collaborators won’t see it.": "Essa alteração é grande demais para compartilhar ao vivo (máx. cerca de 1 MB). Ela fica salva na sua cópia, mas os colaboradores não a verão.",
   "This live session has run out of room. Your change is saved in your copy, but collaborators won’t see it.": "Esta sessão ao vivo ficou sem espaço. Sua alteração fica salva na sua cópia, mas os colaboradores não a verão.",

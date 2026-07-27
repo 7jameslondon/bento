@@ -26,6 +26,16 @@ import type { Catalog } from '../../i18n'
 export const label = 'Suomi'
 
 export const strings: Catalog = {
+  "Insert — text, shapes, images, media, tables, charts": "Lisää — teksti, muodot, kuvat, media, taulukot, kaaviot",
+  "More actions": "Lisää toimintoja",
+  "Slides — show or hide the slide list": "Diat — näytä tai piilota dialuettelo",
+  "Format — show or hide the properties panel": "Muotoilu — näytä tai piilota ominaisuuspaneeli",
+  "Motion path — drag points · click a point for bezier handles · double-click path to insert · double-click point to remove · scroll a point to change its speed": "Liikerata — vedä pisteitä · napsauta pistettä bezier-kahvoja varten · kaksoisnapsauta rataa lisätäksesi · kaksoisnapsauta pistettä poistaaksesi · vieritä muuttaaksesi nopeutta",
+  "Insert": "Lisää",
+  "More": "Lisää",
+  "Slides": "Diat",
+  "Format": "Muotoilu",
+  "Updated to v{v}.": "Päivitetty versioon {v}.",
   "Backed up in this browser": "Varmuuskopioitu tähän selaimeen",
   "Unsaved changes — kept in this browser at {when} and offered back if you reopen. ⌘S downloads an updated copy.": "Tallentamattomia muutoksia — säilytetty tässä selaimessa klo {when}, ja ne tarjotaan takaisin, kun avaat tiedoston uudelleen. ⌘S lataa päivitetyn kopion.",
   "Unsaved changes — ⌘S downloads an updated copy (this browser can’t rewrite the file)": "Tallentamattomia muutoksia — ⌘S lataa päivitetyn kopion (tämä selain ei voi korvata tiedostoa)",

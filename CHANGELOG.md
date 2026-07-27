@@ -11,9 +11,15 @@ pre-1.0.
 
 ## [Unreleased]
 
-- **Hide the slide number or progress bar.** The Slide panel now has toggles
-  for both, plus Reveal's corner arrows. They're deck-wide and travel in the
-  file, so a deck you hand to someone else presents the way you designed it.
+- **Fix: the toolbar buttons were in the wrong order until you switched
+  language.** Comment and Export PDF sat in the wrong group and Save came after
+  Help. Switching language happened to put them right, which made it look like
+  switching language caused it — the first load was the wrong one.
+
+- **Hide the slide number or progress bar.** A new **Slideshow** section in the
+  slide panel has toggles for both, plus the corner navigation arrows. They're
+  deck-wide and travel in the file, so a deck you hand to someone else presents
+  the way you designed it.
 
 - **Fix: presenting on a phone shows the deck, not a scrollable page.** Below
   about 435px wide, the presentation was quietly switching to a scrolling
