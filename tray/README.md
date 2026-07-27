@@ -179,7 +179,26 @@ and the native file layer are not.
 `BentoTray.xcodeproj` is generated, never committed — a `.pbxproj` in git is a
 merge-conflict magnet.
 
-## State: scaffold, not shippable
+### Signing
+
+The **simulator needs none** — it signs ad-hoc, which is why a plain `xcodegen
+&& xcodebuild` has always just worked. A **real device needs a team**:
+
+```sh
+BENTO_TEAM_ID=ABCDE12345 xcodegen     # then build to the device
+```
+
+The ID comes from the environment at generation time and is never written to a
+tracked file. A Team ID identifies a person or company, and the `.xcodeproj`
+that carries it is generated and gitignored, so nothing personal is committed.
+Leave it unset and `DEVELOPMENT_TEAM` is simply absent — simulator builds are
+unaffected.
+
+Find it in **Xcode ▸ Settings ▸ Accounts**, or developer.apple.com ▸ Membership.
+A free Apple ID signs for your own devices on a **7-day** profile that must then
+be re-signed; TestFlight and the App Store need the paid programme.
+
+## State: runs, unsigned, untested on hardware
 
 Verified — the save contract, exercised against the **real** Bento build in a
 browser with the native side emulated (`begin`/`write` over the same protocol):
@@ -190,23 +209,37 @@ browser with the native side emulated (`begin`/`write` over the same protocol):
 - "Save a copy…" prompts for a destination and leaves the open document
   untouched
 
-Also verified — the Swift **typechecks against the real iOS 26.5 simulator SDK**
-(`swiftc -typecheck -sdk $(xcrun --sdk iphonesimulator --show-sdk-path)`), so
-UIKit, WebKit, `UIDocument`, `WKURLSchemeHandler` and every protocol conformance
-resolve. That is full semantic analysis, not a syntax pass.
+Since then it has been **built, installed and driven** on the iPhone 17 Pro Max
+and iPad Pro 11" simulators: documents create, open, edit and save; the scheme
+handler serves bytes; the exit returns to the browser; the app icon renders on
+the home screen. Presentation geometry was measured from the framebuffer rather
+than eyeballed — 16:9 to four decimal places, symmetric letterboxing, on both
+devices and both orientations.
 
-Not verified — **the app has never been linked, launched or run.** Typechecking
-stops before codegen and linking, and nothing has exercised the bridge on an
-actual device or simulator. Runtime behaviour — the scheme handler serving
-bytes, security-scoped access, the save round trip reaching disk — is still
-unproven.
+Still not verified — **anything on real hardware.** Everything above is the
+simulator, which does not exercise signing, provisioning, device performance, or
+the file providers (iCloud Drive, Dropbox) that make open-in-place interesting.
+Also untested: the share-sheet and AirDrop routes into the app.
 
 ### Getting back out
 
-The editor is presented inside a `UINavigationController` with a **Documents**
-button and the file's name. That bar is not decoration: presented full screen
-with no chrome, a document was a ONE-WAY TRIP — full-screen modals have no
-interactive dismiss, so force-quitting the app was the only exit.
+A document opens full screen with **no native bar at all**, and the way back is
+a small floating chevron in the bottom-left corner. Something has to be there:
+full-screen modals have no interactive dismiss, so with no chrome a document
+was a ONE-WAY TRIP and force-quitting the app was the only exit.
+
+The nav bar it replaced is gone in BOTH orientations. The document already has
+its own toolbar, so a native bar above it was a second row of chrome competing
+with the first, spending 44pt of a screen that has none to spare. (Its
+`hidesBarsWhenVerticallyCompact` auto-hide was tried first and simply does not
+fire for a modally-presented navigation controller.)
+
+The chevron fades to near-transparent after a few seconds and returns on any
+touch — including a swipe, which is the gesture that matters, since a presenter
+advancing slides never taps. Once element fullscreen was declined (below) the
+host lost its only signal for "a show is running", and guessing what the
+document is doing is the one thing this app refuses to do; getting out of the
+way when unused is right for presenting and harmless while editing.
 
 The host has to supply this itself. It cannot ask the page for a close button
 without assuming what the page is, which is the one thing this app does not do.
@@ -218,21 +251,36 @@ on the failure path and leaked once per document opened. The scope is dropped
 only after close completes; dropping it earlier can fail the final write for a
 file outside the container.
 
-The nav bar does NOT intrude on a slideshow, because presenting takes real
-element fullscreen — see below. It is chrome for editing only.
+### Element fullscreen is DECLINED, on every device
 
-It also **auto-hides in landscape** (`hidesBarsWhenVerticallyCompact`). A phone
-in landscape is only ~390pt tall, so 44pt is over a tenth of the height, on the
-very axis a 16:9 canvas needs most. When the bar is away, a small floating
-chevron stands in, pinned to the **safe-area inset** — on a notched iPhone held
-sideways that gutter is dead space no content can occupy, so the exit costs
-nothing there.
+`WKWebView` offers it as an opt-in that mobile Safari never gives a page, so it
+looked like free capability. It is not. WebKit's fullscreen view brings its own
+close button that no public API can hide, restyle or move, and it insets the
+content — so a 16:9 deck letterboxed asymmetrically and the foreign ✕ spilled
+off the band onto the slide. On iPad it did not even hide the status bar, which
+is the one thing fullscreen is for.
 
-Verified in landscape: the bar is gone, the chevron is present, and tapping it
-returns to the browser. `simctl` cannot rotate a device and its screenshots do
-not report orientation, so this was tested by having the app rotate ITSELF via a
-temporary launch-argument hook (`requestGeometryUpdate`) — worth remembering as
-the way to test orientation-dependent behaviour here.
+Declining costs nothing, because the host hands the page the whole screen
+anyway: the status bar is hidden on iPad (where nothing else keeps the page off
+the screen — there is no sensor housing to reserve a band for) and the web view
+is inset by exactly `view.safeAreaInsets.top`, which reports the housing on
+iPhone portrait and 0 everywhere else. The deck then fills the view edge to
+edge, letterboxes evenly, and wears its OWN chrome. A page refused fullscreen
+is not broken — that is the path it takes in mobile Safari.
+
+Measured from the framebuffer, presenting the starter deck:
+
+| | bands | result |
+|---|---|---|
+| iPhone landscape | 261 / 261 | aspect 1.7773 |
+| iPad portrait | 741 / 741 | aspect 1.7783 |
+| iPad landscape | 153 / 153 | 1362px = 1210pt × 9/16 |
+
+Orientation testing note: `simctl` cannot rotate a device, and driving the
+Simulator's own rotate command is unreliable when more than one simulator is
+open (the keystroke goes to whichever window has focus). Forcing
+`supportedInterfaceOrientations` on the presented controller is the dependable
+way to land a specific orientation for a measurement.
 
 ### Platform notes worth keeping
 
