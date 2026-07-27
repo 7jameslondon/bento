@@ -11,44 +11,7 @@ pre-1.0.
 
 ## [Unreleased]
 
-- **Fix: the toolbar buttons were in the wrong order until you switched
-  language.** Comment and Export PDF sat in the wrong group and Save came after
-  Help. Switching language happened to put them right, which made it look like
-  switching language caused it — the first load was the wrong one.
-
-- **Hide the slide number or progress bar.** A new **Slideshow** section in the
-  slide panel has toggles for both, plus the corner navigation arrows. They're
-  deck-wide and travel in the file, so a deck you hand to someone else presents
-  the way you designed it.
-
-- **Fix: presenting on a phone shows the deck, not a scrollable page.** Below
-  about 435px wide, the presentation was quietly switching to a scrolling
-  reading layout instead of a slideshow — so swipe navigation stopped working
-  and hidden interactive slides became scrollable content.
-
-- **Fix: presenting was broken.** Slides showed at a fraction of the screen
-  with speaker notes spilling underneath. A stray missing bracket in the
-  stylesheet swallowed all of the presentation layout rules. Nothing was wrong
-  with your decks — presenting is back to full screen.
-
-- **You can see what changed, on both sides of an update.** When an update is
-  available the About dialog now lists the headlines from that release inline,
-  instead of only a version number and a link off to GitHub — and because they
-  travel in the signed manifest, they can't be tampered with. After the update
-  lands and you reload, Bento says once which version you're now on, with a
-  link to the full notes. It only says it if you actually upgraded: someone
-  opening a deck you sent them never sees it.
-- **The editor fits on a phone.** The toolbar used to need about 680px of a
-  402px screen: it ran off the edge, took the Save button with it, and because
-  nothing clipped it, swiping the toolbar dragged the whole canvas sideways.
-  On a phone it now folds into two menus — ＋ for inserting and ⋯ for
-  everything occasional — leaving slides, insert, undo, format, save and more,
-  at proper touch size. The side panels slide over the canvas instead of
-  squeezing it, so the slide you're editing is no longer the smallest thing on
-  screen. Nothing changes on a laptop.
-
-  Known gap: the save-as menu (copy, new deck, template, password) doesn't fit
-  on a phone yet and is unreachable there for now.
+## [1.0.11] — 2026-07-27
 
 - **Maths, written the way you'd write it.** Type `$E=mc^2$` in a text box and
   it renders as a formula — `$$…$$` for a display equation on its own line.
@@ -73,24 +36,17 @@ pre-1.0.
   Tokyo opens in French chrome for a French reader, and the deck itself is
   unchanged either way.
 
-- **Fix: saved files no longer grow by 100 KB on every save.** Each save wrote
-  a fresh, uncompressed copy of the app's stylesheet into the file, which the
-  next save then copied again — a deck saved ten times carried ten of them and
-  had put on a megabyte for nothing. The stylesheet belongs in the compressed
-  runtime payload, where it takes 27 KB and is written exactly once; a file
-  that already accumulated copies drops all of them the next time you save it.
+- **The editor fits on a phone.** The toolbar used to need about 680px of a
+  402px screen: it ran off the edge, took the Save button with it, and because
+  nothing clipped it, swiping the toolbar dragged the whole canvas sideways.
+  On a phone it now folds into two menus — ＋ for inserting and ⋯ for
+  everything occasional — leaving slides, insert, undo, format, save and more,
+  at proper touch size. The side panels slide over the canvas instead of
+  squeezing it, so the slide you're editing is no longer the smallest thing on
+  screen. Nothing changes on a laptop.
 
-- **Fix: a large chart legend no longer crowds the axis labels.** Charts that
-  don't set their own margins now leave room for the legend at whatever size
-  it's set to, instead of assuming the default one.
-
-- **Fix: readable axis numbers on the showcase deck's linked chart.** They were
-  being drawn half-transparent against a dark panel.
-
-- **Chart labels and legends now honor their visual options.** The lightweight
-  chart renderer applies configured font sizes and weights to axis labels and
-  legends, respects legend spacing and placement, and measures CJK legend text
-  correctly so localized series names no longer overlap.
+  Known gap: the save-as menu (copy, new deck, template, password) doesn't fit
+  on a phone yet and is unreachable there for now.
 
 - **Your decks look like themselves in Finder, Files and the Bento Tray app.**
   Every Bento file used to thumbnail as the same dark box, because thumbnails
@@ -110,19 +66,19 @@ pre-1.0.
   thumbnail — and a deck that had a preview loses it the moment you set a
   password.
 
-- **Updating a file now suggests that file's own name.** When an update asks
-  where to save, the dialog is pre-filled with the name of the deck you have
-  open rather than one derived from its title — so a file called
-  `Q3-board.bento.html` no longer offers to save itself as
-  `Q3_Board_Review.bento.html`. The backup written alongside an in-place update
-  follows the same name. Where the save dialog opens is set by the browser and
-  can't be pointed at a folder by the page, but it now remembers the last place
-  you saved, so the second update onwards starts in the right directory.
-- **The starter deck is called “Bento Slides Showcase” again.** The lowercase
-  rebrand swept the deck's own title along with the app's, but a deck title is
-  a document name — it shows in the window title and becomes the suggested
-  filename — so it reads better in title case. The `bento/slides` wordmark is
-  unchanged.
+- **Hide the slide number or progress bar.** A new **Slideshow** section in the
+  slide panel has toggles for both, plus the corner navigation arrows. They're
+  deck-wide and travel in the file, so a deck you hand to someone else presents
+  the way you designed it.
+
+- **You can see what changed, on both sides of an update.** When an update is
+  available the About dialog now lists the headlines from that release inline,
+  instead of only a version number and a link off to GitHub — and because they
+  travel in the signed manifest, they can't be tampered with. After the update
+  lands and you reload, Bento says once which version you're now on, with a
+  link to the full notes. It only says it if you actually upgraded: someone
+  opening a deck you sent them never sees it.
+
 - **The screen stays awake while you present.** Phones and laptops used to dim
   and lock partway through a talk if you left a slide up for a couple of
   minutes. Bento now holds the screen on for the length of the show and lets go
@@ -142,9 +98,45 @@ pre-1.0.
   backed up, while still showing the file itself as out of date, because it is.
   (A password-protected deck is never snapshotted, so it stays quiet rather
   than promise a safety net it doesn't have.)
-- **See what's new before you update.** When an update is available, the About
-  dialog now offers a "What's new" link straight to that version's release
-  notes.
+
+- **Updating a file now suggests that file's own name.** When an update asks
+  where to save, the dialog is pre-filled with the name of the deck you have
+  open rather than one derived from its title — so a file called
+  `Q3-board.bento.html` no longer offers to save itself as
+  `Q3_Board_Review.bento.html`. The backup written alongside an in-place update
+  follows the same name. Where the save dialog opens is set by the browser and
+  can't be pointed at a folder by the page, but it now remembers the last place
+  you saved, so the second update onwards starts in the right directory.
+
+- **The starter deck is called “Bento Slides Showcase” again.** The lowercase
+  rebrand swept the deck's own title along with the app's, but a deck title is
+  a document name — it shows in the window title and becomes the suggested
+  filename — so it reads better in title case. The `bento/slides` wordmark is
+  unchanged.
+
+- **Chart labels and legends now honor their visual options.** The lightweight
+  chart renderer applies configured font sizes and weights to axis labels and
+  legends, respects legend spacing and placement, and measures CJK legend text
+  correctly so localized series names no longer overlap.
+
+- **Fix: presenting on a phone shows the deck, not a scrollable page.** Below
+  about 435px wide, the presentation was quietly switching to a scrolling
+  reading layout instead of a slideshow — so swipe navigation stopped working
+  and hidden interactive slides became scrollable content.
+
+- **Fix: saved files no longer grow by 100 KB on every save.** Each save wrote
+  a fresh, uncompressed copy of the app's stylesheet into the file, which the
+  next save then copied again — a deck saved ten times carried ten of them and
+  had put on a megabyte for nothing. The stylesheet belongs in the compressed
+  runtime payload, where it takes 27 KB and is written exactly once; a file
+  that already accumulated copies drops all of them the next time you save it.
+
+- **Fix: a large chart legend no longer crowds the axis labels.** Charts that
+  don't set their own margins now leave room for the legend at whatever size
+  it's set to, instead of assuming the default one.
+
+- **Fix: readable axis numbers on the showcase deck's linked chart.** They were
+  being drawn half-transparent against a dark panel.
 
 - **Fix: the About dialog's update section overlapped the controls beneath it.**
   Once an update was found, the extra heading and buttons collapsed into a
