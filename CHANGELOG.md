@@ -13,11 +13,6 @@ pre-1.0.
 
 ## [1.0.11] — 2026-07-27
 
-- **Fix: a formula you opened but didn't change now redraws when you finish.**
-  Editing a formula (or a `{{page}}`-style field) shows its raw source; leaving
-  without typing anything used to leave that source on the slide until
-  something else happened to repaint.
-
 - **LaTeX maths in any text box, rendered as MathML.** Type `$E=mc^2$` and it
   renders as a formula — `$$…$$` for a display equation on its own line. The
   document stores exactly what you typed, so a deck with maths still opens in
@@ -126,6 +121,11 @@ pre-1.0.
   The lightweight chart renderer applies configured font sizes and weights to
   axis labels and legends, respects legend spacing and placement, and measures
   CJK legend text correctly so localized series names no longer overlap.
+
+- **Fix: a formula you opened but didn't change now redraws when you finish.**
+  Editing a formula (or a `{{page}}`-style field) shows its raw source; leaving
+  without typing anything used to leave that source on the slide until
+  something else happened to repaint.
 
 - **Fix: Reveal's scroll view no longer activates below 435px.** Below about
   435px wide, the presentation was quietly switching to a scrolling reading
