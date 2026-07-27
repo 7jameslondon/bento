@@ -34,6 +34,9 @@ export class SlideCanvas {
   private zoom = 1
   private zoomLabel: HTMLElement | null = null
   private editing: HTMLElement | null = null
+  /** startTextEdit swapped the rendered form for raw source (a field or a
+   *  formula), so commit must re-render even if the text is unchanged. */
+  private editingShowedRaw = false
   /** when editing a table cell, which cell (else null → text element edit) */
   private editingCell: { r: number; c: number } | null = null
   /** a repaint arrived (e.g. a remote collab op) while an inline edit was in
@@ -917,8 +920,12 @@ export class SlideCanvas {
     // fields ({{page}} etc.) and math ($…$) render RESOLVED; while editing,
     // show the raw source so the author edits the token, not the computed value
     const model = this.store.element(node.dataset.elId ?? '')
+    // Remember that we swapped: on commit the resolved view has to be put back
+    // even when the text did NOT change, and only a re-render can do that.
+    this.editingShowedRaw = false
     if (model?.type === 'text' && typeof model.html === 'string' && /\{\{|\$/.test(model.html)) {
       inner.innerHTML = model.html
+      this.editingShowedRaw = true
     }
     this.editing = node
     node.classList.add('bento-editing')
@@ -989,6 +996,15 @@ export class SlideCanvas {
         el.html = html
         if (grownH > el.h) el.h = Math.ceil(grownH)
       })
+    } else if (this.editingShowedRaw) {
+      // Nothing changed, so there is no commit to re-render off the back of —
+      // but startTextEdit replaced the rendered formula (or {{page}} field)
+      // with its raw source, and that raw source is still on screen. Editing a
+      // formula and changing nothing left `$$x = \\frac{…}$$` sitting on the
+      // slide until some unrelated event happened to repaint. Put the resolved
+      // view back.
+      this.editingShowedRaw = false
+      this.render()
     } else {
       this.syncTargets()
     }
