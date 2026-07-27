@@ -2103,6 +2103,8 @@ input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: poin
   font-size: 11.5px; line-height: 1.5; color: var(--muted);
   background: var(--bg); border-left: 2px solid var(--line);
   padding: 5px 8px; margin: 0 0 6px; border-radius: 0 5px 5px 0;
+}
+
 /* ————— RTL chrome: the marks that don't flip themselves ————————————————————
    Logical properties turn the LAYOUT around on their own. These are the few
    glyphs that encode a direction in their SHAPE, so they have to be flipped by
