@@ -312,7 +312,12 @@ export class Editor {
     const moreMenu = div('ed-menu')
     const moreD = div('ed-dropdown ed-phone-only')
     moreD.append(
-      btn('<b>⋯</b>', t('More'), () => moreD.classList.toggle('open'), t('More actions')),
+      btn('<b>⋯</b>', t('More'), () => {
+        // Fill BEFORE opening: the save-as list reflects live state (is this
+        // file encrypted?) and must be current the moment it becomes visible.
+        if (!moreD.classList.contains('open')) this.fillPhoneSaveAs(moreMenu, moreD)
+        moreD.classList.toggle('open')
+      }, t('More actions')),
       moreMenu)
     const slidesB = btn(ICONS.panelLeft, t('Slides'), () => this.togglePanel('left'), t('Slides — show or hide the slide list'))
     slidesB.classList.add('ed-phone-only')
@@ -559,17 +564,29 @@ export class Editor {
         // so the menu's label rule has nothing to reveal and they would sit in
         // ⋯ as mystery glyphs. Borrow the tooltip, minus its shortcut: "Redo
         // (⇧⌘Z)" -> "Redo". No new strings, and desktop is untouched.
-        if (!b.querySelector('span') && b.title) {
+        // A demoted DROPDOWN is a wrapper, so label its TRIGGER and ask the
+        // trigger alone whether it already has one. Asking the wrapper always
+        // answers yes — it contains the menu it hides, and that menu is full of
+        // spans. Language lost its label to exactly that: it sat in ⋯ as a bare
+        // globe while everything around it was captioned.
+        const face = b.classList.contains('ed-dropdown')
+          ? (b.firstElementChild as HTMLElement | null)
+          : b
+        if (face && !face.querySelector('span') && face.title) {
           const lab = document.createElement('span')
           lab.dataset.phoneLabel = '1'
-          lab.textContent = b.title.split('(')[0].trim()
-          b.appendChild(lab)
+          // "Redo (⇧⌘Z)" -> "Redo"; "Not sharing yet — click…" -> "Not sharing yet"
+          lab.textContent = face.title.split('(')[0].split('—')[0].trim()
+          face.appendChild(lab)
         }
         p.moreMenu.appendChild(b)
       }
     } else if (!fresh) {
       while (p.insertMenu.firstChild) p.insert.appendChild(p.insertMenu.firstChild)
       for (const lab of p.moreMenu.querySelectorAll('[data-phone-label]')) lab.remove()
+      // The save-as rows are a phone-only copy; on a wide screen the split
+      // button's caret is back and owns that list again.
+      for (const row of p.moreMenu.querySelectorAll('[data-phone-saveas]')) row.remove()
       // back to their original homes, in their original order
       for (const b of p.demote) {
         if (b === p.demote[0]) p.history.appendChild(b)
@@ -600,6 +617,34 @@ export class Editor {
       if (wrap.classList.contains('open')) rebuild()
     }, t('Save as… — copy, new deck, password'))
     trigger.classList.add('ed-split-caret')
+    const rebuild = () => {
+      menu.textContent = ''
+      this.buildSaveAsItems(menu, () => wrap.classList.remove('open'))
+    }
+    wrap.append(trigger, menu)
+    document.addEventListener('pointerdown', (ev) => {
+      if (!wrap.contains(ev.target as Node)) wrap.classList.remove('open')
+    })
+    return wrap
+  }
+
+  /**
+   * The Save-as list, built into `into`.
+   *
+   * Rebuilt on every open because it reflects live state: an encrypted file
+   * offers Change/Remove password where a plain one offers Encrypt.
+   *
+   * It takes a container so ONE list can serve two homes — the desktop split
+   * button's dropdown, and the ⋯ menu on a phone, where the caret that opens
+   * this list does not fit beside a 44px Save button. `mark` tags what it
+   * creates so the phone copy can be torn down again without disturbing the
+   * real toolbar buttons parked in that same menu.
+   */
+  private buildSaveAsItems(into: HTMLElement, close: () => void, mark = false) {
+    const tag = <T extends HTMLElement>(el: T): T => {
+      if (mark) el.dataset.phoneSaveas = '1'
+      return el
+    }
     const item = (icon: string, label: string, title: string, onClick: () => void) => {
       const b = document.createElement('button')
       b.className = 'ed-btn'
@@ -607,13 +652,12 @@ export class Editor {
       b.appendChild(Object.assign(document.createElement('span'), { textContent: label }))
       b.title = title
       b.addEventListener('click', () => {
-        wrap.classList.remove('open')
+        close()
         onClick()
       })
-      menu.appendChild(b)
+      into.appendChild(tag(b))
     }
-    const rebuild = () => {
-      menu.textContent = ''
+    {
       // FILE operations only — everything that goes to OTHER PEOPLE lives in
       // the Share panel (one mental model: Save = for me, Share = for others).
       item(ICONS.copy, t('Save a copy…'),
@@ -640,7 +684,7 @@ export class Editor {
       }
       // the document AS DATA — history and the AI/JSON round-trip live with
       // the other file operations now (they were buried in the About dialog)
-      menu.appendChild(div('ed-menu-sep'))
+      into.appendChild(tag(div('ed-menu-sep')))
       item(ICONS.history, t('Version history…'),
         t('Restore an earlier auto-saved version of this deck (kept locally in this browser).'),
         () => void this.openVersionHistory())
@@ -654,11 +698,34 @@ export class Editor {
         t('Replace every slide with one blank slide. Keeps the deck’s theme, name and live session — ⌘Z undoes.'),
         () => this.startFromScratch())
     }
-    wrap.append(trigger, menu)
-    document.addEventListener('pointerdown', (ev) => {
-      if (!wrap.contains(ev.target as Node)) wrap.classList.remove('open')
-    })
-    return wrap
+  }
+
+  /**
+   * Put the save-as list at the bottom of ⋯ on a phone.
+   *
+   * The split button's caret is hidden there — it does not fit beside a 44px
+   * Save target — which left Save a copy, Duplicate as new deck, every password
+   * action, Version history and the whole JSON round-trip with NO route on a
+   * phone at all. They are file operations, so ⋯ ("everything occasional") is
+   * where they belong rather than a second nested dropdown, which on glass is
+   * a worse answer than a long list.
+   *
+   * Rebuilt on each open (the list is state-dependent) and torn down BY TAG:
+   * the buttons sharing this menu are the real toolbar nodes on loan from the
+   * bar, and clearing the container would destroy them.
+   */
+  private fillPhoneSaveAs(menu: HTMLElement, wrap: HTMLElement) {
+    for (const stale of Array.from(menu.querySelectorAll('[data-phone-saveas]'))) stale.remove()
+    if (!this.phoneChromeOn) return
+    // `el.dataset.x = …`, never Object.assign(el, {dataset}) — dataset is a
+    // getter-only accessor, so assigning it wholesale THROWS. It type-checks
+    // either way, and the throw here landed before the menu's own toggle, so
+    // the symptom was ⋯ refusing to open at all rather than anything about
+    // save-as.
+    const sep = div('ed-menu-sep')
+    sep.dataset.phoneSaveas = '1'
+    menu.appendChild(sep)
+    this.buildSaveAsItems(menu, () => wrap.classList.remove('open'), true)
   }
 
   /**

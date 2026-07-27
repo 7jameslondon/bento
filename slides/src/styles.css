@@ -185,7 +185,12 @@ a.ed-btn { text-decoration: none; }  /* the update block's "What's new" link is 
   z-index: 50;
   min-width: 150px;
 }
-.ed-dropdown.open .ed-menu { display: flex; }
+/* DIRECT child, not any descendant. Phone chrome demotes whole dropdown
+   widgets (Share, Language) into the ⋯ menu, so a descendant selector opened
+   their menus too — ⋯ came up with the entire language list already unrolled
+   inside it. Every .ed-menu is appended straight onto its own .ed-dropdown, so
+   scoping to `>` is exact. */
+.ed-dropdown.open > .ed-menu { display: flex; }
 .ed-menu .ed-btn { justify-content: flex-start; width: 100%; }
 
 /* ————— main layout ————— */
@@ -1880,10 +1885,26 @@ body.ed-col-resizing { cursor: col-resize; user-select: none; }
   .ed-main { position: relative; }
   /* the 16px resizer chevrons are replaced by real buttons in the bar */
   .ed-panel-toggle { display: none; }
-  /* Save stays one tap; its save-AS caret does not fit and is the least-used
-     half. KNOWN GAP: copy / new deck / template / password are unreachable on
-     a phone until they move into ⋯. */
+  /* Save stays one tap; its save-AS caret does not fit beside a 44px target
+     and is the least-used half. The list it opens is not lost — editor.ts
+     appends it to the bottom of ⋯ while phone chrome is on. */
   .ed-topbar .ed-split-caret { display: none; }
+  /* ⋯ now carries the demoted buttons AND that list, so it can outgrow the
+     screen in BOTH directions.
+     Down: without a bound it runs off the bottom, and a dropdown is absolutely
+     positioned, so nothing else can scroll it back into reach.
+     Sideways: these menus open from buttons in the right half of a 402px bar,
+     and a start-anchored menu grows AWAY from the screen — ⋯ sits at x≈374, so
+     even the old six short rows were partly cut off. Anchoring to the end grows
+     them inward instead. */
+  .ed-topbar .ed-menu {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .ed-title { min-width: 0; }
 }
 
