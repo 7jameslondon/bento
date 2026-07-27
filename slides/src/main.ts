@@ -9,9 +9,11 @@ import { configureApp, appConfig } from '../../kernel/src/app.ts'
 import {
   capturePristine, readEmbeddedDoc, serializeFile, serializeAuto, downloadFile,
   suggestedFileName, parseEnvelope, decryptEnvelope, setEncryptionPassword,
+  registerPreview,
 } from './save'
+import { buildSlidePreview } from './preview'
 import { APP_VERSION, checkForUpdates, buildUpdatedFile, applyUpdate } from './update'
-import { i18nApi, t } from './i18n'
+import { i18nApi, t, applyDirection } from './i18n'
 import { parseDoc, type BentoDoc } from './model'
 import { starterDoc } from './starterdeck'
 import { injectFonts } from './fonts'
@@ -29,7 +31,20 @@ configureApp({
   manifestUrl: 'https://bento.page/releases/slides/manifest.json',
 })
 
+// Every save writes a static rendering of page one into the shell, so file
+// managers thumbnail the deck instead of the boot splash (src/preview.ts).
+// Registered before capturePristine only for tidiness — nothing serializes
+// this early — but it must be registered before the first save.
+registerPreview((doc) => buildSlidePreview(doc as BentoDoc))
+
 capturePristine()
+
+// Chrome direction follows the VIEWER's language (Arabic/Hebrew/… get an RTL
+// interface). Deliberately AFTER capturePristine: saves re-serialize the
+// pristine clone, so the dir/lang attributes never reach a saved file — the
+// same viewer-scoped rule as 'bento-lang' and reduced motion. The DOCUMENT
+// never mirrors; styles.css pins every slide surface back to direction: ltr.
+applyDirection()
 
 // --- boot gates: password-encrypted files, read-only player files -----------
 

@@ -20,10 +20,12 @@
 // Destination repo: $BENTO_SITE_DIR, else ../bento-site beside this repo.
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { gatePackIndex } from './sign-packs.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const site = join(root, 'site')
@@ -86,6 +88,28 @@ if (existsSync(shellFile)) {
   console.log(`• shell-consistency gate: ${decks.length} example deck(s) embed the released shell ✓`)
 }
 
+// ---- gate: the pack index MUST describe the packs being published ----------
+// Same principle as the shell: signed bytes are served bytes. The index pins
+// each pack's sha256, so a pack rebuilt after signing (or one dropped into the
+// directory by hand) would be rejected by every client with an integrity error
+// the user cannot act on. Catch it here instead.
+const packIndex = join(site, 'releases/slides/packs.json')
+const packsDir = join(site, 'releases/slides/packs')
+if (existsSync(packIndex)) {
+  if (!existsSync(packsDir)) die(`${packIndex.slice(site.length + 1)} exists but there are no packs beside it — re-run release.mjs`)
+  try {
+    gatePackIndex(packIndex, packsDir)
+    console.log('• pack-index gate: every published pack matches its signed hash ✓')
+  } catch (e) {
+    die(`${e.message}\n  Re-sign with: node scripts/sign-packs.mjs ${packsDir} --out ${packIndex}`)
+  }
+} else if (existsSync(packsDir) && readdirSync(packsDir).some((f) => f.endsWith('.pack.json'))) {
+  // Unsigned packs on the CDN are worse than no packs: nothing would verify
+  // them, and a client that fell back to "just fetch it" would be trusting
+  // the host. Refuse rather than publish an unverifiable language.
+  die(`language packs are staged at ${packsDir.slice(site.length + 1)} but packs.json is MISSING — an unsigned pack must never be published.\n  Fix: node scripts/sign-packs.mjs ${packsDir} --out ${packIndex}`)
+}
+
 // ---- mirror site/ → dest (authoritative; never touches dest/.git) ----------
 const rsyncFlags = ['-a', '--delete', '--exclude', '.git']
 if (dry) rsyncFlags.push('-n', '-v', '--itemize-changes')
@@ -108,6 +132,75 @@ const ver = (() => {
   } catch { return '?' }
 })()
 console.log(`\n✓ published to bento-site @ ${head} (app v${ver})`)
+
+// ---- GitHub release --------------------------------------------------------
+// Publishing the site makes a version downloadable and self-updatable, but the
+// GitHub release is how people who arrive from the repo get the file at all —
+// and being a separate manual step in RELEASING.md, it was simply forgotten for
+// v1.0.10. Documentation did not prevent that; doing it here does.
+//
+// Idempotent: an existing release is left alone, and only a missing asset is
+// uploaded, so re-running publish is always safe. NOT best-effort — unlike the
+// guestbook re-seed below, a failure here is reported loudly and exits non-zero,
+// because a silent skip is the exact failure being fixed.
+const releaseShell = join(site, 'releases/slides/Bento_Slides.bento.html')
+const tag = `v${ver}`
+
+const ghAvailable = (() => {
+  try { capture('gh', ['auth', 'status'], { stdio: ['ignore', 'pipe', 'pipe'] }); return true }
+  catch { return false }
+})()
+
+if (ver === '?') {
+  console.warn('⚠ could not read the published version — skipping the GitHub release step')
+} else if (!ghAvailable) {
+  die(`site is published, but gh is unavailable or unauthenticated — the GitHub release for ${tag} was NOT created.\n  Fix: gh auth login, then:  gh release create ${tag} ${releaseShell} --title ${tag} --notes-file <notes>`)
+} else {
+  const exists = (() => {
+    try { capture('gh', ['release', 'view', tag], { stdio: ['ignore', 'pipe', 'pipe'] }); return true }
+    catch { return false }
+  })()
+
+  if (!exists) {
+    // Notes come from the CHANGELOG section for this version, so the release
+    // and the file in the repo can never drift apart.
+    let notes = 'See CHANGELOG.md.'
+    try {
+      const cl = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+      const start = cl.indexOf(`## [${ver}]`)
+      const rest = cl.indexOf('\n## [', start + 1)
+      if (start >= 0) {
+        notes = cl.slice(cl.indexOf('\n', start) + 1, rest > 0 ? rest : undefined).trim()
+      }
+    } catch { /* fall back to the pointer above */ }
+    const intro = "Download the single file below and open it in any modern browser — it's the document, the viewer and the editor in one. Shipped files self-update through the signed release channel.\n\n"
+    const notesFile = join(tmpdir(), `bento-release-${ver}.md`)
+    writeFileSync(notesFile, intro + notes)
+    run('gh', ['release', 'create', tag, releaseShell, '--title', tag, '--notes-file', notesFile])
+    console.log(`✓ GitHub release ${tag} created with the signed shell attached`)
+  } else {
+    const assets = (() => {
+      try { return capture('gh', ['release', 'view', tag, '--json', 'assets', '-q', '.assets[].name']) }
+      catch { return '' }
+    })()
+    if (!assets.includes('Bento_Slides.bento.html')) {
+      run('gh', ['release', 'upload', tag, releaseShell, '--clobber'])
+      console.log(`✓ attached the signed shell to the existing release ${tag}`)
+    } else {
+      console.log(`✓ GitHub release ${tag} already published`)
+    }
+  }
+
+  // Assert rather than assume: "publish succeeded" must mean the release is
+  // actually there, with the file on it.
+  const check = (() => {
+    try { return capture('gh', ['release', 'view', tag, '--json', 'assets', '-q', '.assets[].name']) }
+    catch { return '' }
+  })()
+  if (!check.includes('Bento_Slides.bento.html')) {
+    die(`GitHub release ${tag} is missing Bento_Slides.bento.html after publishing — attach it before announcing.`)
+  }
+}
 
 // ---- keep the LIVE guestbook daemon on the freshly-published shell ---------
 // bento.page/guestbook.bento.html is served by the Cloudflare daemon from KV,

@@ -14,6 +14,207 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-26 — File-manager thumbnails: a `<noscript>` render of page one, written at save time
+
+**Decided:** 2026-07-26. Kernel zone (`kernel/src/save.ts`), so it binds every
+Bento app; the drawing is per-app (`slides/src/preview.ts`).
+
+**The problem.** Thumbnailers render a document's HTML but do not run its
+JavaScript, so every Bento file thumbnailed as the same dark box — correctly,
+because before the runtime boots every deck *is* the same bytes plus the boot
+splash. Confirmed on iOS, and confirmed that the iOS-side escape hatch does not
+exist: an image attached via `UIDocument.fileAttributesToWrite` under
+`NSURLThumbnailDictionaryKey` is accepted and then silently dropped for local
+files (only `com.apple.lastuseddate` survives on disk). **The fix has to live
+in the file.** So `serializeBody` now writes a static rendering of page one
+into the shell on every save, and it fixes every platform at once with no
+native extension anywhere.
+
+**`<noscript>`, not "render it and let JS remove it".** The obvious design —
+always paint the preview, have the runtime delete it at boot — flashes page one
+in front of every reader on every open, for as long as the 600 KB payload takes
+to inflate. `<noscript>` has exactly the semantics wanted: its contents are
+rendered only when scripting is off, which is precisely the audience.
+Empirically the DOM proves it, not just the spec — with scripting on the host
+node has **zero element children** (its content is one raw text node) and a
+bounding box of 0×0, so there is nothing to flash, nothing in layout, nothing
+for print or present to exclude. The cost is that a thumbnailer which *does*
+run scripts sees no preview — i.e. today's behaviour. A regression is not
+possible, only an improvement.
+
+**Scaling: `transform: scale(calc(min(100vw, <aspect>vh) / <width>px))`.**
+CSS Values 4 length-over-length division yields the plain `<number>` `scale()`
+needs, so the whole page scales as one unit and every inline px the renderer
+emitted is left alone. **`<svg viewBox><foreignObject>` was tried first and does
+not work**: Chrome renders it correctly, QuickLook's WebKit does not
+(absolutely-positioned children disappeared, content scaled non-uniformly), and
+QuickLook is the renderer this feature exists to serve. Verify changes here
+against `qlmanage -t -s 640 -o <dir> <file>` — the real macOS thumbnailer, and
+the only honest test. Chrome's `--blink-settings=scriptEnabled=false` suppresses
+`--screenshot` entirely in Chrome 150; drive `Emulation.setScriptExecutionDisabled`
+over CDP instead.
+
+**Encrypted decks get NO preview — the load-bearing rule.** A plaintext
+rendering of page one beside a `bento/enc` envelope hands over the title slide,
+usually the most disclosive page, and does it invisibly. `previewAllowed()`
+checks the in-memory password flag AND re-parses the body as an envelope,
+because those fail independently. Removal of any existing preview is
+UNCONDITIONAL and happens before that decision, so a deck that gains a password
+loses its preview on the next save.
+
+**Shell furniture, not format.** Nothing enters `#bento-doc`; no format field
+is added; old files open unchanged; an app that registers no provider (spaces)
+saves as before. The preview is replaced, never appended — `capturePristine()`
+snapshots the file as loaded, so the clone already carries the previous save's
+copy.
+
+**Budget: 64 KB** (`PREVIEW_BUDGET`, slides/src/model.ts), ~10% of the shipped
+shell. Measured: starter deck 25 KB (2.6% of the file); a page-one chart 11 KB;
+a table 16 KB; a page with a 2.5 MB photograph degrades to 1.7 KB. Over budget,
+page one re-renders with raster payloads replaced by tinted boxes; over it
+again, a title card. Downscaling a hero photo instead would be
+better and was NOT done: image decode is async and `serializeWith`/
+`serializeFile` are synchronous (update.ts, `window.bento.serialize()`), so an
+async provider is a kernel API change of its own.
+
+Guards: `scripts/test-preview.ts` (encryption veto + the refusal to emit markup
+carrying a script tag or `</noscript>`), and `scripts/shell-gate.mjs`, which
+now also proves a preview-carrying file satisfies the splice contract and
+asserts both rules are still wired into the save path.
+
+## 2026-07-26 — A language pack lives in the FILE and nowhere else
+
+No browser-local install. A "keep it on this computer" option (localStorage)
+was **built and then removed**, because `localStorage` is scoped per ORIGIN
+and that is fatally misaligned with how Bento is used: the download comes from
+`bento.page` (an https origin) and the file is then opened from disk (a
+`file://` origin). A language added on the website was therefore GONE the
+moment the user saved the deck and reopened it locally — the exact journey the
+product encourages, and "I added Korean and it vanished" is not a bug a user
+can diagnose.
+
+One home also matches the platform: the file *is* the software, so a language
+belongs to the deck. The trade — adding a language requires saving the file —
+is stated plainly in the UI ("Added when you next save") rather than hidden.
+Adding is staged on click and written on the next save because on browsers
+without File System Access, writing on click means silently downloading a
+second copy of the user's deck.
+
+Corollary: anything that remembers pack *content* outside the file
+reintroduces this. Viewer *preferences* (locale, reduce-motion) stay
+browser-local on purpose; that asymmetry is deliberate. Details:
+`docs/i18n-packs.md`, `slides/src/packs.ts`.
+
+## 2026-07-26 — The pack carrier is generic; pack POLICY is not. This is not a plugin system.
+
+The kernel mechanism is already extension-agnostic and should stay that way:
+`registerShellBlocks` / `readShellBlocks` (`kernel/src/save.ts`) carry
+arbitrary typed blocks in the shell and know nothing about languages, and
+`registerUpdatePrepare` (`kernel/src/update.ts`) is a generic "refresh
+version-bound extras" hook. Signature verification and hash pinning are being
+made generic in the kernel too (branch `claude/i18n-pack-verify`). Reuse all
+of that freely.
+
+**Do not generalize the policy.** Language packs are DATA and their worst case
+is bounded — a tampered or stale pack shows wrong or English words. That bound
+is why degrade-per-string, keep-on-refresh-failure, and auto-refresh on update
+are the right rules *for packs*.
+
+Anything carrying CODE is categorically different: unbounded failure (it would
+hold the document, the file handle, and the collab keys), and it breaks the
+property that makes self-update trustworthy — that the shell only ever runs
+bytes from a signed release. Such a thing would need its own policy (pinned at
+install, never auto-refreshed) and must not inherit the pack rules by reusing
+the pack machinery.
+
+So: reuse the carrier and the crypto; do not treat "we have packs" as evidence
+that a plugin system is designed or wanted. It is not.
+
+## 2026-07-26 — Side-loaded artifacts: sign the index, pin the bytes, fail closed
+
+Language packs are fetched over the network, so they get the **same two-step
+the app shell's own update already gets**: an envelope signed with the release
+key (`{payload, sig}`, ECDSA P-256 / SHA-256) whose payload pins each
+artifact's `sha256`, and a download that is accepted only if its bytes hash to
+that pin. Signature over the pin, pin over the bytes. **No second key and no
+second trust root** — `PUBLIC_KEY_JWK` in `kernel/src/update.ts` is it.
+
+The mechanism lives in the kernel (`verifySigned`, `fetchPinned`) because it is
+the same for anything side-loaded; the *policy* stays in the app
+(`slides/src/packs.ts`). Keep that boundary: the kernel helpers verify BYTES,
+they do not decide what is safe to use. Packs are DATA with a bounded failure
+mode (wrong words on screen), which is why a pack that fails a refresh is kept
+at its existing version rather than dropped. Anything side-loaded that ever
+carries CODE needs stricter policy — pinned at install, never auto-refreshed —
+and must not inherit the pack rules by reusing the same fetch.
+
+**Fail closed, no legacy path.** An unsigned or unpinned index yields no
+listings at all. Nothing is published yet, so there is no permissive fallback
+to keep — and one added later would mean whoever answers for the channel picks
+the strings in the UI.
+
+**A pack already inside a file is NOT re-verified** (`readPacksFromShell`). It
+was verified at the door, and once spliced it carries exactly the trust the
+document does — anyone who can rewrite that block can rewrite the checking
+code too. Re-verifying would need the network at boot, which breaks offline
+use. Proof rig: `node scripts/test-packs.ts` (throwaway key, real crypto).
+
+## 2026-07-26 — Language packs are published under a SIGNED INDEX, separate from the manifest
+
+Amends the "Signing and release" paragraph of `docs/i18n-packs.md`, which said
+the update manifest would gain a `packs` array. It does not.
+
+`release.mjs` emits the packs and signs **one index** over all of them at
+`releases/slides/packs.json` — the same `{payload, sig}` envelope, the same
+offline key, and literally the same signing code as the manifest (extracted to
+`scripts/sign-payload.mjs`). Each listing pins its pack's `sha256`; individual
+packs are not separately signed. Clients verify the index once, then hash each
+download against its signed hash.
+
+Why not inside the manifest: shipped files ignore a manifest that is not
+strictly newer than themselves (downgrade-replay protection), so pack hashes
+carried there could never be corrected **between** app releases — and a fixed
+translation is not a new app version. A separate index is re-issuable any day,
+and `manifest.json` keeps meaning exactly one thing: here is the app shell.
+Signed code and signed data stay two artifacts.
+
+Still one key, still local-only signing, and `publish-site.mjs` now gates the
+index the way it already gates the shell (indexed pack missing, hash drifted,
+or packs staged with no index = refuse to publish). Details and the exact
+payload shape: `docs/i18n-packs.md` §"Signing and release"; `scripts/sign-packs.mjs`.
+
+## 2026-07-25 — i18n: a bundled core of 9 languages, everything else a signed pack
+
+The 7 non-English catalogs cost **115,572 B** of the shell even after key-once
+packing — more than any dependency, and an English-only shell is 28.8%
+smaller. But we want *more* languages, not fewer. So: **bundle a core, ship
+everything else as signed downloadable packs.**
+
+- **Bundled (9):** the existing 8 (en, ja, zh-Hans, zh-Hant, es, fr, de, it)
+  plus **Portuguese**. Nothing regresses for current users; Portuguese is
+  added because Brazil has a real English-proficiency gap and it is in the
+  cheapest cost tier.
+- **Everything else:** a pack, signed with the existing release key and
+  released centrally alongside each app release, fetched only on explicit user
+  action and spliced into the file.
+
+**No further languages get bundled by default** — demand declares itself
+through contributions (#17 offers Korean), and a pack can be revised without
+cutting an app release.
+
+Measured facts worth not re-deriving: cost is **~14 KB per language regardless
+of script** (CJK is the *cheapest* — 2.6× the bytes per character but a third
+of the characters). Simplified↔Traditional conversion on the fly does **not**
+pay: only 43.3% of characters match, because the difference is vocabulary
+(软件/軟體) not glyph form, and deflate already recovers the genuine redundancy.
+Rank candidate languages by the **English-proficiency gap in the segment that
+uses this tool**, not by speaker counts — which is why Hindi is not in the core
+despite 610M speakers.
+
+Full design, risks and status: **`docs/i18n-packs.md`**. The risk that will
+ship broken if ignored: **self-update must carry packs forward** — `update.ts`
+re-splices the document into a *new shell*, and packs live in the shell.
+
 ## 2026-07-25 — Every PR gets human review before merging to main (for now)
 
 At this stage of development the maintainer reviews **every** PR before it
@@ -232,6 +433,85 @@ something is actually failing.
 Human review is a practice, not a GitHub setting, for as long as the team is
 one person. Restore a real approval count the moment a second reviewer exists;
 the future-action exclusion list in the amended entry still applies.
+
+## RTL is two separable problems; only one of them is the document's
+
+**Decided:** 2026-07-26. Supersedes nothing; establishes the split.
+
+Content bidi and chrome mirroring get confused constantly, and treating them
+as one feature produces the wrong answer to both.
+
+*Content* direction is a correctness bug and belongs to the document: an
+Arabic sentence puts its full stop in the wrong place without `dir="auto"`,
+and it is wrong for everyone who opens the file. Cheap, uncontroversial, do it.
+
+*Chrome* mirroring is a UI convention. Nothing is incorrect without it; the
+editor merely feels foreign to an RTL reader. It was deliberately sequenced
+AFTER an RTL language pack existed, because mirroring a UI whose every label
+is still English is worse than not mirroring — and because the point of
+shipping a pack first is to learn whether RTL users actually turn up.
+
+The invariant that falls out of the split — **the document never mirrors** —
+is recorded in `PLATFORM.md` §8 and binds every Bento app. A document that
+looks different depending on the viewer's locale is a format-level bug.
+
+Cost, measured rather than guessed: ~430 bytes in the shipped shell for the
+whole chrome conversion, and **zero** for the languages themselves, because
+every RTL language is a pack. Size was never the constraint here. The real
+constraint is that 32 of the editor's ~36 direction-adjacent coordinate sites
+live in `canvas.ts` (Moveable/Selecto), which cannot be verified by an agent —
+synthetic drags on Moveable handles do not register at all. Pinning the
+document surfaces LTR was sufficient to leave that math untouched, and that is
+the outcome to preserve: if a future change makes chrome direction reach
+`canvas.ts`, stop and reconsider rather than refactoring the coordinate code.
+
+**No plural system.** Hebrew (and later Arabic) ship without one. Of 15
+count-bearing strings only 6 take a real count; the rest are index labels
+(`Axis {n}`, `slide {n}`) or abbreviated times. Six strings do not justify
+changing the catalog format, the build script, the CI gate and every catalog.
+Translators phrase them count-agnostically instead (`מחוברים: {n}`), which is
+standard practice when a framework lacks plurals and costs nothing at runtime.
+Revisit only if a language arrives where the workaround genuinely fails.
+
+## One English word, two meanings = two keys
+
+**Decided:** 2026-07-26. Consequence of English-string-as-key; binds every
+Bento app that uses `kernel/src/i18n.ts`.
+
+Gettext-style catalogs key on the English source string, which quietly assumes
+that one English word means one thing. It often doesn't. `Loop` was the
+animation loop AND the media playback toggle; `solid` was a fill style AND a
+line style. Every language had to pick one word and be wrong in the other
+place — Swedish wants *enfärgad* for a solid colour and *heldragen* for a
+solid line, and no amount of translator care fixes that from inside the
+catalog. Both were found independently by pack authors, which is the signal:
+if a translator has to ask "which one is this?", the key is broken, not them.
+
+**The rule.** When one English string reaches `t()` from two call sites that
+mean different things, the more specific site takes a QUALIFIED key
+(`Loop animation`, `solid colour`) and the plainer one keeps the bare word.
+Do not add a context-prefix convention — the key is also what English users
+read, so it has to be a sentence, not `fill.solid`.
+
+**Model words never move.** Values like `solid`/`gradient` are format words
+stored in the document. Disambiguate the LABEL only: `labeledSelect()` takes
+`[value, label]` pairs precisely so the displayed string and the stored string
+can diverge. A "fix" that changes what is written to `doc` is a format change
+wearing an i18n costume.
+
+**The cost, so it is paid deliberately.** Re-keying invalidates that entry in
+every bundled catalog AND in every pack, silently — the string simply falls
+back to English. So it happens BEFORE packs are published, in one PR, with
+the affected keys listed for pack authors to pick up. After packs ship,
+re-keying is a coordinated break across every language and should be weighed
+against living with a slightly wrong word.
+
+**Interpolated values are strings too.** `t('This {kind} is…', { kind })` with
+a model word for `kind` puts an English noun inside a translated sentence.
+Localise at the call site (`{ kind: t(kind) }`) — and check the sentence still
+agrees grammatically, since a substituted noun carries gender in half the
+languages we ship (French needed "Ce fichier {kind}" once `vidéo` could land
+in it).
 
 ## 2026-07-26 — bento/tray: the iOS host is a suite member, and it is generic
 

@@ -15,12 +15,18 @@
 // it with WebCrypto. The payload carries the shell's sha256, so the shipped
 // app verifies BOTH the manifest signature and the downloaded shell hash.
 // Version defaults to slides/package.json — keep them in lockstep.
+//
+// LANGUAGE PACKS are NOT listed here. They are published on their own clock
+// (a corrected translation is not a new app version, and shipped files ignore
+// a manifest that isn't strictly newer than themselves — so a hash carried
+// here could never be corrected between releases). They get their own signed
+// index, same envelope and same key: scripts/sign-packs.mjs.
 
-import { createHash, createPrivateKey, createPublicKey, sign, verify } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { defaultKeyPath, envelopeJson, signPayload } from './sign-payload.mjs'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 
@@ -38,7 +44,7 @@ const opt = (name, fallback) => {
 const version = opt('version', JSON.parse(readFileSync(join(root, 'slides/package.json'), 'utf8')).version)
 const url = opt('url', 'https://bento.page/releases/slides/Bento_Slides.bento.html')
 const notes = opt('notes', '')
-const keyPath = opt('key', join(homedir(), '.bento', 'release-key.json'))
+const keyPath = opt('key', defaultKeyPath())
 const outPath = opt('out', join(dirname(shellPath), 'manifest.json'))
 
 const shell = readFileSync(shellPath)
@@ -53,21 +59,18 @@ const payload = JSON.stringify({
   at: new Date().toISOString(),
 })
 
-const keyFile = JSON.parse(readFileSync(keyPath, 'utf8'))
-const privateKey = createPrivateKey({ key: keyFile.private, format: 'jwk' })
-const sig = sign('sha256', Buffer.from(payload, 'utf8'), {
-  key: privateKey,
-  dsaEncoding: 'ieee-p1363', // WebCrypto's raw r||s format
-})
-
-// Self-check against the public half before writing anything.
-const publicKey = createPublicKey({ key: keyFile.public, format: 'jwk' })
-if (!verify('sha256', Buffer.from(payload, 'utf8'), { key: publicKey, dsaEncoding: 'ieee-p1363' }, sig)) {
-  console.error('Self-verification failed — manifest NOT written.')
+// Signing (and its self-check against the public half) lives in
+// scripts/sign-payload.mjs — shared verbatim with the pack index, so the two
+// signed artifacts can never drift apart in how they are constructed.
+let envelope
+try {
+  envelope = signPayload(payload, keyPath)
+} catch (err) {
+  console.error(`Signing failed — manifest NOT written: ${err.message}`)
   process.exit(1)
 }
 
-writeFileSync(outPath, JSON.stringify({ payload, sig: sig.toString('base64') }, null, 2) + '\n')
+writeFileSync(outPath, envelopeJson(envelope))
 console.log(`Signed release v${version}`)
 console.log(`  shell   ${shellPath} (${(shell.length / 1024).toFixed(0)} KB, sha256 ${sha256.slice(0, 16)}…)`)
 console.log(`  url     ${url}`)

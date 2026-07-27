@@ -22,7 +22,7 @@
 import type { KernelDoc } from './doc.ts'
 import { appConfig } from './app.ts'
 import {
-  serializeDocInto, serializeAuto, suggestedFileName, downloadFile,
+  serializeDocInto, serializeAuto, suggestedFileName, downloadFile, openedFileName, fileBase,
   hasFileHandle, writeUpdatedFile, writeUpdatedFileAs,
 } from './save.ts'
 
@@ -107,18 +107,33 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /**
- * Verify the manifest signature and return its payload. The signature covers
- * the payload's exact string bytes — no JSON canonicalization involved.
+ * Verify a SIGNED ENVELOPE and return its parsed payload.
+ *
+ * The envelope is `{ payload: "<json string>", sig: "<base64>" }` and the
+ * signature (ECDSA P-256 / SHA-256, made offline by scripts/sign-release.mjs)
+ * covers the payload's exact UTF-8 bytes — no JSON canonicalization involved,
+ * which is why the payload travels as a string rather than as an object.
+ *
+ * This is the ONLY place in the kernel that does release-channel crypto.
+ * Anything else the channel serves — the release manifest, the language-pack
+ * index (slides/src/packs.ts) — verifies through here against the SAME
+ * embedded key, then applies its own shape checks to the payload. One trust
+ * root, one code path: a second implementation is a second thing to get
+ * wrong, and a signature check that is subtly wrong looks exactly like one
+ * that is right.
+ *
+ * Throws on anything short of a good signature. `what` only names the thing
+ * in those messages.
  */
-async function verifyManifest(raw: string): Promise<ReleaseInfo> {
+export async function verifySigned(raw: string, what = 'signed file'): Promise<unknown> {
   let payload: string, sig: string
   try {
     ;({ payload, sig } = JSON.parse(raw))
   } catch {
-    throw new Error('the release manifest is not valid JSON')
+    throw new Error(`the ${what} is not valid JSON`)
   }
   if (typeof payload !== 'string' || typeof sig !== 'string')
-    throw new Error('the release manifest is malformed')
+    throw new Error(`the ${what} is malformed`)
 
   const key = await crypto.subtle.importKey(
     'jwk', PUBLIC_KEY_JWK as JsonWebKey,
@@ -128,9 +143,58 @@ async function verifyManifest(raw: string): Promise<ReleaseInfo> {
     { name: 'ECDSA', hash: 'SHA-256' }, key,
     b64ToBytes(sig), new TextEncoder().encode(payload),
   )
-  if (!ok) throw new Error('the release signature is INVALID — refusing this update')
+  if (!ok) throw new Error(`the ${what} signature is INVALID — refusing it`)
 
-  const info = JSON.parse(payload)
+  try {
+    return JSON.parse(payload)
+  } catch {
+    throw new Error(`the ${what} payload is not valid JSON`)
+  }
+}
+
+/** Lowercase hex sha256 of some bytes — the digest form every pin uses. */
+const sha256Hex = async (bytes: BufferSource): Promise<string> =>
+  hex(await crypto.subtle.digest('SHA-256', bytes))
+
+/**
+ * Fetch an artifact and hand it back ONLY if its bytes hash to `sha256`.
+ * Returns null on anything else: unreachable, non-200, malformed pin, or a
+ * digest that doesn't match. Fail closed — the caller decides what a refusal
+ * means, but it never gets unverified bytes to decide with.
+ *
+ * The pinned digest must itself come from something signed (a manifest, a
+ * signed index) — verifySigned above. Signature over the pin, pin over the
+ * bytes: that chain is what makes a plain https GET from a CDN trustworthy,
+ * and it is the same two steps the app shell's own update goes through.
+ *
+ * SCOPE, deliberately: these two helpers verify BYTES. They do not decide
+ * what those bytes are, or what is safe to do with them — that is the
+ * caller's policy and it is not one-size-fits-all. Language packs are DATA
+ * with a bounded failure mode (wrong words on screen), so packs.ts can keep a
+ * stale pack when a refresh fails. Anything side-loaded that carries CODE
+ * would need much stricter policy — pinned at install, never auto-refreshed —
+ * and must not inherit the pack rules by accident just because it reuses this
+ * fetch.
+ */
+export async function fetchPinned(url: string, sha256: string): Promise<ArrayBuffer | null> {
+  if (!/^[0-9a-f]{64}$/i.test(sha256 ?? '')) return null
+  let bytes: ArrayBuffer
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return null
+    bytes = await res.arrayBuffer()
+  } catch {
+    return null
+  }
+  return (await sha256Hex(bytes)) === sha256.toLowerCase() ? bytes : null
+}
+
+/**
+ * Verify the manifest signature and return its payload: the signature check
+ * above, plus the shape checks that make a payload a release.
+ */
+async function verifyManifest(raw: string): Promise<ReleaseInfo> {
+  const info = (await verifySigned(raw, 'release manifest')) as any
   if (
     info?.app !== appConfig().appId ||
     typeof info.version !== 'string' ||
@@ -160,23 +224,57 @@ export async function checkForUpdates(manifestUrl?: string): Promise<UpdateCheck
  * Fetch the release shell, verify its hash against the signed manifest, and
  * return the full updated .bento.html: this document inside the new app.
  */
+/**
+ * Run by buildUpdatedFile once the new version is known and verified, BEFORE
+ * the document is serialized into it. Lets an app bring version-bound extras
+ * up to date — language packs are the case this exists for.
+ *
+ * Kept as a hook rather than baked in because the kernel must not learn what
+ * a language pack is; it only knows the app may want a moment before the new
+ * shell is written.
+ */
+let prepareUpdate: ((version: string) => Promise<void>) | null = null
+
+export function registerUpdatePrepare(fn: (version: string) => Promise<void>): void {
+  prepareUpdate = fn
+}
+
 export async function buildUpdatedFile(release: ReleaseInfo, doc: KernelDoc): Promise<string> {
   const res = await fetch(release.url, { cache: 'no-store' })
   if (!res.ok) throw new Error(`downloading the update failed (${res.status})`)
   const bytes = await res.arrayBuffer()
-  const digest = hex(await crypto.subtle.digest('SHA-256', bytes))
+  // Same pin as fetchPinned, spelled out here because THIS path distinguishes
+  // "the download failed" from "the download was tampered with" for the user.
+  const digest = await sha256Hex(bytes)
   if (digest !== release.sha256.toLowerCase())
     throw new Error('the downloaded update failed its integrity check — refusing it')
 
   const shell = new DOMParser().parseFromString(new TextDecoder().decode(bytes), 'text/html')
   if (!shell.getElementById('bento-doc'))
     throw new Error('the downloaded update is not a Bento shell')
+
+  // BEST EFFORT, never fatal. If refreshing throws — offline, the new
+  // version's packs not published yet, anything — the update must still
+  // proceed and carry the EXISTING packs forward. Losing a language the
+  // author baked in is far worse than one that is a release out of date,
+  // because a stale pack still degrades per string while a missing one
+  // takes the whole language with it.
+  if (prepareUpdate) {
+    try {
+      await prepareUpdate(release.version)
+    } catch {
+      /* keep whatever the file already carries */
+    }
+  }
   return serializeDocInto(shell, doc)
 }
 
-/** Build the updated file and hand it to the user as a fresh download. */
+/** Build the updated file and hand it to the user as a fresh download.
+ *  Named after the file they have open, not the deck title — an update
+ *  REPLACES that file, so "Q3-board.bento.html" is the answer even when the
+ *  deck is titled "Q3 Board Review". */
 export async function applyUpdate(release: ReleaseInfo, doc: KernelDoc): Promise<void> {
-  downloadFile(await buildUpdatedFile(release, doc), suggestedFileName(doc))
+  downloadFile(await buildUpdatedFile(release, doc), openedFileName() ?? suggestedFileName(doc))
 }
 
 /** Can we rewrite the open file directly (a FS Access handle is held)? */
@@ -190,18 +288,23 @@ export const canUpdateInPlace = hasFileHandle
  *
  * Without a handle (e.g. the file was double-clicked open — the browser grants
  * no handle on open): use a save picker AND KEEP the resulting handle, so this
- * update and every later one can rewrite the file in place. The picker can't
- * default to the open file's location without a handle, so the caller must tell
- * the user to overwrite the file they have open; once they do, it is a one-time
- * grant. Returns false if the picker was cancelled.
+ * update and every later one can rewrite the file in place. The picker is
+ * pre-filled with the open file's own NAME (taken from the document URL); its
+ * DIRECTORY still cannot be set — the API accepts a handle, never a path — so
+ * the caller must still tell the user to overwrite the file they have open.
+ * Once they do, it is a one-time grant. Returns false if cancelled.
  */
 export async function applyUpdateInPlace(release: ReleaseInfo, doc: KernelDoc): Promise<boolean> {
   const html = await buildUpdatedFile(release, doc)
+  // Both names below follow the OPEN FILE, not the deck title: the backup sits
+  // beside the original, and the picker opens pre-filled with the very file the
+  // user is being asked to overwrite.
+  const current = openedFileName()
   if (hasFileHandle()) {
-    const base = suggestedFileName(doc).replace(/\.bento\.html$/, '')
+    const base = fileBase(current ?? suggestedFileName(doc))
     downloadFile(await serializeAuto(doc), `${base}.v${APP_VERSION}-backup.bento.html`)
     await writeUpdatedFile(html)
     return true
   }
-  return writeUpdatedFileAs(html, doc, { keepHandle: true })
+  return writeUpdatedFileAs(html, doc, { keepHandle: true, suggestedName: current ?? undefined })
 }

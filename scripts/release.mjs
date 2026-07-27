@@ -13,6 +13,9 @@
 //     slides/index.html                      live demo (the shell itself)
 //     releases/slides/Bento_Slides.bento.html   the download
 //     releases/slides/manifest.json          signed update manifest
+//     releases/slides/packs/*.pack.json      language packs
+//     releases/slides/packs.json             signed pack index (pins each
+//                                            pack's sha256)
 //
 // The bytes that get SIGNED are the bytes that get SERVED — everything is
 // staged from one local build, so the manifest sha256 always matches the
@@ -56,15 +59,70 @@ cpSync(shellSrc, join(site, 'slides/index.html'))
 // scripts/shell-gate.mjs (shared with CI, which runs it on every PR build).
 gateShell(join(site, 'releases/slides/Bento_Slides.bento.html'))
 
+const key = opt('key', null)
+
+/**
+ * Release notes for the manifest, lifted from this version's CHANGELOG entry.
+ *
+ * The About dialog renders `release.notes` INLINE when an update is found, so
+ * this is what people read while deciding whether to rewrite their file. It
+ * used to be empty, which left a bare version number and a link off to GitHub
+ * — a context switch, mid-decision, to a developer-facing page, and useless to
+ * a deck opened offline from disk.
+ *
+ * Because it rides in the signed envelope, the notes are as tamper-proof as
+ * the shell itself.
+ *
+ * Kept SHORT on purpose: every shipped file fetches this manifest at launch,
+ * so the whole changelog section would be a needless payload. Bold lead-ins
+ * only — the headline of each entry — with the full text a link away.
+ */
+function releaseNotes() {
+  try {
+    const cl = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+    const start = cl.indexOf(`## [${version}]`)
+    if (start < 0) return null
+    const next = cl.indexOf('\n## [', start + 1)
+    const body = cl.slice(cl.indexOf('\n', start) + 1, next > 0 ? next : undefined)
+    // the bold lead-in of each bullet: "- **Something changed.** detail…"
+    const heads = [...body.matchAll(/^- \*\*(.+?)\*\*/gms)].map((m) => m[1].replace(/\s+/g, ' ').trim())
+    if (!heads.length) return null
+    const MAX = 5
+    const shown = heads.slice(0, MAX).map((h) => `• ${h}`)
+    if (heads.length > MAX) shown.push(`…and ${heads.length - MAX} more`)
+    return shown.join('\n')
+  } catch {
+    return null // notes are a nicety; never fail a release over them
+  }
+}
+
 // Sign the manifest against the staged bytes.
+const notes = releaseNotes()
+if (notes) console.log(`  notes   ${notes.split('\n').length} line(s) from CHANGELOG`)
+else console.log('  notes   none — no CHANGELOG entry for this version')
 const signArgs = [
   join(root, 'scripts/sign-release.mjs'),
   join(site, 'releases/slides/Bento_Slides.bento.html'),
   '--out', join(site, 'releases/slides/manifest.json'),
 ]
-const key = opt('key', null)
+if (notes) signArgs.push('--notes', notes)
 if (key) signArgs.push('--key', key)
 execFileSync('node', signArgs, { stdio: 'inherit' })
+
+// Language packs: every non-core language, emitted from its catalog, staged
+// beside the shell and listed in packs.json — a SIGNED index (same envelope,
+// same offline key as the manifest) that pins each pack's sha256. The index is
+// what "Add language…" reads; nothing is trusted without it.
+// Both steps are no-ops until a pack catalog exists (docs/i18n-packs.md).
+const packsOut = join(site, 'releases/slides/packs')
+execFileSync('node', [join(root, 'scripts/build-i18n.mjs'), '--packs', packsOut], { stdio: 'inherit' })
+const packArgs = [
+  join(root, 'scripts/sign-packs.mjs'), packsOut,
+  '--out', join(site, 'releases/slides/packs.json'),
+  '--version', version,
+]
+if (key) packArgs.push('--key', key)
+execFileSync('node', packArgs, { stdio: 'inherit' })
 
 writeFileSync(join(site, 'CNAME'), 'bento.page\n')
 // The site is fully pre-built static — disable Jekyll so every file is served

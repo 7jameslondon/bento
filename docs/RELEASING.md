@@ -34,7 +34,8 @@ verify the manifest signature against the public key embedded in every shell.
    shell and the manifest version — single source of truth).
 2. Commit, tag: `git tag vX.Y.Z`.
 3. `node scripts/release.mjs` — builds, signs, assembles `./site/`
-   (CNAME, landing page, live demo, download, signed manifest).
+   (CNAME, landing page, live demo, download, signed manifest, language packs
+   + their signed index).
 4. Publish `./site/` to the public site repo — one step:
 
    ```sh
@@ -61,17 +62,61 @@ verify the manifest signature against the public key embedded in every shell.
    live **guestbook daemon** onto the freshly-published shell as a best-effort
    final step (see below) — no separate command needed.
 
-5. Also attach `site/releases/slides/Bento_Slides.bento.html` to a GitHub
-   Release for the tag — download counts, release-watch notifications, and a
-   permanent per-version archive.
+5. **The GitHub release is created for you** by `publish-site.mjs` — it makes
+   the release for the tag, attaches
+   `site/releases/slides/Bento_Slides.bento.html`, and takes the notes from
+   this version's CHANGELOG section (so the two can't drift). It is idempotent:
+   an existing release is left alone and only a missing asset is uploaded, so
+   re-running publish is safe.
+
+   It is deliberately **not** best-effort. If `gh` is unauthenticated, or the
+   asset is missing afterwards, publish exits non-zero and tells you the exact
+   command to run. This used to be a manual step, and it was silently missed
+   for v1.0.10 — the site was live and self-updating while the repo showed no
+   release at all. Documentation didn't prevent that, so the check now does.
 6. Sanity check: open the PREVIOUS version's file, About (topbar logo) →
    Check for updates → should offer the new version, and the downloaded copy
    must boot with the document intact.
+
+## Language packs
+
+`release.mjs` also emits every non-core language pack
+(`scripts/build-i18n.mjs --packs`) into `site/releases/slides/packs/` and signs
+an INDEX over them at `site/releases/slides/packs.json`
+(`scripts/sign-packs.mjs`) — same envelope, same offline key and the same
+signing code as the manifest (`scripts/sign-payload.mjs`). The index pins each
+pack's sha256; shipped files verify the index signature once and then hash each
+downloaded pack against it. Design and payload shape: `docs/i18n-packs.md`.
+
+Both steps are no-ops until a pack catalog exists, so nothing changes for a
+release with no packs.
+
+Preview what would be signed, without the key and without writing anything:
+
+```sh
+node scripts/build-i18n.mjs --packs /tmp/packs
+node scripts/sign-packs.mjs /tmp/packs --dry     # prints the exact payload
+```
+
+Re-publishing packs **without cutting an app release** is supported and is the
+reason the index is its own artifact (a corrected translation is not a new app
+version). Re-emit, re-sign the index, publish:
+
+```sh
+node scripts/sign-packs.mjs site/releases/slides/packs \
+  --out site/releases/slides/packs.json --version <app version>
+node scripts/publish-site.mjs "packs: fix the Korean plural forms"
+```
+
+`publish-site.mjs` refuses to push if any published pack does not match its
+signed hash, if an indexed pack is missing, or if packs are staged with no
+index at all — an unsigned pack must never reach the CDN.
 
 ## Rules
 
 - Never edit files on `gh-pages` by hand — the manifest signature covers the
   shell's exact bytes; any drift bricks the update check (integrity refusal).
+  The same holds for `packs.json` and everything under `packs/`.
 - Version only goes up. Shipped files refuse manifests that aren't strictly
   newer than themselves (downgrade-replay protection), so a "rollback" is a
   new higher version that reverts the code.
