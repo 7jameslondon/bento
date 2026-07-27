@@ -149,6 +149,27 @@ export function startPresentation(
     // for tiny embeds.
     minScale: 0.1,
     maxScale: 100,
+    /**
+     * Never switch to Reveal's SCROLL VIEW, whatever the window size.
+     *
+     * Reveal 5 auto-swaps the classic one-slide-at-a-time renderer for a
+     * vertical scrolling page below `scrollActivationWidth`, default 435px.
+     * That default is meant for a deck embedded in an article, where reading
+     * beats presenting. Presenting is the only thing this overlay does, and
+     * EVERY phone is under the threshold — an iPhone is 390-430 CSS px — so
+     * the platform bento/tray exists to serve would silently get a different
+     * renderer from a laptop.
+     *
+     * The concrete cost is navigation, not layout: measured at 402px the
+     * section still scales and positions correctly. But scroll view replaces
+     * slide navigation with page scrolling, which bypasses our own swipe
+     * handling (Reveal's is off deliberately — it walks into hidden state
+     * slides), and turns those state slides into scrollable content when they
+     * are supposed to be reachable only through a link. It also renders every
+     * section at once rather than one at a time, which is the opposite of what
+     * a presentation overlay is for.
+     */
+    scrollActivationWidth: 0,
     center: false,
     hash: false,
     history: false,
