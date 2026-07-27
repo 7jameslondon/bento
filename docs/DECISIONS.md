@@ -14,6 +14,50 @@ Decision. Why. Pointers.
 
 ---
 
+## 2026-07-27 — Thumbnails: plain markup plus a parser-blocking remover, NOT `<noscript>`
+
+**Supersedes the 2026-07-26 entry below** on the one point of where the preview
+lives. Everything else in it still stands: written at save time, replaced never
+appended, `PREVIEW_BUDGET` tiers, and above all **encrypted decks get no
+preview**.
+
+`<noscript>` renders only where scripting is DISABLED, and iOS satisfies
+neither half of that. Probed with a page that is red by default, turns green
+from an inline script, and carries a blue `<noscript>`, the iOS thumbnailer
+renders **RED** — it runs no script AND does not render `<noscript>`. So the
+feature worked in Finder and macOS QuickLook and did nothing on the platform it
+was built for; every deck in Bento Tray stayed a dark box.
+
+That same gap is the fix. A renderer that runs no script still renders ordinary
+markup, and every real reader does run script — so the preview ships as a plain
+`[data-bento-preview]` element with a **parser-blocking inline remover**
+immediately after it. The thumbnailer keeps the preview (it never runs the
+remover); the reader never sees it (the script executes before the browser
+paints). Measured: at removal `document.readyState` is `"loading"` and
+`performance.getEntriesByType('paint')` is EMPTY — zero frames containing the
+preview were ever presented. Not a fast flash; no flash.
+
+The 2026-07-26 entry chose `<noscript>` to avoid exactly that flash, and
+accepted "a thumbnailer that does run scripts sees no preview" as the trade.
+Both halves turned out to be wrong about iOS, and the replacement costs neither.
+
+**A QLThumbnailProvider extension does not work and should not be retried.** It
+registers correctly (`pluginkit` shows `SDK = com.apple.quicklook.thumbnail`)
+but its process never launches: iOS uses its own generator for `public.html`
+and does not consult third-party extensions for types it already handles.
+Likewise `NSURLThumbnailDictionaryKey` via `UIDocument.fileAttributesToWrite`,
+which is accepted and then silently dropped for local files — inspecting the
+xattrs afterwards finds only `com.apple.lastuseddate`.
+
+`previewIsSafe` is now MORE load-bearing, not less: the preview lands in the
+live DOM rather than sitting inert inside `<noscript>`, so the refusal that
+keeps a script tag out of it protects the page and not just the file structure.
+`shell-gate.mjs` gained two source assertions — that the remover is emitted at
+all, and that it sits immediately after the preview, since anything between
+them is markup a browser could paint first.
+
+---
+
 ## 2026-07-26 — File-manager thumbnails: a `<noscript>` render of page one, written at save time
 
 **Decided:** 2026-07-26. Kernel zone (`kernel/src/save.ts`), so it binds every

@@ -36,10 +36,19 @@ names provisional.
   file-manager thumbnails**. Thumbnailers (iOS Files, macOS QuickLook/Finder,
   Bento Tray) render HTML with JS OFF, so every deck used to thumbnail as the
   same boot splash. Every save now writes a still render of page one into the
-  shell, parked in `<noscript data-bento-preview>` — rendered only when
-  scripting is off, so with JS on the host node has ZERO element children (raw
-  text) and a 0×0 box: no flash, no layout, nothing for print/present to
-  exclude. Reuses `renderSlide` with `svgAsImage:true` (svg → one `<img>`,
+  shell as a plain `[data-bento-preview]` element, followed IMMEDIATELY by a
+  parser-blocking `<script data-bento-preview>` that deletes both. The
+  thumbnailer keeps the preview (it runs no script); the reader never sees it
+  (the remover executes before the browser paints — measured: at removal
+  `readyState` is `loading` and `getEntriesByType('paint')` is EMPTY). **NOT
+  `<noscript>`** — that was v1 and it does nothing on iOS, whose thumbnailer
+  runs no script AND does not render `<noscript>` (probe: red default / green
+  from inline script / blue in noscript renders RED). Anything between host and
+  remover is markup a browser could paint, so the gate asserts the ordering.
+  A QLThumbnailProvider extension does NOT work — registers fine, never
+  launches, because iOS owns `public.html`; nor does
+  `NSURLThumbnailDictionaryKey`, silently dropped for local files.
+  Reuses `renderSlide` with `svgAsImage:true` (svg → one `<img>`,
   media → poster/icon still) + `hidePlaceholders`; `staticize()` strips active
   elements, runtime data-attrs and `on*`, and INLINES the few `.bento-*` rules
   from styles.css (the runtime CSS ships deflated and is never inflated in
