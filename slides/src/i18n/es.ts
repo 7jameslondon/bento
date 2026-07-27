@@ -4,6 +4,9 @@
 import type { Catalog } from '../i18n'
 
 export const es: Catalog = {
+  "Slide number": "Número de diapositiva",
+  "Progress bar": "Barra de progreso",
+  "Corner arrows": "Flechas de esquina",
   "Updated to v{v}.": "Actualizado a la v{v}.",
   "More": "Más",
   "Insert": "Insertar",
