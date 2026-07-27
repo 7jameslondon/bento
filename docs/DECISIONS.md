@@ -512,3 +512,40 @@ Localise at the call site (`{ kind: t(kind) }`) — and check the sentence still
 agrees grammatically, since a substituted noun carries gender in half the
 languages we ship (French needed "Ce fichier {kind}" once `vidéo` could land
 in it).
+
+## 2026-07-26 — bento/tray: the iOS host is a suite member, and it is generic
+
+The native iOS app is named **bento/tray** — "Bento Tray" on the App Store,
+bundle id `page.bento.tray`, source in `tray/` beside `slides/` and `spaces/`.
+
+**It runs ANY self-contained HTML document, not only Bento's.** That is not
+scope creep bolted on; the Swift never parses the document and never did — it
+is a courier that serves bytes into a WKWebView and polyfills the one File
+System Access call the page needs to save itself. Bento decks are simply the
+first documents it carries. Any single-file HTML app that saves itself works
+identically, which on iOS is otherwise impossible: every browser there is
+WebKit and none ship that API.
+
+Naming notes, so this is not relitigated:
+
+- **`bento/host` was rejected.** It names the mechanism, not the thing, and the
+  suite convention is `bento/<what you get>`. "tray" keeps the food metaphor and
+  says what it does — a tray carries any bento, whoever made it.
+- **Plain "Bento" is unavailable** on the App Store: an unrelated Food & Drink
+  app holds the exact name, and App Store names are globally unique. "Bento
+  Tray" and "BentoTray" were both free at time of checking. That check reads
+  published listings only — reservations in App Store Connect are invisible to
+  it, so confirm there before submitting.
+- The App Store name carries no slash. Per the 2026-07-24 naming entry, `/` is
+  a mark, never a stored name.
+
+**One app, not two.** A separate "generic HTML runner" listing would risk
+guideline 4.3 (duplicate apps from one developer) and doubles the listing
+overhead — screenshots, privacy labels, review cycles — for no gain. The
+Developer Program is $99/yr per ACCOUNT, so a second app costs nothing in fees;
+the cost is entirely in maintenance.
+
+Consequence already implemented: each document gets its OWN origin
+(`bento-tray://<sha256 of path>`), because a shared origin would let one
+document read another's localStorage and IndexedDB — tolerable when every file
+is yours, a real leak between unrelated third-party apps.
