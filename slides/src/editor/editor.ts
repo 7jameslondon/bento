@@ -2647,25 +2647,31 @@ export class Editor {
       } else {
         const { release } = result
         status.textContent = ''
+        // One card: version, what changed, and the ways to take it. Grouping
+        // them is the layout fix — as five loose children of the status block
+        // the notes were squeezed between the heading and a vertical stack of
+        // three buttons, in a dialog that also has to hold Document properties
+        // and the toggles. The card stretches full width and owns its scroll.
+        const card = div('ed-about-update')
+        status.appendChild(card)
         const line = div('ed-about-new')
         line.textContent = t('Version {v} is available.', { v: release.version })
-        status.appendChild(line)
-        if (release.notes) {
-          const notes = div('ed-about-notes')
-          notes.textContent = release.notes
-          status.appendChild(notes)
-        }
+        card.appendChild(line)
+        if (release.notes) card.appendChild(releaseNotes(release.notes))
+        const actions = div('ed-about-actions')
         const fail = (err: any) => { status.textContent = t('Update failed: {m}', { m: String(err?.message ?? err) }) }
         const done = () => {
           status.textContent = ''
+          const after = div('ed-about-update')
+          status.appendChild(after)
           const ok = div('ed-about-new')
           ok.textContent = t('Updated to v{v} on disk.', { v: release.version })
-          status.appendChild(ok)
+          after.appendChild(ok)
           const note = div('ed-about-notes')
           note.textContent = canUpdateInPlace()
             ? t('This window is still running v{v} — reload to finish. A v{v} backup was downloaded.', { v: APP_VERSION })
             : t("This window is still running v{v}. If you overwrote the file that's open here, reload; otherwise open the file you saved.", { v: APP_VERSION })
-          status.appendChild(note)
+          after.appendChild(note)
           const reloadB = document.createElement('button')
           reloadB.className = 'ed-btn ed-btn-primary'
           reloadB.textContent = t('Reload into new version')
@@ -2677,14 +2683,16 @@ export class Editor {
             try { sessionStorage.setItem(JUST_UPDATED_KEY, release.version) } catch { /* private mode */ }
             location.reload()
           })
-          status.appendChild(reloadB)
+          const row2 = div('ed-about-actions')
+          row2.appendChild(reloadB)
+          after.appendChild(row2)
         }
 
-        // What changed, before deciding whether to take it. The manifest carries
-        // no release notes today, so this points at the per-version release page
-        // — which publish-site.mjs now creates for every release, so the link
-        // cannot dangle. Placed BEFORE the action buttons deliberately: reading
-        // first is the point.
+        // The inline notes above are the signed manifest's summary — the first
+        // five CHANGELOG lead-ins (scripts/release.mjs). This is the rest of
+        // them: the per-version release page, which publish-site.mjs creates
+        // for every release, so the link cannot dangle. First in the action
+        // row deliberately: reading before deciding is the point.
         const notesLink = document.createElement('a')
         notesLink.className = 'ed-btn'
         notesLink.href = `https://github.com/nyblnet/bento/releases/tag/v${release.version}`
@@ -2692,7 +2700,7 @@ export class Editor {
         notesLink.rel = 'noopener'
         notesLink.textContent = t('What’s new →')
         notesLink.title = t('Read the release notes for v{v} (opens in a new tab)', { v: release.version })
-        status.appendChild(notesLink)
+        actions.appendChild(notesLink)
 
         const inPlaceB = document.createElement('button')
         inPlaceB.className = 'ed-btn ed-btn-primary'
@@ -2710,7 +2718,7 @@ export class Editor {
             else { inPlaceB.disabled = false; inPlaceB.textContent = t('Update this file…') }
           } catch (err: any) { fail(err) }
         })
-        status.appendChild(inPlaceB)
+        actions.appendChild(inPlaceB)
 
         const getB = document.createElement('button')
         getB.className = 'ed-btn'
@@ -2725,10 +2733,11 @@ export class Editor {
             getB.textContent = t('Downloaded ✓')
             const note = div('ed-about-notes')
             note.textContent = t('This window keeps running v{v} until you open the downloaded file.', { v: APP_VERSION })
-            status.appendChild(note)
+            card.appendChild(note)
           } catch (err: any) { fail(err) }
         })
-        status.appendChild(getB)
+        actions.appendChild(getB)
+        card.appendChild(actions)
       }
     })
     row.appendChild(checkB)
@@ -2875,6 +2884,31 @@ function syncNoticeText(n: import('../sync/session').SyncNotice): string {
     case 'rate-limited':
       return t('Too many changes at once — live sync is catching up.')
   }
+}
+
+/**
+ * Release notes → a real list.
+ *
+ * The manifest carries them as PLAIN TEXT, one "• " bullet per line, capped at
+ * five plus an "…and N more" tail (scripts/release.mjs). A pre-wrap block gave
+ * every wrapped bullet a flush-left second line, which at 320px was most of
+ * them — so one item read as two and the box looked like a wall. Split per line
+ * and hang the indent instead.
+ *
+ * Always textContent, never innerHTML: the manifest is signed, but a signature
+ * says who wrote a string, not that it is safe to run.
+ */
+function releaseNotes(notes: string): HTMLElement {
+  const box = div('ed-about-release')
+  for (const raw of notes.split('\n')) {
+    const text = raw.trim()
+    if (!text) continue
+    const bullet = /^[•*-]\s+/.test(text)
+    const item = div(bullet ? 'ed-about-note' : 'ed-about-more')
+    item.textContent = bullet ? text.replace(/^[•*-]\s+/, '') : text
+    box.appendChild(item)
+  }
+  return box
 }
 
 /** Deep-clone an element with a fresh id (same-slide duplicates must not share ids). */
