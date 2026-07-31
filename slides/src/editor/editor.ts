@@ -1604,9 +1604,13 @@ export class Editor {
   }
 
   private highlightSidebar() {
+    let active: HTMLElement | undefined
     this.sidebar.querySelectorAll<HTMLElement>('.ed-thumb').forEach((n) => {
-      n.classList.toggle('active', Number(n.dataset.index) === this.store.currentIndex)
+      const isActive = Number(n.dataset.index) === this.store.currentIndex
+      n.classList.toggle('active', isActive)
+      if (isActive) active = n
     })
+    active?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }
 
   private scheduleThumbs() {
