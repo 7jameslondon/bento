@@ -131,6 +131,28 @@ option { background: #fff; color: #1e2a3a; }
 .ed-title:hover { border-color: var(--line); }
 .ed-title:focus { border-color: var(--blue); outline: none; background: #fff; }
 
+/* The file this deck is open AS — quieter than the deck title beside it.
+   Shows the BASE name only: every Bento file ends in ".bento.html", so the
+   extension is the one part that identifies nothing (a first attempt truncated
+   from the right and rendered "…tml", which is worse than showing nothing).
+   Never shrinks — it competed with the title input and squeezed it to "Bento S"
+   — and it leaves the bar entirely at the same width the button labels do. */
+.ed-filechip {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--sunk, rgba(127, 127, 127, .08));
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  cursor: default;
+}
+.ed-filechip[hidden] { display: none; }
+@media (max-width: 1200px) { .ed-filechip { display: none; } }
+
 /* unsaved-changes dot — badges the SAVE button's corner (amber when dirty) */
 .ed-dirty {
   position: absolute;

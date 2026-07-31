@@ -715,4 +715,13 @@ export const fr: Catalog = {
   "audio": "audio",
   "Loop animation": "Animation en boucle",
   "solid colour": "couleur unie",
+  "⌘S rewrites this file in place": "⌘S réécrit ce fichier sur place",
+  "⌘S saves a copy — this browser can’t rewrite the file in place": "⌘S enregistre une copie — ce navigateur ne peut pas réécrire le fichier sur place",
+  "Open {name}? Unsaved changes in this deck will be lost.": "Ouvrir {name} ? Les modifications non enregistrées de cette présentation seront perdues.",
+  "{name} isn’t a Bento document.": "{name} n’est pas un document Bento.",
+  "{name} is password-protected. Open it directly to unlock it.": "{name} est protégé par mot de passe. Ouvrez-le directement pour le déverrouiller.",
+  "Opened {name}": "{name} ouvert",
+  "Opened {name} — ⌘S will save a copy": "{name} ouvert — ⌘S enregistrera une copie",
+  "⌘S asks where to save, then rewrites that file in place": "⌘S demande où enregistrer, puis réécrit ce fichier sur place",
+  "{name} has no saved document yet — open it directly to start one.": "{name} ne contient pas encore de document enregistré — ouvrez-le directement pour en commencer un.",
 }

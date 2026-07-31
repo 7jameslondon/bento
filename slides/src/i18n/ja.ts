@@ -715,4 +715,13 @@ export const ja: Catalog = {
   "audio": "音声",
   "Loop animation": "ループアニメーション",
   "solid colour": "単色",
+  "⌘S rewrites this file in place": "⌘S はこのファイルを上書き保存します",
+  "⌘S saves a copy — this browser can’t rewrite the file in place": "⌘S はコピーを保存します — このブラウザはファイルを直接上書きできません",
+  "Open {name}? Unsaved changes in this deck will be lost.": "{name} を開きますか？このデッキの未保存の変更は失われます。",
+  "{name} isn’t a Bento document.": "{name} は Bento ドキュメントではありません。",
+  "{name} is password-protected. Open it directly to unlock it.": "{name} はパスワードで保護されています。直接開いてロックを解除してください。",
+  "Opened {name}": "{name} を開きました",
+  "Opened {name} — ⌘S will save a copy": "{name} を開きました — ⌘S はコピーを保存します",
+  "⌘S asks where to save, then rewrites that file in place": "⌘S は保存先を尋ねてから、そのファイルを上書き保存します",
+  "{name} has no saved document yet — open it directly to start one.": "{name} にはまだ保存された書類がありません。直接開いて作成してください。",
 }

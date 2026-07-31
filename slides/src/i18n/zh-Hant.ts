@@ -715,4 +715,13 @@ export const zhHant: Catalog = {
   "audio": "音訊",
   "Loop animation": "循環動畫",
   "solid colour": "純色",
+  "⌘S rewrites this file in place": "⌘S 直接覆寫此檔案",
+  "⌘S saves a copy — this browser can’t rewrite the file in place": "⌘S 儲存副本 — 此瀏覽器無法直接覆寫檔案",
+  "Open {name}? Unsaved changes in this deck will be lost.": "開啟 {name}？此簡報中未儲存的變更將遺失。",
+  "{name} isn’t a Bento document.": "{name} 不是 Bento 文件。",
+  "{name} is password-protected. Open it directly to unlock it.": "{name} 受密碼保護。請直接開啟以解鎖。",
+  "Opened {name}": "已開啟 {name}",
+  "Opened {name} — ⌘S will save a copy": "已開啟 {name} — ⌘S 將儲存副本",
+  "⌘S asks where to save, then rewrites that file in place": "⌘S 會先詢問儲存位置，然後直接覆寫該檔案",
+  "{name} has no saved document yet — open it directly to start one.": "{name} 中還沒有已儲存的文件 — 請直接開啟以建立。",
 }

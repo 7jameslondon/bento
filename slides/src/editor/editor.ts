@@ -8,7 +8,7 @@ import {
   FORMAT_VERSION,
   MEDIA_EMBED_BUDGET,
   applyChartPalette, applyLayout, builtinLayouts, defaultChart, defaultImage, defaultMedia, defaultShape, defaultTable, defaultText,
-  instantiateLayout, isLightBg, layoutElementIds, newDocId, readableInk, syncLinkedChart, uid,
+  instantiateLayout, isLightBg, layoutElementIds, newDocId, parseDoc, readableInk, syncLinkedChart, uid,
   type ChartElement, type ShapeKind, type Slide, type SlideElement, type TableElement,
 } from '../model'
 import { APP_VERSION, applyUpdate, applyUpdateInPlace, autoCheckEnabled, canUpdateInPlace, checkForUpdates, offlineEnabled, setAutoCheck, setOffline } from '../update'
@@ -17,7 +17,7 @@ import { renderSlide, renderThumbnail } from '../render'
 import { SlideCanvas } from './canvas'
 import { PropsPanel } from './panels'
 import { startPresentation } from '../present'
-import { canWriteInPlace, hasFileHandle, isEncryptionActive, saveFile, serializeAuto, serializeFile, setEncryptionPassword, writeUpdatedFile, writeUpdatedFileAs } from '../save'
+import { adoptFileHandle, canWriteInPlace, currentFileName, fileBase, hasFileHandle, isEncryptionActive, openedFileName, saveFile, serializeAuto, serializeFile, setEncryptionPassword, writeUpdatedFile, writeUpdatedFileAs } from '../save'
 import { addVersion, clearRecovery, clearVersions, docContentKey, getRecovery, listVersions, pruneOld, putRecovery, type Snapshot } from '../autosave'
 import { insertElements, insertSlides, parseClip, serializeElements, serializeSlides } from './clipboard'
 import { openSpeakerWindow, speakerIdleBody } from '../screens'
@@ -60,6 +60,9 @@ export class Editor {
   private sidebar!: HTMLElement
   private props!: HTMLElement
   private dirtyDot!: HTMLElement
+  private fileChip?: HTMLElement
+  /** Name of a deck opened by DROP when no writable handle came with it. */
+  private openedAs?: string
   private thumbTimer = 0
   private presenting = false
   private updatesB!: HTMLElement
@@ -224,15 +227,23 @@ export class Editor {
     title.spellcheck = false
     title.addEventListener('change', () => {
       this.store.commit(() => { this.store.doc.title = title.value || 'Untitled' })
-      document.title = `${this.store.doc.title} — ${appConfig().appName}`
+      this.syncWindowTitle()
     })
     // remote/programmatic title changes reflect live (unless being typed in)
     this.store.on('doc', () => {
       if (document.activeElement !== title && title.value !== this.store.doc.title) {
         title.value = this.store.doc.title
-        document.title = `${this.store.doc.title} — ${appConfig().appName}`
+        this.syncWindowTitle()
       }
     })
+
+    // The FILE this deck is open as — deliberately separate from the deck
+    // title above, because the two drift apart constantly (rename the deck and
+    // the file on disk keeps its old name) and only one of them answers "what
+    // does ⌘S overwrite?". Absent until the answer is knowable: a never-saved
+    // deck has no file, and saying so would be noise.
+    this.fileChip = div('ed-filechip')
+    this.fileChip.hidden = true
     this.dirtyDot = div('ed-dirty')
     // Capability-aware: on Safari/Firefox (and every iOS browser) there is no
     // File System Access API, so ⌘S CANNOT rewrite this file — it hands back a
@@ -324,13 +335,15 @@ export class Editor {
     const formatB = btn(ICONS.panelRight, t('Format'), () => this.togglePanel('right'), t('Format — show or hide the properties panel'))
     formatB.classList.add('ed-phone-only')
 
+    this.syncWindowTitle()
+
     this.phoneChrome = {
       insertD, insertMenu, moreD, moreMenu, slidesB, formatB, insert, actions, history,
       // order matters: this is the order they appear in the ⋯ menu
       demote: [redoB, commentB, pdfB, shareD, langD, helpB],
     }
 
-    bar.append(logo, this.updatesB, title, slidesB, insertD, history, insert, actions, moreD)
+    bar.append(logo, this.updatesB, title, this.fileChip, slidesB, insertD, history, insert, actions, moreD)
 
     // main area
     const main = div('ed-main')
@@ -1852,6 +1865,13 @@ export class Editor {
   // --- paste: external objects + cross-deck elements/slides ---------------------
 
   private wirePaste() {
+    // A dropped .bento.html OPENS as a deck (and adopts a writable handle);
+    // anything else falls through to the existing image/media drop behaviour.
+    document.addEventListener('dragover', (ev: DragEvent) => {
+      if ([...(ev.dataTransfer?.items ?? [])].some((i) => i.kind === 'file')) ev.preventDefault()
+    })
+    document.addEventListener('drop', (ev: DragEvent) => { void this.openDroppedDeck(ev) })
+
     document.addEventListener('paste', (ev: ClipboardEvent) => {
       if (this.presenting) return
       const a = document.activeElement as HTMLElement | null
@@ -2116,6 +2136,101 @@ export class Editor {
     document.body.appendChild(bar)
   }
 
+  /**
+   * Tab title = deck title, plus the FILE name once one is known.
+   *
+   * `openedFileName()` answers this from the handle, or from the URL when a
+   * `.bento.html` was opened directly — so it is right for a dropped file, a
+   * saved file, and a double-clicked one alike, and null for the hosted demo.
+   */
+  private syncWindowTitle() {
+    // Order matters. A handle is the truth. Failing that, a deck opened by drop
+    // is named by the file it came from — the URL is stale the moment a drop
+    // replaces the document, and would otherwise label this deck with the name
+    // of the file still sitting in the address bar.
+    const file = currentFileName() ?? this.openedAs ?? openedFileName()
+    const named = file && fileBase(file) !== this.store.doc.title
+    // Two segments, never three: a tab is narrow, and once a file name is
+    // shown the app name is the least informative thing competing for it.
+    document.title = named
+      ? `${this.store.doc.title} — ${file}`
+      : `${this.store.doc.title} — ${appConfig().appName}`
+    if (!this.fileChip) return
+    this.fileChip.hidden = !named
+    if (!file) return
+    this.fileChip.textContent = fileBase(file)
+    // Three states, because two would lie: with the API but no handle yet, ⌘S
+    // asks first and only then owns a file.
+    this.fileChip.title = !canWriteInPlace()
+      ? t('⌘S saves a copy — this browser can’t rewrite the file in place')
+      : hasFileHandle()
+        ? t('⌘S rewrites this file in place')
+        : t('⌘S asks where to save, then rewrites that file in place')
+  }
+
+  /**
+   * Open a `.bento.html` dropped onto the editor, adopting a WRITABLE handle
+   * where the browser offers one.
+   *
+   * This is the only route to in-place saving for a deck that arrived from
+   * disk. A file double-clicked in Finder opens on `file://` with no handle, so
+   * every ⌘S re-runs the save picker and asks the user to navigate to the file
+   * they already have open. `getAsFileSystemHandle()` returns a real handle for
+   * a dropped file (Chromium only), so one permission prompt converts that deck
+   * into one Bento can rewrite.
+   *
+   * Guards, in order: images and everything else keep their existing paste/drop
+   * behaviour; an encrypted deck is refused rather than half-opened, because the
+   * password gate lives in boot and there is nothing here to prompt with; and
+   * unsaved work is confirmed before being replaced, since this is destructive
+   * in a way dropping a picture is not.
+   */
+  private async openDroppedDeck(ev: DragEvent): Promise<boolean> {
+    const item = [...(ev.dataTransfer?.items ?? [])].find((i) => i.kind === 'file')
+    const named = ev.dataTransfer?.files?.[0]?.name ?? ''
+    if (!item || !/\.bento\.html$/i.test(named)) return false
+    ev.preventDefault()
+
+    if (this.store.dirty && !confirm(t('Open {name}? Unsaved changes in this deck will be lost.', { name: named }))) return true
+
+    // The handle is the prize; a plain File still opens, just without write-back.
+    const anyItem = item as unknown as { getAsFileSystemHandle?: () => Promise<any> }
+    let handle: any = null
+    try { handle = await anyItem.getAsFileSystemHandle?.() } catch { /* not supported — read-only open */ }
+
+    const file: File | null = handle ? await handle.getFile() : (ev.dataTransfer?.files?.[0] ?? null)
+    if (!file) return true
+
+    const html = await file.text()
+    const el = new DOMParser().parseFromString(html, 'text/html').querySelector('#bento-doc')
+    const block = el?.textContent?.trim() ?? ''
+    // A pristine, never-saved shell ships an EMPTY block — the starter deck is
+    // generated at runtime, not stored. That file is a perfectly good Bento
+    // document; it just has nothing in it yet, so say that rather than call it
+    // a foreign file.
+    if (el && !block) { alert(t('{name} has no saved document yet — open it directly to start one.', { name: named })); return true }
+    let parsed: unknown
+    try { parsed = JSON.parse(block) } catch { alert(t('{name} isn’t a Bento document.', { name: named })); return true }
+    if ((parsed as { format?: string })?.format === 'bento/enc') {
+      alert(t('{name} is password-protected. Open it directly to unlock it.', { name: named }))
+      return true
+    }
+    const next = parseDoc(JSON.stringify(parsed))
+    if (!next) { alert(t('{name} isn’t a Bento document.', { name: named })); return true }
+
+    if (handle?.requestPermission) {
+      try {
+        if (await handle.requestPermission({ mode: 'readwrite' }) === 'granted') adoptFileHandle(handle)
+      } catch { /* denied or unsupported — opens read-only, ⌘S still offers Save as */ }
+    }
+    this.openedAs = named
+    this.store.replaceDoc(next)
+    this.canvas.render()
+    this.syncWindowTitle()
+    this.flashSaved(hasFileHandle() ? t('Opened {name}', { name: named }) : t('Opened {name} — ⌘S will save a copy', { name: named }))
+    return true
+  }
+
   private noticeIfCannotWriteInPlace() {
     if (canWriteInPlace()) return
     if (localStorage.getItem(SAVE_NOTICE_KEY) === 'seen') return
@@ -2304,6 +2419,8 @@ export class Editor {
       const result = await saveFile(this.store.doc, forcePicker)
       if (result === 'cancelled') return
       this.store.setDirty(false)
+      // the file name is knowable from here on — put it in the tab and the chip
+      this.syncWindowTitle()
       // staged language packs are in the bytes now — stop calling them pending
       markFileSaved()
       // record a recovery baseline + a version checkpoint at each manual save
