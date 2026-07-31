@@ -464,7 +464,7 @@ export const de: Catalog = {
   "Paste an image or text straight onto the canvas with ⌘V.": "Ein Bild oder Text mit ⌘V direkt auf die Arbeitsfläche einfügen.",
   "Copy a slide (⌘C with nothing selected) and paste it into another Bento deck.": "Eine Folie kopieren (⌘C ohne Auswahl) und in eine andere Bento-Präsentation einfügen.",
   "Make a chart from a table and it stays linked — edit the table, the chart updates.": "Aus einer Tabelle ein Diagramm erstellen — es bleibt verknüpft: Tabelle bearbeiten, Diagramm aktualisiert sich.",
-  "Your work auto-saves; restore earlier versions from About → Version history.": "Deine Arbeit wird automatisch gespeichert; frühere Versionen unter Über → Versionsverlauf wiederherstellen.",
+  "Your work auto-saves; restore earlier versions from Save → Version history.": "Deine Arbeit wird automatisch gespeichert; frühere Versionen unter Speichern → Versionsverlauf wiederherstellen.",
   "Slide copied — ⌘V in any deck to paste it": "Folie kopiert — ⌘V in einer beliebigen Präsentation zum Einfügen",
   "📺 Use a second screen for notes": "📺 Zweiten Bildschirm für Notizen nutzen",
   "Second screen ready — press S for speaker notes": "Zweiter Bildschirm bereit — S für die Referentenansicht",
