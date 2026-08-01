@@ -11,6 +11,10 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Fix: Fade, slide, and zoom transitions animate again.** Present mode now keeps
+  the adjacent slides mounted while moving between them; morph transitions
+  were unaffected.
+
 ## [1.0.12] — 2026-08-01
 
 - **A laser pointer while you present.** Press **L** in the slideshow and the
