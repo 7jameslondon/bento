@@ -470,8 +470,9 @@ export function startPresentation(
       : false,
     // touch is handled by our own swipe logic below (state-aware + ends exit)
     touch: false,
-    // heavy decks: paint only the neighbourhood of the current slide
-    viewDistance: 1,
+    // Reveal uses distance < viewDistance; 2 is the minimum that keeps adjacent
+    // sections mounted so fade/slide/zoom transitions can animate.
+    viewDistance: 2,
     keyboardCondition: null,
     plugins: [],
   })
