@@ -71,6 +71,15 @@ pre-1.0.
   changes when you open a deck normally — the picture is written for software
   that can't run the file, and is never shown to a reader.
 
+- **Added an optional virtual laser pointer for presentations.** Press `L`, or
+  use the new `🟒` laser button in speaker view, to point at the audience slide.
+  The pointer stays local to the current show and leaves a short, smooth,
+  tapered trail as it moves.
+- **Chart labels and legends now honor their visual options.** The lightweight
+  chart renderer applies configured font sizes and weights to axis labels and
+  legends, respects legend spacing and placement, and measures CJK legend text
+  correctly so localized series names no longer overlap.
+
   **A password-protected deck gets no preview at all.** A readable picture of
   the title page sitting next to the encrypted document would give away exactly
   what the password is there to protect, so encrypted decks keep the plain dark

@@ -359,7 +359,11 @@ names provisional.
   current highlighted + scrolled into view), and a lazy **all-slides grid**
   overlay. The popup has its OWN keydown handler (its keys fire in its own
   document) so the presenter drives the whole show from it: ←/→/space/PageUp-Dn,
-  Home/End, B (black), G (grid), Esc (close grid). `updateSpeakerControls()`
+  Home/End, B (black), G (grid), L (laser pointer), Esc (close grid). The laser
+  is local presenter-session state, rendered through a pointer-transparent
+  layer, and never enters the document or collaboration model. `L` is handled
+  in both audience and speaker documents because popup key events do not cross
+  windows. `updateSpeakerControls()`
   refreshes highlight/counter/button-state cheaply on every slidechange; the
   expensive current/next re-render only in `updateSpeaker`. Reveal's notes plugin
   is NOT used (it reloads the URL in an iframe → boots a whole second editor).

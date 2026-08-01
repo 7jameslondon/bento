@@ -741,6 +741,51 @@ a.ed-btn { text-decoration: none; }  /* the update block's "What's new" link is 
   --r-overlay-element-fg-color: 0, 0, 0;
 }
 .bento-present-overlay .reveal .slides section { padding: 0; }
+/* Presenter laser: viewport-level so its screen-space size stays constant at
+   every Reveal scale. The visual layer stays pointer-transparent so slide
+   links, hover effects, charts and media remain interactive while it is armed. */
+.bento-laser-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 59;
+  pointer-events: none;
+}
+.bento-present-overlay.laser-over-slide .bento-slide,
+.bento-present-overlay.laser-over-slide .bento-slide * { cursor: none !important; }
+.bento-laser-trail {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+.bento-laser-trail-segment {
+  fill: none;
+  stroke-linecap: butt;
+  vector-effect: non-scaling-stroke;
+}
+.bento-laser-trail-segment.halo { stroke: rgb(255 255 255 / 0.9); }
+.bento-laser-trail-segment.core { stroke: #ef252f; }
+.bento-laser-trail-segment.tail-tip { stroke: none; }
+.bento-laser-trail-segment.tail-tip.halo { fill: rgb(255 255 255 / 0.9); }
+.bento-laser-trail-segment.tail-tip.core { fill: #ef252f; }
+.bento-laser-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 2px solid rgb(255 255 255 / 0.94);
+  border-radius: 50%;
+  background: #ef252f;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.55), 0 0 10px rgb(239 37 47 / 0.9);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.08s linear;
+}
+.bento-laser-dot.visible { opacity: 1; }
+.bento-present-overlay.reduce-motion .bento-laser-trail { display: none; }
+.bento-present-overlay.reduce-motion .bento-laser-dot { transition: none; }
 /* Reduced motion (M / speaker toggle / OS prefers-reduced-motion): JS fx are
    skipped in present.ts; this neutralises CSS-driven motion too — Reveal's
    slide transitions cut instantly and svg keyframe animations don't play. */

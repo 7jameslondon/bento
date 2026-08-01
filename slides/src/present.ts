@@ -111,8 +111,292 @@ export function startPresentation(
   blackout.className = 'bento-blackout'
   blackout.hidden = true
   overlay.appendChild(blackout)
+
+  // ——— laser pointer (local presenter state; never written to the deck) ———
+  // A passive viewport-level layer paints above Reveal while pointer movement
+  // is observed from the overlay's capture phase. Links, hover states, charts
+  // and media therefore keep receiving their normal pointer events. Blackout
+  // and toasts intentionally paint above the laser visuals.
+  const laserLayer = document.createElement('div')
+  laserLayer.className = 'bento-laser-layer'
+  laserLayer.setAttribute('aria-hidden', 'true')
+  // Until a real pointer event supplies screen coordinates, let the browser
+  // paint the laser at the OS cursor. The DOM dot and trail take over on the
+  // first move, when `laser-over-slide` hides this native cursor.
+  const laserCursorStyle = document.createElement('style')
+  laserCursorStyle.textContent =
+    `.bento-present-overlay.laser-enabled:not(.laser-over-slide) .bento-slide,` +
+    `.bento-present-overlay.laser-enabled:not(.laser-over-slide) .bento-slide *{` +
+    `cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23000' fill-opacity='.55'/%3E%3Ccircle cx='8' cy='8' r='6' fill='%23fff'/%3E%3Ccircle cx='8' cy='8' r='4' fill='%23ef252f'/%3E%3C/svg%3E") 8 8,crosshair!important}`
+  const laserTrail = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  laserTrail.classList.add('bento-laser-trail')
+  laserTrail.setAttribute('width', '100%')
+  laserTrail.setAttribute('height', '100%')
+  laserTrail.setAttribute('focusable', 'false')
+  const laserTrailHalo = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  const laserTrailCore = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  laserTrail.append(laserTrailHalo, laserTrailCore)
+  const laserDot = document.createElement('div')
+  laserDot.className = 'bento-laser-dot'
+  laserLayer.append(laserTrail, laserDot)
+
+  const LASER_TRAIL_LIFETIME = 275
+  const LASER_TRAIL_SAMPLE_MS = 5
+  const LASER_TRAIL_SEGMENTS = Math.ceil(LASER_TRAIL_LIFETIME / LASER_TRAIL_SAMPLE_MS) + 1
+  const laserTrailHaloSegments: SVGPathElement[] = []
+  const laserTrailCoreSegments: SVGPathElement[] = []
+
+  // Built on FIRST ENABLE, not at startup. startPresentation() is not only the
+  // "user pressed Present" path — a doc.readonly player file boots straight
+  // into the show, so this runs at document-OPEN time for every player deck
+  // ever shared. Eagerly that cost 112 SVGPathElements, an injected <style>
+  // and the layer, for a feature reached only by pressing L — which a player
+  // deck's audience often cannot do at all.
+  let laserBuilt = false
+  const buildLaser = () => {
+    if (laserBuilt) return
+    laserBuilt = true
+    overlay.insertBefore(laserCursorStyle, blackout)
+    overlay.insertBefore(laserLayer, blackout)
+    for (let i = 0; i < LASER_TRAIL_SEGMENTS; i++) {
+      const halo = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      halo.classList.add('bento-laser-trail-segment', 'halo')
+      const core = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      core.classList.add('bento-laser-trail-segment', 'core')
+      if (i === 0) {
+        halo.classList.add('tail-tip')
+        core.classList.add('tail-tip')
+      }
+      laserTrailHalo.appendChild(halo)
+      laserTrailCore.appendChild(core)
+      laserTrailHaloSegments.push(halo)
+      laserTrailCoreSegments.push(core)
+    }
+  }
+
+  type LaserTrailPoint = { x: number; y: number; time: number }
+  const laserTrailPoints: LaserTrailPoint[] = Array.from(
+    { length: LASER_TRAIL_SEGMENTS + 1 },
+    () => ({ x: 0, y: 0, time: 0 }),
+  )
+  let laserEnabled = false
+  let laserFrame = 0
+  let laserTrailFrame = 0
+  let laserTrailStart = 0
+  let laserTrailLength = 0
+  let laserTrailVisibleSegments = 0
+  let laserPoint: { x: number; y: number } | null = null
+
+  const hideLaserDot = () => {
+    laserDot.classList.remove('visible')
+  }
+
+  const laserTrailPointAt = (index: number) =>
+    laserTrailPoints[(laserTrailStart + index) % laserTrailPoints.length]
+
+  const clearLaserTrail = () => {
+    if (laserTrailFrame) cancelAnimationFrame(laserTrailFrame)
+    laserTrailFrame = 0
+    laserTrailStart = 0
+    laserTrailLength = 0
+    for (let i = 0; i < laserTrailVisibleSegments; i++) {
+      laserTrailHaloSegments[i].setAttribute('opacity', '0')
+      laserTrailCoreSegments[i].setAttribute('opacity', '0')
+    }
+    laserTrailVisibleSegments = 0
+  }
+
+  const pruneLaserTrail = (now: number) => {
+    while (laserTrailLength && now - laserTrailPointAt(0).time >= LASER_TRAIL_LIFETIME) {
+      laserTrailStart = (laserTrailStart + 1) % laserTrailPoints.length
+      laserTrailLength--
+    }
+  }
+
+  const setTrailPath = (
+    path: SVGPathElement,
+    startX: number,
+    startY: number,
+    control: LaserTrailPoint,
+    endX: number,
+    endY: number,
+    width: number,
+    opacity: number,
+  ) => {
+    path.setAttribute(
+      'd',
+      `M ${startX.toFixed(1)} ${startY.toFixed(1)} Q ${control.x.toFixed(1)} ${control.y.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`,
+    )
+    path.setAttribute('stroke-width', width.toFixed(2))
+    path.setAttribute('opacity', opacity.toFixed(3))
+  }
+
+  const setTrailTipPath = (
+    path: SVGPathElement,
+    startX: number,
+    startY: number,
+    control: LaserTrailPoint,
+    endX: number,
+    endY: number,
+    width: number,
+    opacity: number,
+  ) => {
+    const left: string[] = []
+    const right: string[] = []
+    const steps = 5
+    for (let step = 0; step <= steps; step++) {
+      const t = step / steps
+      const mt = 1 - t
+      const x = mt * mt * startX + 2 * mt * t * control.x + t * t * endX
+      const y = mt * mt * startY + 2 * mt * t * control.y + t * t * endY
+      const dx = 2 * mt * (control.x - startX) + 2 * t * (endX - control.x)
+      const dy = 2 * mt * (control.y - startY) + 2 * t * (endY - control.y)
+      const length = Math.hypot(dx, dy) || 1
+      const halfWidth = width * t / 2
+      const nx = -dy / length * halfWidth
+      const ny = dx / length * halfWidth
+      left.push(`${(x + nx).toFixed(1)} ${(y + ny).toFixed(1)}`)
+      right.unshift(`${(x - nx).toFixed(1)} ${(y - ny).toFixed(1)}`)
+    }
+    path.setAttribute('d', `M ${left.join(' L ')} L ${right.join(' L ')} Z`)
+    path.setAttribute('opacity', opacity.toFixed(3))
+  }
+
+  const renderLaserTrail = (now: number) => {
+    laserTrailFrame = 0
+    pruneLaserTrail(now)
+    const used = Math.max(0, laserTrailLength - 1)
+    for (let i = 0; i < used; i++) {
+      const from = laserTrailPointAt(i)
+      const to = laserTrailPointAt(i + 1)
+      const before = i ? laserTrailPointAt(i - 1) : from
+      const startX = i ? (before.x + from.x) / 2 : from.x
+      const startY = i ? (before.y + from.y) / 2 : from.y
+      const endX = i === used - 1 ? to.x : (from.x + to.x) / 2
+      const endY = i === used - 1 ? to.y : (from.y + to.y) / 2
+      const age = Math.max(0, now - (from.time + to.time) / 2)
+      const life = Math.max(0, 1 - age / LASER_TRAIL_LIFETIME)
+      const taper = Math.pow(life, 0.7)
+      const width = 0.75 + 7.25 * taper
+      const opacity = 0.72 * Math.pow(life, 1.45)
+      const haloWidth = width + 1.8 * taper
+      if (i === 0) {
+        setTrailTipPath(
+          laserTrailHaloSegments[i], startX, startY, from, endX, endY,
+          haloWidth, opacity * 0.48,
+        )
+        setTrailTipPath(
+          laserTrailCoreSegments[i], startX, startY, from, endX, endY,
+          width, opacity,
+        )
+      } else {
+        setTrailPath(
+          laserTrailHaloSegments[i], startX, startY, from, endX, endY,
+          haloWidth, opacity * 0.48,
+        )
+        setTrailPath(laserTrailCoreSegments[i], startX, startY, from, endX, endY, width, opacity)
+      }
+    }
+    for (let i = used; i < laserTrailVisibleSegments; i++) {
+      laserTrailHaloSegments[i].setAttribute('opacity', '0')
+      laserTrailCoreSegments[i].setAttribute('opacity', '0')
+    }
+    laserTrailVisibleSegments = used
+    if (used) laserTrailFrame = requestAnimationFrame(renderLaserTrail)
+  }
+
+  const addLaserTrailPoint = (x: number, y: number, now: number) => {
+    if (reduceMotion) return
+    pruneLaserTrail(now)
+    const previous = laserTrailLength ? laserTrailPointAt(laserTrailLength - 1) : null
+    if (previous) {
+      const dx = x - previous.x
+      const dy = y - previous.y
+      if (now - previous.time < LASER_TRAIL_SAMPLE_MS || dx * dx + dy * dy < 2.25) return
+    }
+    if (laserTrailLength === laserTrailPoints.length) {
+      laserTrailStart = (laserTrailStart + 1) % laserTrailPoints.length
+      laserTrailLength--
+    }
+    const point = laserTrailPointAt(laserTrailLength)
+    point.x = x
+    point.y = y
+    point.time = now
+    laserTrailLength++
+  }
+
+  const resetLaserPointer = () => {
+    hideLaserDot()
+    clearLaserTrail()
+    if (laserFrame) cancelAnimationFrame(laserFrame)
+    laserFrame = 0
+    laserPoint = null
+    overlay.classList.remove('laser-over-slide')
+  }
+
+  const paintLaser = (now: number) => {
+    laserFrame = 0
+    const point = laserPoint
+    if (!laserEnabled || blacked || !deckReady || !point) {
+      resetLaserPointer()
+      return
+    }
+    const section = deck.getCurrentSlide() as HTMLElement | null
+    const surface = section?.querySelector<HTMLElement>('.bento-slide')
+    if (!surface) {
+      resetLaserPointer()
+      return
+    }
+    // Measure the transformed surface itself instead of duplicating Reveal's
+    // scale/letterbox maths. Pointer and dot both stay in viewport coordinates.
+    const rect = surface.getBoundingClientRect()
+    const inside = point.x >= rect.left && point.x <= rect.right &&
+      point.y >= rect.top && point.y <= rect.bottom
+    if (!inside) {
+      hideLaserDot()
+      clearLaserTrail()
+      overlay.classList.remove('laser-over-slide')
+      return
+    }
+    const host = overlay.getBoundingClientRect()
+    const x = point.x - host.left
+    const y = point.y - host.top
+    laserDot.style.left = `${x}px`
+    laserDot.style.top = `${y}px`
+    overlay.classList.add('laser-over-slide')
+    laserDot.classList.add('visible')
+    addLaserTrailPoint(x, y, now)
+    if (!reduceMotion && laserTrailLength > 1) {
+      if (laserTrailFrame) cancelAnimationFrame(laserTrailFrame)
+      renderLaserTrail(now)
+    }
+  }
+
+  const scheduleLaser = (ev: PointerEvent) => {
+    if (!laserEnabled || ev.pointerType === 'touch' || !ev.isPrimary) return
+    laserPoint = { x: ev.clientX, y: ev.clientY }
+    if (!laserFrame) laserFrame = requestAnimationFrame(paintLaser)
+  }
+
+  const setLaserEnabled = (on: boolean, feedback = true) => {
+    if (laserEnabled === on) return
+    if (on) buildLaser()
+    laserEnabled = on
+    overlay.classList.toggle('laser-enabled', on)
+    if (!on) resetLaserPointer()
+    if (feedback) flashPresentMsg(on ? t('Laser pointer: on') : t('Laser pointer: off'))
+    updateSpeakerControls()
+  }
+  const toggleLaser = () => setLaserEnabled(!laserEnabled)
+
+  overlay.addEventListener('pointermove', scheduleLaser, true)
+  overlay.addEventListener('pointerleave', resetLaserPointer)
+  const onWindowBlur = () => resetLaserPointer()
+  window.addEventListener('blur', onWindowBlur)
+
   const setBlack = (on: boolean) => {
     blacked = on
+    if (on) resetLaserPointer()
     blackout.hidden = !on
     updateSpeakerControls()
   }
@@ -192,7 +476,7 @@ export function startPresentation(
     plugins: [],
   })
 
-  const onResize = () => deck.layout()
+  const onResize = () => { resetLaserPointer(); deck.layout() }
 
   // ——— speaker view (S) ———
   // Reveal's stock speaker window reloads the presentation URL in iframes —
@@ -260,6 +544,8 @@ export function startPresentation(
     nav('next')?.toggleAttribute('disabled', !hasNext())
     nav('last')?.toggleAttribute('disabled', !hasNext())
     nav('black')?.classList.toggle('active', blacked)
+    nav('laser')?.classList.toggle('active', laserEnabled)
+    nav('laser')?.setAttribute('aria-pressed', String(laserEnabled))
     nav('reduce')?.classList.toggle('active', reduceMotion)
   }
 
@@ -279,6 +565,7 @@ export function startPresentation(
     reduceMotion = on
     if (persist) { try { localStorage.setItem('bento-reduce-motion', on ? 'on' : 'off') } catch { /* storage off */ } }
     overlay.classList.toggle('reduce-motion', on)
+    if (on) clearLaserTrail()
     // Toast only on an explicit toggle (M / speaker button), not the silent
     // OS-preference follow or the initial state.
     if (persist) flashPresentMsg(on ? t('Reduced motion: on') : t('Reduced motion: off'))
@@ -352,8 +639,8 @@ export function startPresentation(
       for (const st of document.querySelectorAll('style')) d.head.appendChild(d.importNode(st, true))
     }
     d.body.className = 'bento-speaker'
-    const navBtn = (k: string, glyph: string, label: string) =>
-      `<button class="sv-btn" data-nav="${k}" title="${label}" aria-label="${label}">${glyph}</button>`
+    const navBtn = (k: string, glyph: string, label: string, pressed = false) =>
+      `<button class="sv-btn" data-nav="${k}" title="${label}" aria-label="${label}"${pressed ? ' aria-pressed="false"' : ''}>${glyph}</button>`
     d.body.innerHTML =
       `<div class="sv-top">` +
         `<div class="sv-timer" title="${t('Click to reset')}">00:00</div>` +
@@ -365,6 +652,7 @@ export function startPresentation(
           navBtn('next', '›', t('Next')) +
           navBtn('last', '⇥', t('Last slide')) +
           navBtn('black', '■', t('Black screen (B)')) +
+          navBtn('laser', '🟒', t('Laser pointer (L)'), true) +
           navBtn('grid', '▦', t('All slides (G)')) +
           navBtn('reduce', '⏸', t('Reduce motion (M)')) +
         `</div>` +
@@ -430,6 +718,7 @@ export function startPresentation(
       else if (k === 'next') goNext()
       else if (k === 'last') goLast()
       else if (k === 'black') toggleBlack()
+      else if (k === 'laser') toggleLaser()
       else if (k === 'grid') toggleGrid()
       else if (k === 'reduce') toggleReduceMotion()
     }
@@ -446,6 +735,7 @@ export function startPresentation(
       else if (k === 'End') { ev.preventDefault(); goLast() }
       else if (k === 'b' || k === 'B') { ev.preventDefault(); toggleBlack() }
       else if (k === 'g' || k === 'G') { ev.preventDefault(); toggleGrid() }
+      else if (k === 'l' || k === 'L') { ev.preventDefault(); if (!ev.repeat) toggleLaser() }
       else if (k === 'm' || k === 'M') { ev.preventDefault(); toggleReduceMotion() }
       else if (k === 'Escape' && !grid.hasAttribute('hidden')) { ev.preventDefault(); toggleGrid(false) }
     })
@@ -489,7 +779,10 @@ export function startPresentation(
     wakeLock = null
     void held?.release?.().catch(() => {})
   }
-  const onVisibility = () => { if (document.visibilityState === 'visible') void acquireWakeLock() }
+  const onVisibility = () => {
+    if (document.visibilityState === 'visible') void acquireWakeLock()
+    else resetLaserPointer()
+  }
   document.addEventListener('visibilitychange', onVisibility)
   void acquireWakeLock()
 
@@ -548,6 +841,8 @@ export function startPresentation(
         setSpeakerWindow(null)
       }
     }
+    setLaserEnabled(false, false)
+    window.removeEventListener('blur', onWindowBlur)
     onExit(last)
   }
 
@@ -579,6 +874,12 @@ export function startPresentation(
       ev.preventDefault()
       ev.stopPropagation()
       toggleReduceMotion()
+      return
+    }
+    if (ev.key === 'l' || ev.key === 'L') {
+      ev.preventDefault()
+      ev.stopPropagation()
+      if (!ev.repeat) toggleLaser()
       return
     }
     const key = ev.key || ({ 32: ' ', 37: 'ArrowLeft', 39: 'ArrowRight', 33: 'PageUp', 34: 'PageDown' } as Record<number, string>)[ev.keyCode]
