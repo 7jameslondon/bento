@@ -139,27 +139,39 @@ export function startPresentation(
   const laserDot = document.createElement('div')
   laserDot.className = 'bento-laser-dot'
   laserLayer.append(laserTrail, laserDot)
-  overlay.insertBefore(laserCursorStyle, blackout)
-  overlay.insertBefore(laserLayer, blackout)
 
   const LASER_TRAIL_LIFETIME = 275
   const LASER_TRAIL_SAMPLE_MS = 5
   const LASER_TRAIL_SEGMENTS = Math.ceil(LASER_TRAIL_LIFETIME / LASER_TRAIL_SAMPLE_MS) + 1
   const laserTrailHaloSegments: SVGPathElement[] = []
   const laserTrailCoreSegments: SVGPathElement[] = []
-  for (let i = 0; i < LASER_TRAIL_SEGMENTS; i++) {
-    const halo = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    halo.classList.add('bento-laser-trail-segment', 'halo')
-    const core = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    core.classList.add('bento-laser-trail-segment', 'core')
-    if (i === 0) {
-      halo.classList.add('tail-tip')
-      core.classList.add('tail-tip')
+
+  // Built on FIRST ENABLE, not at startup. startPresentation() is not only the
+  // "user pressed Present" path — a doc.readonly player file boots straight
+  // into the show, so this runs at document-OPEN time for every player deck
+  // ever shared. Eagerly that cost 112 SVGPathElements, an injected <style>
+  // and the layer, for a feature reached only by pressing L — which a player
+  // deck's audience often cannot do at all.
+  let laserBuilt = false
+  const buildLaser = () => {
+    if (laserBuilt) return
+    laserBuilt = true
+    overlay.insertBefore(laserCursorStyle, blackout)
+    overlay.insertBefore(laserLayer, blackout)
+    for (let i = 0; i < LASER_TRAIL_SEGMENTS; i++) {
+      const halo = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      halo.classList.add('bento-laser-trail-segment', 'halo')
+      const core = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      core.classList.add('bento-laser-trail-segment', 'core')
+      if (i === 0) {
+        halo.classList.add('tail-tip')
+        core.classList.add('tail-tip')
+      }
+      laserTrailHalo.appendChild(halo)
+      laserTrailCore.appendChild(core)
+      laserTrailHaloSegments.push(halo)
+      laserTrailCoreSegments.push(core)
     }
-    laserTrailHalo.appendChild(halo)
-    laserTrailCore.appendChild(core)
-    laserTrailHaloSegments.push(halo)
-    laserTrailCoreSegments.push(core)
   }
 
   type LaserTrailPoint = { x: number; y: number; time: number }
@@ -368,6 +380,7 @@ export function startPresentation(
 
   const setLaserEnabled = (on: boolean, feedback = true) => {
     if (laserEnabled === on) return
+    if (on) buildLaser()
     laserEnabled = on
     overlay.classList.toggle('laser-enabled', on)
     if (!on) resetLaserPointer()
