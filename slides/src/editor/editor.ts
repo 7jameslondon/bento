@@ -2198,9 +2198,21 @@ export class Editor {
     if (this.store.dirty && !confirm(t('Open {name}? Unsaved changes in this deck will be lost.', { name: named }))) return true
 
     // The handle is the prize; a plain File still opens, just without write-back.
+    //
+    // ORDER MATTERS: requestPermission() needs a live user gesture, and the drop
+    // is it. Reading the file first (600KB+ of text(), then DOMParser and
+    // JSON.parse) spends the activation, so the request throws SecurityError and
+    // the deck opens read-only — ⌘S then re-runs the save picker, which is the
+    // whole thing this feature exists to avoid. So: handle, permission, THEN read.
     const anyItem = item as unknown as { getAsFileSystemHandle?: () => Promise<any> }
     let handle: any = null
     try { handle = await anyItem.getAsFileSystemHandle?.() } catch { /* not supported — read-only open */ }
+
+    let writable = false
+    if (handle?.requestPermission) {
+      try { writable = await handle.requestPermission({ mode: 'readwrite' }) === 'granted' }
+      catch { /* denied, or activation already spent — opens read-only */ }
+    }
 
     const file: File | null = handle ? await handle.getFile() : (ev.dataTransfer?.files?.[0] ?? null)
     if (!file) return true
@@ -2212,7 +2224,7 @@ export class Editor {
     // generated at runtime, not stored. That file is a perfectly good Bento
     // document; it just has nothing in it yet, so say that rather than call it
     // a foreign file.
-    if (el && !block) { alert(t('{name} has no saved document yet — open it directly to start one.', { name: named })); return true }
+    if (el && !block) { alert(t('{name} is an empty copy of Bento, not a saved deck. Open it on its own to start one.', { name: named })); return true }
     let parsed: unknown
     try { parsed = JSON.parse(block) } catch { alert(t('{name} isn’t a Bento document.', { name: named })); return true }
     if ((parsed as { format?: string })?.format === 'bento/enc') {
@@ -2222,11 +2234,7 @@ export class Editor {
     const next = parseDoc(JSON.stringify(parsed))
     if (!next) { alert(t('{name} isn’t a Bento document.', { name: named })); return true }
 
-    if (handle?.requestPermission) {
-      try {
-        if (await handle.requestPermission({ mode: 'readwrite' }) === 'granted') adoptFileHandle(handle)
-      } catch { /* denied or unsupported — opens read-only, ⌘S still offers Save as */ }
-    }
+    if (writable) adoptFileHandle(handle)
     this.openedAs = named
     this.store.replaceDoc(next)
     this.canvas.render()
