@@ -1253,6 +1253,182 @@ CI-testable, but the registry drifting from the tree is. It pins `appId`
 against each app's own `configureApp()` call and the manifest URL against the
 path the release publishes to.
 
+## 2026-08-03 — An encrypted space is never written to disk in the clear
+
+**Decision.** bento/spaces skips the autosave recovery snapshot while a space
+is encrypted, and setting a password clears both the version timeline and the
+recovery snapshot already written.
+
+**The bug.** `main.ts` called `putRecovery(store.doc)` on a 2.5s debounce,
+unconditionally. The snapshot is the document as plain JSON, so an encrypted
+space wrote its full plaintext into IndexedDB every few seconds — defeating the
+password completely, for the one author who has demonstrably asked for secrecy.
+`about.ts` already cleared the version timeline when a password was set, which
+made the gap easy to miss: half of it was handled, and the half that ran
+continuously was not.
+
+**`putRecovery` does not guard this, by design** — it is a kernel primitive and
+the encryption state is app-side. That makes it a CALLER contract, and a caller
+contract with no gate is a bug waiting for the next app. Slides holds the same
+contract in its own autosave layer.
+
+**Measured, on the built shell:** typing into a plaintext space put the marker
+text in the `recovery` store within three seconds (correct — it is the only
+backstop on iOS, where no browser can write back to a file). Setting a password
+removed that row; every later edit wrote nothing; and the saved file was still
+a `bento/enc` envelope with no plaintext anywhere in it.
+
+**Guarded** by two source assertions in `scripts/test-spaces-model.ts`, both
+negative-controlled. Same reasoning as the inert-parse guard above: the
+behaviour needs IndexedDB and a real clock, the mistake is made at the call
+site.
+
+## 2026-08-03 — A space does not phone home when it is opened
+
+**Decision.** bento/spaces renders a remote image `src` as a placeholder naming
+the host, with a "Load this image" button. Only `asset:` and `data:` load
+without asking. Consent is per-url, per-session, in memory, and never enters
+the document.
+
+**Measured.** A space carrying `<img src="https://…/pixel.png">`, opened from
+`file://`, issued the request — observed via `PerformanceObserver`, one
+`resource` entry, before any interaction. That is a tracking pixel: the
+recipient's IP address and the moment they opened your document, delivered to
+whoever authored the file. In a format whose entire premise is that you can
+mail it to someone, it is the wrong default by a wide margin. It also breaks
+PLATFORM §1 — no network required to open.
+
+**Why it costs authors nothing.** The editor never writes a remote src. A
+picked image is downscaled, interned by content hash, and stored as `asset:`.
+Only hand- or agent-authored documents can carry a url, so the only documents
+affected are exactly the ones where a reader should be asked.
+
+**The predicate is an allowlist,** not a blocklist of `http:`. A relative path
+is a real request on a static host; so are `//host/x`, `blob:`, `filesystem:`
+and any scheme this build has not heard of. `isRemote()` lives in `model.ts`
+(pure, testable in node) and returns false only for `asset:` and `data:`.
+
+**Consent is VIEWER state, like locale and reduced motion.** Putting it in the
+file would let the author decide whether the reader phones home, and would
+carry one reader's decision to everyone the file is forwarded to. It is a plain
+`Set` on the editor, it dies with the session, and the click does not commit —
+so undo, the dirty flag and autosave never see it. All four verified.
+
+**The placeholder names the host.** "Load images" with no indication of who is
+being contacted is not consent. It also shows the `alt` text, which is now the
+thing a reader actually reads when an image does not load — so the agent guide
+tells agents to always write one, and to embed bytes rather than link them.
+
+## 2026-08-03 — Untrusted html is parsed INERT; a detached div is not safe
+
+**Decision.** All untrusted html in bento/spaces goes through
+`sanitize.ts inertBody()`, which parses with `DOMParser` into an inert
+document. `document.createElement('div').innerHTML = untrusted` is banned, and
+`scripts/test-spaces-model.ts` refuses it in the source.
+
+**Measured, in a browser, on the real shell over `file://`:**
+
+| construction | `<img src="404" onerror="…">` |
+|---|---|
+| `document.createElement('div').innerHTML = …` | **FIRES** |
+| `new DOMParser().parseFromString(…, 'text/html')` | inert |
+| `<template>.innerHTML = …` | inert |
+| `document.implementation.createHTMLDocument()` | inert |
+
+A detached div reads as safe — nothing was inserted into the page — but the
+elements it creates belong to the LIVE document, so their resources load. The
+handler runs from a node that was never attached to anything.
+
+**Why this was the worst possible instance of it.** The sanitizer has to parse
+hostile markup before it can strip it, so the sanitizer was itself the vector,
+and the payload ran BEFORE the strip. `sanitizeInline` is called at render time
+(`render.ts`), so the trigger was *opening a space someone sent you* — no
+click, no edit. Sanitizing at render rather than at load is otherwise the right
+call (every path into the DOM is covered by one line); it just meant this bug
+sat on the open path.
+
+Four call sites had the shape: `sanitizeInline`, `textOf`, `render.ts`'s
+code-block text extraction, and — found by the guard, not by reading —
+`about.ts`'s markdown export, so "Export as Markdown" ran what it was
+exporting.
+
+**The guard is a source assertion,** like the `.href`-IDL one above it: the
+behaviour needs a DOM and a failing network request, and the mistake is made in
+the source. It caught the fourth site the moment it was written, which is the
+argument for writing it that way.
+
+**Verified after the fix,** on the built shell from `file://`, with the removed
+construction kept in the same page as a control: only the control fired. No
+`[onerror]`, no smuggled `<img>`, no `svg[onload]`, no `javascript:` href
+reached the DOM; the `#p/` link survived, external links kept
+`rel="noopener noreferrer"`, `<p>a</p><p>b</p>` still unwrapped to "a b", and
+markdown export produced `alpha **bold** *it* \`c\` [link](#p/sd-home)`.
+
+**One consequence to remember.** The sanitizer's host now lives in a different
+document, so nodes it inserts must come from `el.ownerDocument`, not the global
+`document`. DOM4 adopts implicitly, so the wrong one would work — which is
+exactly why it is written explicitly and pinned by the rig.
+
+## 2026-08-03 — Release notes, agent guides and tags are PER APP
+
+**Decision.** `scripts/apps.mjs` gained `changelog` and `agents` per app. A
+release reads its own app's changelog (`CHANGELOG.md` for slides,
+`spaces/CHANGELOG.md` for spaces) and publishes its own agent guide at
+`bento.page/<app>/agents.md`. Tags are prefixed for every app but slides.
+
+**The bug this fixes.** `release.mjs` read `join(root, 'CHANGELOG.md')`
+unconditionally, and that file's first line is "All notable changes to
+**bento/slides**". The first spaces release would therefore have SIGNED slides'
+release notes into the spaces manifest — and every shipped spaces file fetches
+that manifest at launch and renders `notes` inline in the About dialog. So the
+failure is not a build error; it is a correct-looking release that tells all of
+one product's users about a different product's changes.
+
+It is unrecoverable in the ordinary way. The notes are inside the signed
+envelope, so fixing them means re-signing — and the updater enforces version
+monotonicity, so the same version cannot be re-signed. The fix would be
+burning a version number.
+
+**Why it was invisible.** Every gate was app-scoped. The registry rig checked
+`dir`, `shell` and `appId` against each app's own source of truth, and each
+check passed for each app in isolation. The wrongness only exists in the PAIR:
+two apps naming one file. That is now a single assertion — the set of
+changelogs has the same size as the set of apps — plus, per app, "your
+changelog has a section for the version being released, and that section has
+bold lead-ins" (a section of pure prose signs EMPTY notes, which is the same
+class of silent failure).
+
+**`--print-notes`.** `node scripts/release.mjs --app <app> --print-notes`
+prints exactly what would be signed and exits before anything is built, wiped
+or signed. A one-way artifact should be readable before it is committed to;
+this makes reading it a one-second step rather than an act of faith. It runs
+ahead of the `site/` wipe, which is why `cmpVer` is a function declaration and
+not a const arrow — the const is in the TDZ at that point in the file.
+
+**Agent guides.** `docs/agents.md` already advertised
+`bento.page/<app>/agents.md` as the convention, but only the site-root
+`/agents.md` was ever written. Each app now publishes its own guide at the
+advertised URL, and slides copies its own to `/agents.md` for compatibility —
+the README and the harness `SKILL.md` point there, and that SKILL.md ships
+inside a zip people upload to claude.ai, so the root URL is effectively frozen.
+One source, two paths.
+
+**Tags.** Slides has 23 tags in the bare `vX.Y.Z` form and is at 1.0.15;
+spaces starts at 0.1.0. An unprefixed spaces tag would sort into the middle of
+slides' history and permanently claim a version slides cannot reuse. Slides
+keeps bare; everything else is `<app>-vX.Y.Z`.
+
+**Reconciled with #234.** bento/dash hit the same bug independently and landed
+a convention-based resolver (`<dir>/CHANGELOG.md`, else the root) while this was
+in flight. Both now go through ONE `changelogPath()` in release.mjs — registry
+field first, convention second, root last — used by the signing path and by
+`--print-notes` alike, so what a release reports and what it reads cannot
+drift. The registry states it explicitly for all three apps, and the rig
+asserts each app RESOLVES to its own file, which is what keeps the root
+fallback unreachable. That matters because the fallback is only harmless while
+version numbers do not overlap: the day a second app reaches 1.0.x, an empty
+manifest would quietly become a wrong one.
+
 ## 2026-08-03 — One bento/spaces file is one SPACE, and the reason is a save primitive
 
 Spaces is a tree of pages in ONE `.bento.html`, with links as same-document
