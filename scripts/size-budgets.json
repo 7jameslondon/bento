@@ -1,0 +1,10 @@
+{
+  "//": "Ceilings for the single-file shells. Raise one IN THE COMMIT that needs the bytes, and say what bought them. Checked by scripts/test-spaces-size.mjs.",
+  "shells": {
+    "spaces": {
+      "path": "spaces/dist-single/Bento_Spaces.bento.html",
+      "max": 120832,
+      "//": "118 KiB. Raised from 114 KiB at 117218 B on 2026-08-05 for the static first-page preview (spaces/src/preview.ts): without it a saved space showed the boot splash to every reader that runs no script — QuickLook, iOS Files, Bento Tray. Reported from the field. The preview itself is per-SAVE and separately budgeted at 64KB."
+    }
+  }
+}

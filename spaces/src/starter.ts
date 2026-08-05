@@ -8,7 +8,7 @@
 // reachable only through one, and the limits page says the awkward things out
 // loud rather than letting them be discovered.
 
-import { FORMAT, FORMAT_VERSION, defaultTheme, type SpacesDoc, type Block } from './model'
+import { FORMAT, FORMAT_VERSION, defaultTheme, type SpacesDoc, type Block } from './model.ts'
 
 const b = (type: string, html = '', extra: Partial<Block> = {}): Block =>
   ({ id: `sd-${(seq++).toString(36)}`, type, html, ...extra })
@@ -29,6 +29,7 @@ export function starterDoc(): SpacesDoc {
   // the toggle is built first so its child can name its REAL id — a parent
   // pointing at an id that does not exist would render the child at top level
   const toggle = b('toggle', 'A toggle — click the triangle', { open: true })
+  const callout = b('callout', 'A callout. Click the mark to make it a note, a tip, a warning.', { tone: 'tip' })
 
   return {
     format: FORMAT,
@@ -89,7 +90,15 @@ export function starterDoc(): SpacesDoc {
           b('todo', '<code>[] </code> makes a checkbox', { done: false }),
           b('h2', 'Blocks that are not text'),
           b('quote', 'A quote — type <code>&gt; </code>.'),
-          b('code', 'const space = oneFile\n// ```  makes a code block', { lang: 'js' }),
+          b('code', 'const space = oneFile\n// type ``` and a SPACE to make a code block', { lang: 'js' }),
+          callout,
+          b('p', 'Press <code>⏎</code> in a callout and the next line goes inside it. Empty line, <code>⌫</code>, and you are out.', { parent: callout.id }),
+          b('code',
+            '// type ```js and a space — the language is yours to pick\n' +
+            'const space = { file: 1, pages: 5 }\n' +
+            'console.log(`one file, ${space.pages} pages`)',
+            { lang: 'js' }),
+          b('p', 'Hover a code block to see — and change — its language.'),
           toggle,
           b('p', 'Anything indented under a toggle folds away with it.', { parent: toggle.id }),
           b('divider'),
