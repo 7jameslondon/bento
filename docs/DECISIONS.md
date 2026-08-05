@@ -1275,6 +1275,160 @@ CI-testable, but the registry drifting from the tree is. It pins `appId`
 against each app's own `configureApp()` call and the manifest URL against the
 path the release publishes to.
 
+## 2026-08-05 — The board's order IS the page order, and a view's filter is two keys
+
+**Decision.** Dragging a card between columns sets that issue's field value.
+Dragging it *within* a column reorders `doc.pages`. There is **no per-view
+order field**, and nobody may add one in a drag handler. A view's filter is
+`filter: { is?: {key: string[]}, open?: boolean }` on the `view` block, and
+absent means everything.
+
+**Why order is the page array.** An issue IS a page, and pages are already an
+ordered list — the sidebar renders it, the markdown export walks it, and a
+saved file preserves it. A stored per-view order is a permanent format field
+that has to answer what happens to an issue no view has ever seen, what happens
+when two views disagree, and what a build that predates it does with the
+orphaned key. Reordering the pages answers none of those questions because it
+does not ask them. The consequence is deliberate and worth saying out loud: the
+board's order and the sidebar's order are the same order. `fields.ts
+reorderPages` is the whole mechanism, and it returns null when a drop changes
+nothing, which is what keeps a drag that went nowhere out of the undo stack.
+
+**Why `sort` is NOT implemented.** `sort: [...]` appears in the shape sketched
+in the ruling below. It is still unimplemented, and now it is not free: a
+stored sort and a hand-dragged order contradict each other, and which one wins
+is a format decision, not a rendering detail. Whoever needs sort settles that
+first. Until then a `sort` key round-trips untouched and is ignored.
+
+**Why the filter is two keys.** `is` (a field's values) and `open` (a phase).
+A filter language grows without limit and can never shrink — every operator is
+in files on other people's disks the moment it ships. These two answer the two
+questions a tracker is actually asked. Rules: an absent filter, an absent key
+and an empty value list all mean "no constraint", so every view block written
+before filters keeps working and an empty stored filter is deleted rather than
+kept; a value this build does not know is compared LITERALLY, so a filter a
+newer build wrote still selects what it meant; `open` is derived from
+`FieldOption.group` on the first field whose options declare one (never
+hardcoded to `status`), and an unknown value counts as OPEN, because hiding
+work this build cannot read is a loss and showing one issue too many is not; a
+filter key this build cannot evaluate is kept, is not applied, and the view
+SAYS SO — a count that is silently too high is the failure additivity would
+otherwise trade for.
+
+**Touch.** A phone cannot drag an HTML5 draggable, and the board is the
+tracker's main screen, so every card carries a status BUTTON that opens the
+same picker the issue's own header strip opens, through the same writer
+(`editor.applyField` → `fields.propHtml`). There is exactly one place where
+`value` and `html` are written, and there must stay exactly one.
+
+## 2026-08-05 — An issue is a page: the tracker format for bento/spaces
+
+**Decision.** bento/spaces gains an opinionated, Linear-shaped issue tracker.
+An ISSUE IS A PAGE. Its fields are `prop` BLOCKS. The schema those fields draw
+on is `doc.fields`. A saved view is a `view` BLOCK. Nothing about this is a new
+document type and nothing is a page-level key.
+
+**Why spaces rather than a new app.** A tracker is a pile of short documents
+with typed fields and a few saved queries over them. Spaces already has pages,
+rich bodies, links, backlinks, search, archive, print, i18n, nine languages and
+an agent surface — which is most of a tracker — and Linear's own model is
+"an issue is a document with fields". A separate app would rebuild all of it,
+and would land where Jira is: a tracker whose issues cannot hold a real
+document. The suite's other half, bento/dash, owns typed COLUMNS over rows;
+this owns typed FIELDS on documents. That is the seam.
+
+**The format.**
+
+    doc.fields: [                       // the schema, document-level
+      { key: 'status', label: 'Status', vt: 'select', options: [
+          { id: 'todo', label: 'Todo', color: '#…', group: 'unstarted' }, … ] },
+      { key: 'assignee', label: 'Assignee', vt: 'person' },
+      …
+    ]
+
+    // …and on an issue page, its values, as ordinary blocks:
+    { id:'b1', type:'prop', key:'status', value:'todo', html:'Status: Todo' }
+
+    // …and a board, which is also just a block:
+    { id:'v1', type:'view', layout:'board', groupBy:'status',
+      filter:{…}, sort:[…], html:'Board — all issues by status' }
+
+**Why values are blocks and the schema is not.** The ruling above already
+settled values: a `prop` block degrades losslessly on a build that predates it
+(render.ts's `default:` branch shows its `html`), and it is found by ⌘F, ⌘K,
+undo and the block registry for free, because every one of those iterates
+`page.blocks`. A page-level key renders as nothing and is invisible to all of
+them. But the SCHEMA is not a value: putting the status list on every issue
+would copy it into every page and let two pages disagree about what "Todo"
+means. Document-level is the only place it can live, and `doc.fields` is
+additive — a build that predates it ignores the key and still renders every
+`prop` block's `html`.
+
+**Every `prop` block carries a human-readable `html`.** That is what makes the
+format degrade rather than vanish, and it is not redundancy: it is the same
+discipline as the static preview and the markdown export. An older build, a
+thumbnailer, a grep, and a markdown export all see "Status: In progress"
+without knowing what a field is.
+
+**Fields render as a header strip, by CONVENTION not by a new container.**
+`prop` blocks that precede the first non-prop block on a page are drawn as a
+compact strip under the title; the same blocks later in the body render inline.
+No format flag says "this is a header" — the position does — so an older build
+shows the same information in the same order, just stacked.
+
+**What this buys the day collaboration lands.** Nothing needs doing. The CRDT
+syncs pages and blocks; properties ARE blocks, so per-field last-writer-wins
+falls out of the existing per-(node,key) registers, and two people changing
+status and assignee at the same time both win. Had properties been one object
+on the page, that would have been one register and one of the two edits would
+have been lost silently — which is the measured reason the ruling exists.
+
+**Deliberately NOT in this format.** No teams (a file IS the team boundary), no
+per-user permissions (the file is the capability, per PLATFORM §5), no
+notifications, no server-side automation. Those are Buzz's problem shape — a
+relay, signed events, agents as members — and Buzz is a Rust service with
+Postgres behind it. The thing Bento can do that neither Linear nor Buzz can is
+hand you the whole tracker as one file that opens offline, forever, with no
+account. That is the feature, and it is the reason the format has to stay
+small enough to keep that promise.
+
+## 2026-08-05 — The tracker's agent surface: written, warned about, never refused
+
+**Decision.** `window.bento` gains `fields()`, `issues(query?)`,
+`setField(pageId, key, value)` and `newIssue({title, ...fields})`, and
+`validate()` learns about fields. Three shapes are settled here because they are
+an API other work will be built on.
+
+**1. A value this build does not know is WRITTEN, and warned about — never
+refused.** The format is permanent and additive: a status a newer build declared
+has to round-trip through an older one, and a verb that refused it would make
+the older build unable to edit a document the newer one wrote. But an agent
+typing `'In progress'` where the option id is `'doing'` has made a mistake and
+silence would leave it confident, so the result carries
+`warning: {code:'unknown-option', options:[…]}` and `validate()` reports
+`unknown-field-value` at **info**. Refuse the shapes JSON cannot carry, warn
+about the vocabulary. The same reasoning makes `unknown-field-key` info, and
+`prop-html-stale` a warning — but that check STANDS DOWN when the value names no
+known option, because then the writer knew a label this build does not and its
+`html` is right where ours would be a guess.
+
+**2. An unknown key in an ARGUMENT is a typo, not additivity.** `newIssue` and
+`setField` refuse a key that is in no schema (`err: 'no-such-field'`). Unknown
+keys in a *document* are how a future build's data survives; unknown keys in a
+*call* are how an agent believes it set a priority it did not set.
+
+**3. "Open" means NOT FINISHED.** `issues({group:'open'})` is one predicate —
+not `done`, not `cancelled` — so a status with no phase and a status this build
+has never heard of both count as work, and a status naming no option reports
+`group:'unknown'` rather than being folded in with the rest. An issue wrongly
+shown in a backlog costs a glance; an issue wrongly hidden from one costs the
+issue.
+
+`setField` is the ONLY supported way to write a value, because it writes `value`
+and `html` together through fields.ts `propHtml()` — the same call the editor's
+own field picker makes, so the two cannot drift. Guarded by
+`scripts/test-spaces-agent.ts`; guide in `docs/spaces-agents.md`.
+
 ## 2026-08-03 — bento/spaces: the format decisions that must precede parallel work
 
 Five independent design reviews of bento/spaces proposed overlapping feature
