@@ -789,12 +789,9 @@ export class Editor {
     const blank = builtinLayouts().find((l) => l.id === 'layout-blank')
     if (!blank) return
     this.canvas.commitTextEdit() // a live text edit would commit ONTO the new slide
-    this.store.select([])
     this.store.commit(() => {
       this.store.doc.slides = [instantiateLayout(blank)]
     }, 'slides')
-    this.store.goTo(0)
-    this.store.emit('current')
   }
 
   /** A sealed hand-out: present-only player file, no editor, no live session. */
@@ -1611,6 +1608,14 @@ export class Editor {
   }
 
   private wireThumbDrag(item: HTMLElement, index: number) {
+    // Select on press, before the browser starts native dragging. Waiting for
+    // click/dragstart leaves Moveable's previous canvas target live while the
+    // pointer crosses the workspace.
+    item.addEventListener('mousedown', (ev) => {
+      if (ev.button !== 0 || (ev.target instanceof Element && ev.target.closest('.ed-thumb-tools'))) return
+      ev.stopPropagation() // keep the canvas Moveable gesture controller out
+      this.store.goTo(index)
+    })
     item.addEventListener('dragstart', (ev) => {
       ev.dataTransfer!.setData('text/bento-slide', String(index))
       ev.dataTransfer!.effectAllowed = 'move'
@@ -1629,8 +1634,6 @@ export class Editor {
         const [moved] = this.store.doc.slides.splice(from, 1)
         this.store.doc.slides.splice(index, 0, moved)
       }, 'slides')
-      this.store.currentIndex = index
-      this.store.emit('current')
     })
   }
 
@@ -1716,8 +1719,6 @@ export class Editor {
         }
       }
     }, 'slides')
-    this.store.goTo(Math.min(i, this.store.doc.slides.length - 1))
-    this.store.emit('current')
   }
 
   /**

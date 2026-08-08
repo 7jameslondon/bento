@@ -11,6 +11,17 @@ export type StoreEvent =
 
 type Listener = () => void
 
+export type ViewSnapshot = {
+  slideIds: string[]
+  currentIndex: number
+  currentId?: string
+}
+
+type HistoryEntry = {
+  doc: string
+  view: ViewSnapshot
+}
+
 const MAX_UNDO = 100
 
 /** Central state: document, current slide, selection, undo/redo, dirty flag. */
@@ -22,8 +33,8 @@ export class Store {
   /** editor-only: which showOnHover set the canvas previews (never saved) */
   hoverPreview: string | null = null
 
-  private undoStack: string[] = []
-  private redoStack: string[] = []
+  private undoStack: HistoryEntry[] = []
+  private redoStack: HistoryEntry[] = []
   private listeners = new Map<StoreEvent, Set<Listener>>()
 
   /** read-only viewer: block user edits (commit) while remote ops — which
@@ -79,7 +90,7 @@ export class Store {
 
   /** Snapshot current doc state onto the undo stack. Call BEFORE a mutation. */
   checkpoint() {
-    this.undoStack.push(JSON.stringify(this.doc))
+    this.undoStack.push({ doc: JSON.stringify(this.doc), view: this.captureView() })
     if (this.undoStack.length > MAX_UNDO) this.undoStack.shift()
     this.redoStack.length = 0
   }
@@ -87,9 +98,56 @@ export class Store {
   /** checkpoint() + mutate + notify, in one call. */
   commit(mutate: () => void, event: StoreEvent = 'doc') {
     if (this.readOnly) return // live viewer — user edits are inert
+    const view = this.captureView()
     this.checkpoint()
     mutate()
+    const { currentChanged, selectionChanged } = this.reconcileView(view)
     this.touch(event)
+    if (currentChanged) this.emit('current')
+    if (selectionChanged) this.emit('selection')
+  }
+
+  /**
+   * A slide-list mutation and the view that points into it are one state
+   * transition. Keep the same slide by id when it survives; otherwise choose
+   * the next surviving neighbour (or the previous one at the end). This runs
+   * before touch(), so no redraw listener can observe an invalid slide index.
+   */
+  captureView(): ViewSnapshot {
+    return {
+      slideIds: this.doc.slides.map((slide) => slide.id),
+      currentIndex: this.currentIndex,
+      currentId: this.doc.slides[this.currentIndex]?.id,
+    }
+  }
+
+  reconcileView(
+    before: ViewSnapshot,
+    preferred: ViewSnapshot = before,
+  ): { currentChanged: boolean; selectionChanged: boolean } {
+    const slides = this.doc.slides
+    const byId = new Map(slides.map((slide, index) => [slide.id, index]))
+
+    let nextIndex = preferred.currentId == null ? undefined : byId.get(preferred.currentId)
+    if (nextIndex == null) {
+      const neighbourId = preferred.slideIds.slice(preferred.currentIndex + 1).find((id) => byId.has(id))
+        ?? preferred.slideIds.slice(0, preferred.currentIndex).reverse().find((id) => byId.has(id))
+      nextIndex = neighbourId == null
+        ? Math.max(0, Math.min(preferred.currentIndex, slides.length - 1))
+        : byId.get(neighbourId)!
+    }
+
+    this.currentIndex = nextIndex
+    const currentChanged = slides[nextIndex]?.id !== before.currentId
+    const selection = currentChanged
+      ? []
+      : this.selection.filter((id) => slides[nextIndex]?.elements.some((element) => element.id === id))
+    const selectionChanged = currentChanged
+      || selection.length !== this.selection.length
+      || selection.some((id, index) => id !== this.selection[index])
+    this.selection = selection
+    if (currentChanged) this.hoverPreview = null
+    return { currentChanged, selectionChanged }
   }
 
   /** Mark dirty and notify after an in-place mutation (no checkpoint). */
@@ -103,13 +161,13 @@ export class Store {
   undo() { this.restore(this.undoStack, this.redoStack) }
   redo() { this.restore(this.redoStack, this.undoStack) }
 
-  private restore(from: string[], to: string[]) {
-    const snapshot = from.pop()
-    if (!snapshot) return
-    to.push(JSON.stringify(this.doc))
-    this.doc = JSON.parse(snapshot)
-    this.currentIndex = Math.min(this.currentIndex, this.doc.slides.length - 1)
-    this.selection = this.selection.filter((id) => this.element(id))
+  private restore(from: HistoryEntry[], to: HistoryEntry[]) {
+    const entry = from.pop()
+    if (!entry) return
+    const before = this.captureView()
+    to.push({ doc: JSON.stringify(this.doc), view: before })
+    this.doc = JSON.parse(entry.doc)
+    this.reconcileView(before, entry.view)
     this.setDirty(true)
     this.emit('doc')
     this.emit('slides')
