@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 The Bento authors
+import { inLinearFlow } from './model'
 import type { BentoDoc, Slide, SlideElement } from './model'
 
 export type StoreEvent =
@@ -140,7 +141,7 @@ export class Store {
   goToLinear(dir: 1 | -1) {
     const slides = this.doc.slides
     for (let i = this.currentIndex + dir; i >= 0 && i < slides.length; i += dir) {
-      if (!slides[i].stateOf) { this.goTo(i); return }
+      if (inLinearFlow(slides[i])) { this.goTo(i); return }
     }
   }
 

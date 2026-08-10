@@ -11,6 +11,23 @@ pre-1.0.
 
 ## [Unreleased]
 
+- **Hide a slide from the show.** Toggle *Hide slide* in the Slide panel and it
+  stays in the deck, fully editable, but drops out of the walk: arrow keys pass
+  over it, PDF export leaves it out, and it is never picked as the file's
+  thumbnail. An element `link` still reaches it, which is the point — backup
+  numbers, an appendix, the detail slide you only open if somebody asks.
+
+  Hidden slides do not take a page number, so `{{page}}`/`{{pages}}` stay
+  contiguous for the audience: the same rule interactive states already follow,
+  rather than a second one to remember. If you prefer the office-suite
+  behaviour, where a hidden slide keeps its number so the visible ones do not
+  renumber while you toggle slides during rehearsal, turn on *Number hidden
+  slides* under Slideshow.
+
+  The sidebar shows what the audience would count — a hidden slide's number is
+  struck through, or replaced by a dash when it has none — because a slide you
+  have forgotten you hid is a slide you find out about mid-presentation.
+
 - **Fix: a live session could crash when two people created the same element at
   the same moment.** Sharing an element id across slides is the morph idiom —
   it is what id continuity is *for* — so two collaborators inserting one

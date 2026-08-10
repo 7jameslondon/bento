@@ -735,4 +735,7 @@ export const pt: Catalog = {
   "Zoom in and out": "Ampliar e reduzir",
   "Space-drag": "Espaço + arrastar",
   "Pan as well, if your mouse has a middle button": "Também desloca, se o rato tiver botão do meio",
+  "Hide slide": "Ocultar diapositivo",
+  "Number hidden slides": "Numerar diapositivos ocultos",
+  "Hidden — skipped while presenting and left out of PDF export": "Oculto — ignorado ao apresentar e excluído da exportação para PDF",
 }

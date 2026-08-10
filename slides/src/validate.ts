@@ -138,6 +138,10 @@ export function validateDoc(doc: BentoDoc, opts: ValidateOpts = {}): ValidateRes
   const slideIds = new Set(doc.slides.map((s) => s.id))
   const assets = doc.assets ?? {}
   const arrivals = morphArrivals(doc)
+  // Every slide any element can jump to. A hidden slide is reachable ONLY this
+  // way, so one with no inbound link is in the file and in nobody's path.
+  const linkTargets = new Set<string>()
+  for (const sl of doc.slides) for (const el of sl.elements) if (el.link) linkTargets.add(el.link)
 
   // ---- document level ------------------------------------------------------
   for (const k of Object.keys(doc)) {
@@ -180,6 +184,10 @@ export function validateDoc(doc: BentoDoc, opts: ValidateOpts = {}): ValidateRes
         add({ code: 'unknown-key', severity: 'warning', slide: sid, path: k,
           message: `Slide key "${k}" is not part of the format — it is ignored.` })
       }
+    }
+    if (slide.hidden && !slide.stateOf && !linkTargets.has(sid)) {
+      add({ code: 'unreachable-hidden-slide', severity: 'info', slide: sid, path: 'hidden',
+        message: `Hidden, and nothing links to it — this slide cannot be reached at all while presenting. Give an element a link to it, or unhide it.` })
     }
     if (slide.stateOf && !slideIds.has(slide.stateOf)) {
       add({ code: 'broken-state-parent', severity: 'error', slide: sid, path: 'stateOf',

@@ -737,4 +737,7 @@ export const de: Catalog = {
   "Zoom in and out": "Vergrößern und verkleinern",
   "Space-drag": "Leertaste + ziehen",
   "Pan as well, if your mouse has a middle button": "Verschiebt ebenfalls, wenn die Maus eine mittlere Taste hat",
+  "Hide slide": "Folie ausblenden",
+  "Number hidden slides": "Ausgeblendete Folien nummerieren",
+  "Hidden — skipped while presenting and left out of PDF export": "Ausgeblendet — wird beim Präsentieren übersprungen und nicht als PDF exportiert",
 }

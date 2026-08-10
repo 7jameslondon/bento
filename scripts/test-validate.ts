@@ -193,5 +193,29 @@ const chartFindings = validateDoc(chartDoc, { measure: false }).findings
 ok(chartFindings.length === 0,
   `a realistic dual-axis chart produces no findings (got ${chartFindings.map((f) => f.path).join(', ') || 'none'})`)
 
+// ------------------------------------------------- hidden slides
+// Hidden is the one state a slide can be in where nothing on screen reveals a
+// mistake: it is skipped silently, exactly as intended, whether or not anyone
+// can still get to it.
+const hiddenDoc = (link?: string): BentoDoc => ({
+  ...clean,
+  slides: [
+    { id: 's1', name: 'one', background: '#FFF', transition: 'fade', notes: '', elements:
+      link ? [{ id: 'go', type: 'shape', shape: 'rect', x: 10, y: 10, w: 50, h: 50, rotation: 0,
+                opacity: 1, fill: '#000', stroke: 'none', strokeWidth: 0, radius: 0, link }] : [] },
+    { id: 's2', name: 'appendix', background: '#FFF', transition: 'fade', notes: '', hidden: true, elements: [] },
+  ],
+} as any)
+const unreachable = (d: BentoDoc) => validateDoc(d, { measure: false })
+  .findings.filter((f) => f.code === 'unreachable-hidden-slide')
+
+ok(unreachable(hiddenDoc()).length === 1,
+  'a hidden slide nothing links to is reported as unreachable')
+ok(unreachable(hiddenDoc('s2')).length === 0,
+  'a hidden slide with an inbound link is not reported — that is the point of hiding it')
+ok(unreachable(clean).length === 0, 'an ordinary deck reports nothing')
+ok(validateDoc(hiddenDoc('s2'), { measure: false }).ok,
+  'hiding a slide is never an error')
+
 console.log(`\n${checks - failures}/${checks} checks passed`)
 if (failures) process.exit(1)

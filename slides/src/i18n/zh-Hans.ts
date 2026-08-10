@@ -737,4 +737,7 @@ export const zhHans: Catalog = {
   "Zoom in and out": "放大与缩小",
   "Space-drag": "空格键+拖动",
   "Pan as well, if your mouse has a middle button": "如果鼠标有中键，也可以平移",
+  "Hide slide": "隐藏幻灯片",
+  "Number hidden slides": "为隐藏幻灯片编号",
+  "Hidden — skipped while presenting and left out of PDF export": "已隐藏 — 放映时跳过，且不包含在 PDF 导出中",
 }

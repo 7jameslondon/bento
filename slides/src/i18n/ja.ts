@@ -737,4 +737,7 @@ export const ja: Catalog = {
   "Zoom in and out": "拡大・縮小",
   "Space-drag": "スペース+ドラッグ",
   "Pan as well, if your mouse has a middle button": "中ボタンのあるマウスでも移動できます",
+  "Hide slide": "スライドを非表示",
+  "Number hidden slides": "非表示スライドに番号を付ける",
+  "Hidden — skipped while presenting and left out of PDF export": "非表示 — 発表中はスキップされ、PDF 書き出しにも含まれません",
 }

@@ -34,7 +34,7 @@
 // feature exists to serve.
 
 import { renderSlide } from './render'
-import { PREVIEW_BUDGET, type BentoDoc, type Slide } from './model'
+import { PREVIEW_BUDGET, type BentoDoc, type Slide, inLinearFlow } from './model'
 
 /** Elements that must never reach a static preview (active or external). */
 const BANNED = 'script,style,noscript,iframe,object,embed,link,video,audio,canvas,form,input,button'
@@ -355,9 +355,11 @@ const byteLength = (el: HTMLElement) => new TextEncoder().encode(el.outerHTML).l
  * Tier 3 cannot exceed the budget, so this always terminates with something.
  */
 export function buildSlidePreview(doc: BentoDoc): HTMLElement | null {
-  // The first page a reader sees: interactive states are hidden variants and
-  // never open a deck.
-  const slide = doc.slides.find((s) => !s.stateOf) ?? doc.slides[0]
+  // The first page a reader sees. Nothing outside the linear flow can be it:
+  // a state is a variant reachable only by clicking, and a hidden slide is
+  // deliberately out of the show — neither should become the deck's face in a
+  // file manager.
+  const slide = doc.slides.find(inLinearFlow) ?? doc.slides[0]
   if (!slide) return null
 
   for (const keepImages of [true, false]) {

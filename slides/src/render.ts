@@ -4,7 +4,7 @@
 // editor canvas, sidebar thumbnails, and Reveal.js sections.
 
 import type { BentoDoc, ShapeElement, Slide, SlideElement, SvgElement, TableElement } from './model'
-import { morphKey } from './model'
+import { morphKey, paginates } from './model'
 import { chartSnapshotSvg } from './charts'
 import temml from 'temml'
 
@@ -34,8 +34,8 @@ export function fieldContext(doc: BentoDoc, slide: Slide): FieldContext {
   const upto = idx < 0 ? doc.slides : doc.slides.slice(0, idx + 1)
   const m = doc.meta ?? {}
   return {
-    page: upto.filter((s) => !s.stateOf).length,
-    pages: doc.slides.filter((s) => !s.stateOf).length,
+    page: upto.filter((s) => paginates(s, doc)).length,
+    pages: doc.slides.filter((s) => paginates(s, doc)).length,
     title: doc.title,
     date: new Date(),
     author: m.author ?? '',

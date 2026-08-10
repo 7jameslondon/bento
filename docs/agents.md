@@ -351,6 +351,17 @@ without them — and elements should carry the full field set shown.
   with `stateOf: "<parent-id>"` is a hidden variant reached only by links
   (arrow keys skip it, ← returns to parent). Give clickable things a padded
   transparent rect as the hit target, not the text itself.
+- **Hidden slides**: `"hidden": true` keeps a slide in the deck and out of the
+  show — arrow keys skip it, PDF export leaves it out, and it is never the
+  file's thumbnail — but an element `link` still reaches it. That is what it is
+  for: backup and appendix material you jump to only if asked. By default a
+  hidden slide does not consume a page number either, so `{{page}}`/`{{pages}}`
+  stay contiguous for the audience; set `present.numberHidden: true` for the
+  office-suite behaviour where it keeps its number.
+
+  Not the same as `stateOf`. A state is a variant OF another slide (← returns
+  to its parent, and it morphs with it); hidden carries no such relationship.
+  Use a state for "click to drill into this", hidden for "only if they ask".
 - **Numbers count up** with `fx: { countUp: true }`.
 - **Speaker notes** (`notes`) are part of the document — write them; they
   make a template teach itself.

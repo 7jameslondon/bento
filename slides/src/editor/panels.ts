@@ -252,6 +252,16 @@ export class PropsPanel {
       slide.transition,
       (v) => this.edit(() => { this.store.slide.transition = v as TransitionKind }, true),
     ))
+    // Hidden slides stay in the deck and stay editable; they drop out of the
+    // walk, the PDF and the file thumbnail. Offered only on ordinary slides —
+    // a state is already unreachable linearly, so hiding one means nothing.
+    if (!slide.stateOf) {
+      this.row('Hide slide', this.toggle(!!slide.hidden, (v) =>
+        this.edit(() => {
+          if (v) this.store.slide.hidden = true
+          else delete this.store.slide.hidden
+        }, true)))
+    }
     if (slide.transition === 'morph') {
       const hint = document.createElement('p')
       hint.className = 'ed-hint'
@@ -274,7 +284,7 @@ export class PropsPanel {
     // Each writes `undefined` at its default rather than the default value, so a
     // deck that never touches these carries no `present` block at all.
     const pres = this.store.doc.present ?? {}
-    const setPresent = (k: 'slideNumber' | 'progress' | 'controls', v: boolean, dflt: boolean) =>
+    const setPresent = (k: 'slideNumber' | 'progress' | 'controls' | 'numberHidden', v: boolean, dflt: boolean) =>
       this.edit(() => {
         const d = this.store.doc
         const cur = { ...(d.present ?? {}) }
@@ -289,6 +299,12 @@ export class PropsPanel {
       (v) => setPresent('progress', v, true)))
     this.row('Corner arrows', this.toggle(pres.controls ?? false,
       (v) => setPresent('controls', v, false)))
+    // Off by default: skipped means uncounted, the same rule interactive states
+    // already follow, which is what keeps the audience's numbering contiguous.
+    // On matches PowerPoint and Keynote, where a hidden slide keeps its number
+    // so the visible ones do not renumber as you toggle slides during rehearsal.
+    this.row('Number hidden slides', this.toggle(pres.numberHidden ?? false,
+      (v) => setPresent('numberHidden', v, false)))
 
 
     // interactivity: naming, state-of, hover focus

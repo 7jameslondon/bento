@@ -737,4 +737,7 @@ export const it: Catalog = {
   "Zoom in and out": "Ingrandisci e riduci",
   "Space-drag": "Spazio + trascina",
   "Pan as well, if your mouse has a middle button": "Sposta anche, se il mouse ha il tasto centrale",
+  "Hide slide": "Nascondi diapositiva",
+  "Number hidden slides": "Numera le diapositive nascoste",
+  "Hidden — skipped while presenting and left out of PDF export": "Nascosta — saltata durante la presentazione ed esclusa dall’esportazione PDF",
 }

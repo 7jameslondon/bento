@@ -8,7 +8,7 @@ import {
   FORMAT_VERSION,
   MEDIA_EMBED_BUDGET,
   applyChartPalette, applyLayout, builtinLayouts, defaultChart, defaultImage, defaultMedia, defaultShape, defaultTable, defaultText,
-  instantiateLayout, isLightBg, layoutElementIds, newDocId, parseDoc, readableInk, syncLinkedChart, uid,
+  instantiateLayout, isLightBg, layoutElementIds, newDocId, paginates, inLinearFlow, parseDoc, readableInk, syncLinkedChart, uid,
   type ChartElement, type ShapeKind, type Slide, type SlideElement, type TableElement,
 } from '../model'
 import { APP_VERSION, applyUpdate, applyUpdateInPlace, autoCheckEnabled, canUpdateInPlace, checkForUpdates, compareVersions, offlineEnabled, setAutoCheck, setOffline } from '../update'
@@ -1455,6 +1455,15 @@ export class Editor {
       const parentIdx = this.store.doc.slides.findIndex((s) => s.id === slide.stateOf)
       num.textContent = slide.name ?? `⤷ ${parentIdx + 1}`
       num.title = `Interactive state of slide ${parentIdx + 1} — reached via links while presenting`
+    } else if (slide.hidden) {
+      // The sidebar shows what the AUDIENCE would count. With the default
+      // numbering a hidden slide has no number at all, so show the marker
+      // alone; with office-suite numbering it keeps one, struck through — the
+      // same affordance PowerPoint uses. Either way it must be obvious at a
+      // glance, because a slide you forgot you hid is one you rediscover
+      // mid-presentation.
+      num.textContent = paginates(slide, this.store.doc) ? String(this.linearNumber(i)) : '—'
+      num.title = t('Hidden — skipped while presenting and left out of PDF export')
     } else {
       num.textContent = String(this.linearNumber(i))
     }
@@ -1479,7 +1488,7 @@ export class Editor {
 
   /** 1-based position among non-state slides (what the audience counts). */
   private linearNumber(i: number): number {
-    return this.store.doc.slides.slice(0, i + 1).filter((s) => !s.stateOf).length
+    return this.store.doc.slides.slice(0, i + 1).filter((s) => paginates(s, this.store.doc)).length
   }
 
   private rebuildSidebar() {
@@ -1493,6 +1502,7 @@ export class Editor {
       if (!slide.stateOf) this.sidebar.appendChild(this.insertGap(i))
       const item = this.makeThumb(slide, i, !!slide.stateOf)
       if (slide.stateOf) item.classList.add('ed-thumb-state')
+      if (slide.hidden) item.classList.add('ed-thumb-hidden')
       this.sidebar.appendChild(item)
     })
     this.sidebar.appendChild(this.insertGap(slides.length))
@@ -1722,8 +1732,9 @@ export class Editor {
 
   /**
    * Export the deck to PDF via the browser's print pipeline: every linear
-   * slide becomes one exact 1600×900 page (states are reachable only through
-   * interaction, so they stay out of the paper trail).
+   * slide becomes one exact 1600×900 page. Anything outside the linear flow
+   * stays off the paper: a state is reachable only through interaction, and a
+   * hidden slide is material the audience was not meant to be handed.
    */
   exportPdf() {
     this.canvas.commitTextEdit()
@@ -1736,7 +1747,7 @@ export class Editor {
     pageCss.textContent = `@page { size: 1600px ${pageH}px; margin: 0; } #bento-print .bp-page { height: ${pageH}px; }`
     box.appendChild(pageCss)
     for (const slide of this.store.doc.slides) {
-      if (slide.stateOf) continue
+      if (!inLinearFlow(slide)) continue
       const page = div('bp-page')
       const surface = renderSlide(slide, this.store.doc, { svgAsImage: true, hidePlaceholders: true })
       // normalise to the print page size regardless of doc size
