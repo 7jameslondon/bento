@@ -133,8 +133,9 @@ It should:
    matches the artifact.
 6. If the PR is closed or merged, exit successfully without changing anything.
    This observes PR state but never constrains normal PR operations.
-7. Generate the comment from a fixed Markdown template. Only validated numbers
-   and formatted, allowlisted app names enter the template.
+7. Generate the comment from a fixed Markdown template. Only validated numbers,
+   formatted allowlisted app names, safely HTML-escaped branch names from the
+   revalidated PR, and a workflow-generated UTC timestamp enter the template.
 8. Paginate PR comments and locate the exact
    `<!-- bento-build-size-report -->` marker on a comment authored by
    `github-actions[bot]`. Update that comment, or create it if none exists.
@@ -152,12 +153,8 @@ Use a small table:
 | `bento/slides` | 560.0 KiB | 561.2 KiB | +1.2 KiB (+0.21%) |
 
 Use one deterministic rounding rule, handle a zero-byte base without division
-by zero, and show the measured base and head short SHAs.
-
-End with:
-
-> Informational only. Generated from PR code and not a merge gate; exact output
-> can vary slightly by build environment.
+by zero, and show the safely escaped base and head branch names with their short
+SHAs. End with the workflow-generated update time in ISO 8601 UTC format.
 
 ## Implementation constraints
 
