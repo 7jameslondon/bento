@@ -238,6 +238,8 @@ jobs:
               pull?.merged_at === null &&
               pull?.base?.repo?.id === baseRepositoryId &&
               pull?.base?.repo?.full_name?.toLowerCase() === process.env.REPOSITORY.toLowerCase() &&
+              typeof pull?.base?.ref === 'string' &&
+              pull.base.ref.length > 0 &&
               pull?.base?.sha === report.baseSha &&
               pull?.head?.repo?.id === headRepositoryId &&
               pull?.head?.ref === process.env.HEAD_BRANCH &&
@@ -287,27 +289,37 @@ jobs:
             return `${absolute} (${formattedPercent})`;
           }
 
+          function escapeHtml(value) {
+            return value
+              .replaceAll('&', '&amp;')
+              .replaceAll('<', '&lt;')
+              .replaceAll('>', '&gt;')
+              .replaceAll('"', '&quot;')
+              .replaceAll("'", '&#39;');
+          }
+
           const rows = expectedApps.map(({ id, label }) => {
             const value = sizes.get(id);
             return `| ${label} | ${kib(value.baseBytes)} | ${kib(value.headBytes)} | ${change(value.baseBytes, value.headBytes)} |`;
           });
+          pull = await api(pullPath, { allowNotFound: true });
+          if (!validPull(pull)) {
+            noOp('the pull request changed before the comment could be written.');
+          }
+
+          const updatedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
           const body = [
             marker,
             '### Build size',
             '',
-            `Measured \`${report.baseSha.slice(0, 7)}\` → \`${report.headSha.slice(0, 7)}\`.`,
+            `<code>${escapeHtml(pull.base.ref)}</code> (<code>${report.baseSha.slice(0, 7)}</code>) → <code>${escapeHtml(pull.head.ref)}</code> (<code>${report.headSha.slice(0, 7)}</code>)`,
             '',
             '| app | base | PR | change |',
             '| --- | ---: | ---: | ---: |',
             ...rows,
             '',
-            '> Informational only. Generated from PR code and not a merge gate; exact output can vary slightly by build environment.',
+            `Updated: \`${updatedAt}\``,
           ].join('\n');
-
-          pull = await api(pullPath, { allowNotFound: true });
-          if (!validPull(pull)) {
-            noOp('the pull request changed before the comment could be written.');
-          }
 
           if (matchingComments.length === 1) {
             const commentId = matchingComments[0].id;
