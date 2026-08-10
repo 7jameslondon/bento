@@ -2271,5 +2271,24 @@ input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: poin
 
 /* Disposable build-size report probe; this test branch will not be merged. */
 :root {
-  --bento-build-size-report-probe: 1;
+  --bento-build-size-report-probe-01: #010101;
+  --bento-build-size-report-probe-02: #020202;
+  --bento-build-size-report-probe-03: #030303;
+  --bento-build-size-report-probe-04: #040404;
+  --bento-build-size-report-probe-05: #050505;
+  --bento-build-size-report-probe-06: #060606;
+  --bento-build-size-report-probe-07: #070707;
+  --bento-build-size-report-probe-08: #080808;
+  --bento-build-size-report-probe-09: #090909;
+  --bento-build-size-report-probe-10: #101010;
+  --bento-build-size-report-probe-11: #111111;
+  --bento-build-size-report-probe-12: #121212;
+  --bento-build-size-report-probe-13: #131313;
+  --bento-build-size-report-probe-14: #141414;
+  --bento-build-size-report-probe-15: #151515;
+  --bento-build-size-report-probe-16: #161616;
+  --bento-build-size-report-probe-17: #171717;
+  --bento-build-size-report-probe-18: #181818;
+  --bento-build-size-report-probe-19: #191919;
+  --bento-build-size-report-probe-20: #202020;
 }
