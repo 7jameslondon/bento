@@ -2268,3 +2268,8 @@ input.ed-toggle { width: 16px; height: 16px; accent-color: #5E7699; cursor: poin
 [dir="rtl"] .ed-chart-json {
   direction: ltr;
 }
+
+/* Disposable build-size report probe; this test branch will not be merged. */
+:root {
+  --bento-build-size-report-probe: 1;
+}
