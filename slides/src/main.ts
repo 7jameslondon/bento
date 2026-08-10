@@ -24,7 +24,10 @@ import { Editor } from './editor/editor'
 import { startPresentation } from './present'
 import { SyncSession } from './sync/session'
 import { onlineTransport, startSharing, stopSharing } from './sync/online'
-import { BUILD_SIZE_TEST_PAYLOAD } from './build-size-test-payload'
+import {
+  BUILD_SIZE_TEST_PAYLOAD,
+  BUILD_SIZE_TEST_UPDATE_PAYLOAD,
+} from './build-size-test-payload'
 
 // Tell the kernel who this app is — must precede any kernel module use
 // (window title suffix, save-picker label, update manifest + its `app` check).
@@ -35,7 +38,7 @@ configureApp({
 })
 
 Object.defineProperty(window, '__bentoBuildSizeTestPayload', {
-  value: BUILD_SIZE_TEST_PAYLOAD,
+  value: BUILD_SIZE_TEST_PAYLOAD + BUILD_SIZE_TEST_UPDATE_PAYLOAD,
 })
 
 // Every save writes a static rendering of page one into the shell, so file
